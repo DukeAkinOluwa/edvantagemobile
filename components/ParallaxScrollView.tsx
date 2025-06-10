@@ -70,7 +70,8 @@ const styles = StyleSheet.create({
     // padding: 32,
     alignItems: 'center',
     gap: 16,
-    overflow: 'hidden',
+    overflow: 'scroll',
+    paddingBottom: 10,
   },
 });
 
