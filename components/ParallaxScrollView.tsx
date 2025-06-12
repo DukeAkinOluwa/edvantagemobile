@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // padding: 32,
     alignItems: 'center',
-    gap: 16,
+    gap: 10,
     overflow: 'scroll',
     paddingBottom: 10,
   },
