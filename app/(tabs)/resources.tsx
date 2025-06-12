@@ -10,13 +10,15 @@ import { useEffect, useState } from 'react';
 import { filesDummyData } from '@/dummydata/filesData';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
+
+const screenWidth = Dimensions.get('window').width;
+const boundaryWidth = screenWidth - 10;
+
 export default function ScheduleScreen() {
 
     const globalStyles = useGlobalStyles();
 
     const [searchQuery, setSearchQuery] = useState('');
-    const screenWidth = Dimensions.get('window').width;
-    const searchInputWidth = screenWidth - 10;
 
     type FileTypeCategory = 'Video' | 'Image' | 'Document' | 'Audio' | 'Other';
     // type FileTypeCategory = 'Video' | 'Image' | 'Document' | 'Audio' | 'Archive' | 'Code' | 'Other';
@@ -101,7 +103,7 @@ export default function ScheduleScreen() {
         <>
             <Header title="Resources" />
             <ParallaxScrollView>
-                <ThemedView style={[styles.searchContainer, { width: searchInputWidth }]}>
+                <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
                     <TextInput
                         placeholder="Search by title, author, or summary"
                         value={searchQuery}
@@ -122,7 +124,8 @@ export default function ScheduleScreen() {
                         >
                             <ThemedText style={[
                                 styles.categoryButtonText,
-                                selectedCategory === category && styles.categoryTextActive
+                                globalStyles.baseText,
+                                selectedCategory === category && {color: "#2A52BE"},
                             ]}>
                                 {category}
                             </ThemedText>
@@ -204,6 +207,7 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 6,
         gap: 10,
+        maxWidth: boundaryWidth - 20,
     
         // iOS shadow
         shadowColor: '#000',

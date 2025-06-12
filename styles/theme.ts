@@ -11,14 +11,14 @@ export const spacing = {
 export const borderRadius = {
     sm: 4,
     md: 8,
-    lg: 15,
+    lg: 16,
     xl: 32,
 };
 
 export const fontSizes = {
     sm: 14,
-    base: 16,
-    md: 18,
+    base: 15,
+    md: 17,
     lg: 22,
     xl: 28,
 };
