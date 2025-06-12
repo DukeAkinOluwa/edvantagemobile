@@ -28,10 +28,20 @@ export const useGlobalStyles = () => {
         color: colorSet.text,
         fontFamily: 'Montserrat-Regular',
     },
+    semiMediumText: {
+        fontSize: fontSizes.base,
+        color: colorSet.text,
+        fontFamily: 'Montserrat-Medium'
+    },
     mediumText: {
         fontSize: fontSizes.md,
         color: colorSet.text,
         fontFamily: 'Montserrat-Medium',
+    },
+    semiLargeText: {
+        fontFamily: 'Montserrat-SemiBold',
+        fontSize: fontSizes.smlg,
+        color: colorSet.text,
     },
     largeText: {
         fontSize: fontSizes.lg,
@@ -42,5 +52,8 @@ export const useGlobalStyles = () => {
         fontSize: fontSizes.xl,
         color: colorSet.text,
     },
+    actionText: {
+        color: "#2A52BE"
+    }
   });
 };

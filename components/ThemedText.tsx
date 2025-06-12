@@ -26,7 +26,6 @@ export function ThemedText({
         type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
         type === 'subtitle' ? styles.subtitle : undefined,
         type === 'link' ? styles.link : undefined,
-        type === 'action' ? styles.action : undefined,
         style,
       ]}
       {...rest}
@@ -41,27 +40,26 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   defaultSemiBold: {
+    fontFamily: 'Montserrat-Regular',
     fontSize: 16,
     lineHeight: 24,
     fontWeight: '600',
   },
   title: {
+    fontFamily: 'Montserrat-Regular',
     fontSize: 32,
     fontWeight: 'bold',
     lineHeight: 32,
   },
   subtitle: {
+    fontFamily: 'Montserrat-Regular',
     fontSize: 20,
     fontWeight: 'bold',
   },
   link: {
+    fontFamily: 'Montserrat-Regular',
     lineHeight: 30,
     fontSize: 16,
     color: '#0a7ea4',
-  },
-  action: {
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#2A52BE',
   },
 });

@@ -3,9 +3,12 @@ import { Dimensions, StyleSheet } from 'react-native';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { useGlobalStyles } from '@/styles/globalStyles';
 import { Header } from '@react-navigation/elements';
 
 export default function HomeScreen() {
+
+  const globalStyles = useGlobalStyles()
 
   const scheduleData = [
     {
@@ -43,10 +46,10 @@ export default function HomeScreen() {
       </ThemedView>
       <ThemedView style={styles.todaysTasks}>
         <ThemedView style={styles.cardHeading}>
-          <ThemedText type='subtitle'>
+          <ThemedText style={ globalStyles.semiLargeText }>
             Today&apos;s Schedule
           </ThemedText>
-          <ThemedText type='action' style={styles.actionText}>
+          <ThemedText style={[globalStyles.mediumText, globalStyles.actionText]}>
             New Event
           </ThemedText>
         </ThemedView>
@@ -66,26 +69,26 @@ export default function HomeScreen() {
     return (
       <ThemedView style={styles.eventCard}>
         <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={styles.minorText}>
+          <ThemedText style={globalStyles.smallText}>
             Event
           </ThemedText>
-          <ThemedText style={styles.majorText}>
+          <ThemedText style={globalStyles.semiMediumText}>
             {cardData.title}
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={styles.minorText}>
+          <ThemedText style={globalStyles.smallText}>
             Time
           </ThemedText>
-          <ThemedText style={styles.majorText}>
+          <ThemedText style={globalStyles.semiMediumText}>
             {cardData.startTime} - {cardData.endTime}
           </ThemedText>
         </ThemedView>
         <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={styles.minorText}>
+          <ThemedText style={globalStyles.smallText}>
             Location
           </ThemedText>
-          <ThemedText style={styles.majorText}>
+          <ThemedText style={globalStyles.semiMediumText}>
             {cardData.location}
           </ThemedText>
         </ThemedView>
@@ -125,9 +128,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 10,
   },
-  actionText: {
-    fontWeight: '500',
-  },
   todaysTasksContent: {
     flexDirection: 'column',
     gap: 10
@@ -144,13 +144,5 @@ const styles = StyleSheet.create({
   },
   eventCardSection: {
     flexDirection: 'column',
-  },
-  majorText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  minorText: {
-    fontSize: 13,
-    fontWeight: '400',
   },
 });
