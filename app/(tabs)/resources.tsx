@@ -8,8 +8,11 @@ import { Header } from '@react-navigation/elements';
 import { useEffect, useState } from 'react';
 
 import { filesDummyData } from '@/dummydata/filesData';
+import { useGlobalStyles } from '@/styles/globalStyles';
 
 export default function ScheduleScreen() {
+
+    const globalStyles = useGlobalStyles();
 
     const [searchQuery, setSearchQuery] = useState('');
     const screenWidth = Dimensions.get('window').width;
@@ -54,8 +57,8 @@ export default function ScheduleScreen() {
 
                     </ThemedView>
                     <ThemedView style={styles.fileCardHeadingTexts}>
-                        <ThemedText style={{ fontWeight: 600, fontSize: 20 }}>{file.filename}</ThemedText>
-                        <ThemedText>{`Uploaded by ${file.uploadedBy}`}</ThemedText>
+                        <ThemedText style={[globalStyles.mediumText, {fontWeight: 500}]}>{file.filename}</ThemedText>
+                        <ThemedText style={globalStyles.smallText}>{`Uploaded by ${file.uploadedBy}`}</ThemedText>
                     </ThemedView>
                 </ThemedView>
                 <ThemedView>
@@ -187,7 +190,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(1, 119, 251, .1)',
     },
     categoryButtonText: {
-        color: '#000',
         fontWeight: 500,
     },
     categoryTextActive: {
