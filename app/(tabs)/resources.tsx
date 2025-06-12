@@ -64,7 +64,7 @@ export default function ScheduleScreen() {
                     </ThemedView>
                 </ThemedView>
                 <ThemedView>
-                    <ThemedText style={globalStyles.baseText}>{`Summary: ${file.summary}`}</ThemedText>
+                    <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
                 </ThemedView>
                 <ThemedText style={globalStyles.baseText}>{`Likes: ${file.likes} | Downloads: ${file.downloads}`}</ThemedText>
             </ThemedView>
