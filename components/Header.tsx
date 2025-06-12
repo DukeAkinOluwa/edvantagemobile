@@ -1,6 +1,8 @@
 // components/Header.tsx
+import { useGlobalStyles } from '@/styles/globalStyles';
+import { FontAwesome } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 type HeaderProps = {
   title: string;
@@ -8,16 +10,17 @@ type HeaderProps = {
 
 export const Header = ({ title }: HeaderProps) => {
   const router = useRouter();
+  const globalStyles = useGlobalStyles()
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[ globalStyles.mediumText, styles.title ]}>{title}</Text>
       <View style={styles.rightIcons}>
         <TouchableOpacity onPress={() => router.push('/notifications-page')}>
-          <Image source={require('@/assets/icons/bell.png')} style={styles.icon} />
+          <FontAwesome name='bell' size={25} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/profile-page')}>
-          <Image source={require('@/assets/images/profile.png')} style={styles.profile} />
+          <FontAwesome name='user-circle' size={25} color="#2A52BE" />
         </TouchableOpacity>
       </View>
     </View>
@@ -26,8 +29,9 @@ export const Header = ({ title }: HeaderProps) => {
 
 const styles = StyleSheet.create({
   container: {
+    height: 60,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    // paddingVertical: 12,
     backgroundColor: '#fff',
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -35,13 +39,12 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 23,
   },
   rightIcons: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 20,
   },
   icon: {
     width: 24,
