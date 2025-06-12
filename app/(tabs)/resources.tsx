@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 
 import { filesDummyData } from '@/dummydata/filesData';
 import { useGlobalStyles } from '@/styles/globalStyles';
+import { FontAwesome } from '@expo/vector-icons';
 
 
 const screenWidth = Dimensions.get('window').width;
@@ -47,16 +48,45 @@ export default function ScheduleScreen() {
         }
         return 'Other';
     };
+
+    const categoryIconMap: Record<string, string> = {
+        video: 'video-camera',
+        image: 'image',
+        document: 'file-text',
+        audio: 'music',
+        other: 'file',
+    };
+
+    const categoryIconColor: Record<string, string> = {
+        video: '#2A52BE',
+        image: '#00C853',
+        document: '#9C27B0',
+        audio: '#F44336',
+        other: '#FFC107',
+    };
+
+    const categoryIconBackgroundColor: Record<string, string> = {
+        video: 'rgba(1, 119, 251, 0.1)',
+        image: 'rgba(0, 200, 83, 0.1)',
+        document: 'rgba(156, 39, 176, 0.1)',
+        audio: 'rgba(244, 67, 54, 0.1)',
+        other: 'rgba(255, 193, 7, 0.1)',
+    };
     
     const FileTypeOption: React.FC<Props> = ({ file }) => {
         const extension = file.filepath.split('.').pop() || '';
         const category = getCategoryFromExtension(extension);
+        const lowerCaseCategory = category.toLowerCase()
+
+        const iconName = categoryIconMap[lowerCaseCategory] || 'file-o'
+        const iconColor = categoryIconColor[lowerCaseCategory]
+        const iconBackgroundColor = categoryIconBackgroundColor[lowerCaseCategory]
 
         return (
             <ThemedView style={styles.fileCard}>
                 <ThemedView style={styles.fileCardHeading}>
-                    <ThemedView style={styles.fileCardHeadingIcon}>
-
+                    <ThemedView style={[styles.fileCardHeadingIcon, {backgroundColor: iconBackgroundColor}]}>
+                        <FontAwesome name={iconName} size={22} color={iconColor} />
                     </ThemedView>
                     <ThemedView style={styles.fileCardHeadingTexts}>
                         <ThemedText style={[globalStyles.mediumText, {fontWeight: 500}]}>{file.filename}</ThemedText>
@@ -224,10 +254,12 @@ const styles = StyleSheet.create({
         alignItems: "center"
     },
     fileCardHeadingIcon: {
-        width: 30,
-        height: 30,
-        backgroundColor: "#2A52BE80",
+        width: 37,
+        height: 37,
+        backgroundColor: "#2A52BEE6",
         borderRadius: 5,
+        alignItems: 'center',
+        justifyContent: 'center'
     },
     fileCardHeadingTexts: {
         flexDirection: 'column'
