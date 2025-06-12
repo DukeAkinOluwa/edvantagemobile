@@ -34,13 +34,6 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <FontAwesome name='rocket' size={28} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="schedule"
         options={{
           title: 'Schedule',
@@ -52,6 +45,13 @@ export default function TabLayout() {
         options={{
           title: 'Resources',
           tabBarIcon: ({ color }) => <FontAwesome name='book' size={28} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="explore"
+        options={{
+          title: 'Explore',
+          tabBarIcon: ({ color }) => <FontAwesome name='rocket' size={28} color={color} />,
         }}
       />
     </Tabs>
