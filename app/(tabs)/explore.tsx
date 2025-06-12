@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
 
+import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { Header } from '@react-navigation/elements';
 
 export default function TabTwoScreen() {
   return (
     <>
-    <Header title="Explore" />
+    <NavigationHeader title="Explore" />
     <ParallaxScrollView>
       
     </ParallaxScrollView>

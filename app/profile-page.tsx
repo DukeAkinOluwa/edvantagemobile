@@ -1,9 +1,9 @@
-import { Header } from "@react-navigation/elements";
+import { NavigationHeader } from "@/components/Header";
 
 export default function ProfilePage() {
     return (
         <>
-        <Header title="Profile" />
+        <NavigationHeader title="Profile" />
         </>
     );
 }

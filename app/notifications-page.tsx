@@ -1,9 +1,9 @@
-import { Header } from "@react-navigation/elements";
+import { NavigationHeader } from "@/components/Header";
 
 export default function NotificationsPage() {
     return (
         <>
-        <Header title="Notifications" />
+        <NavigationHeader title="Notifications" />
         </>
     );
 }

@@ -1,10 +1,10 @@
 import { Dimensions, StyleSheet } from 'react-native';
 
+import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useGlobalStyles } from '@/styles/globalStyles';
-import { Header } from '@react-navigation/elements';
 
 export default function HomeScreen() {
 
@@ -38,30 +38,30 @@ export default function HomeScreen() {
   ]
 
   return (
-    <>
-    <Header title="Dashboard" />
-    <ParallaxScrollView>
-      <ThemedView style={styles.gamificationContainer} lightColor='#2A52BE' darkColor='#FAFBFD'>
+    <ThemedView style={styles.page}>
+      <NavigationHeader title="Dashboard" />
+      <ParallaxScrollView>
+        <ThemedView style={styles.gamificationContainer} lightColor='#2A52BE' darkColor='#FAFBFD'>
 
-      </ThemedView>
-      <ThemedView style={styles.todaysTasks}>
-        <ThemedView style={styles.cardHeading}>
-          <ThemedText style={ globalStyles.semiLargeText }>
-            Today&apos;s Schedule
-          </ThemedText>
-          <ThemedText style={[globalStyles.mediumText, globalStyles.actionText]}>
-            New Event
-          </ThemedText>
         </ThemedView>
-        <ThemedView style={styles.todaysTasksContent}>
-          {scheduleData.map(data => (
-            <EventCard key={data.title} event={data} />
-          ))}
+        <ThemedView style={styles.todaysTasks}>
+          <ThemedView style={styles.cardHeading}>
+            <ThemedText style={ globalStyles.semiLargeText }>
+              Today&apos;s Schedule
+            </ThemedText>
+            <ThemedText style={[globalStyles.mediumText, globalStyles.actionText]}>
+              New Event
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.todaysTasksContent}>
+            {scheduleData.map(data => (
+              <EventCard key={data.title} event={data} />
+            ))}
+          </ThemedView>
         </ThemedView>
-      </ThemedView>
 
-    </ParallaxScrollView>
-    </>
+      </ParallaxScrollView>
+    </ThemedView>
   );
 
   function EventCard(event: any) {
@@ -98,9 +98,15 @@ export default function HomeScreen() {
 }
 
 const screenWidth = Dimensions.get('window').width;
+const screenHeight = Dimensions.get('window').height;
 const adjustedWidth = screenWidth - 30;
 
 const styles = StyleSheet.create({
+  page: {
+    flexDirection: 'column',
+    height: screenHeight,
+    gap: 10,
+  },
   gamificationContainer: {
     height: 120,
     width: adjustedWidth,
@@ -117,7 +123,7 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
 
     // Android shadow
     elevation: 4,

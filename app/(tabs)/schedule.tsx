@@ -1,14 +1,14 @@
 import { StyleSheet } from 'react-native';
 
+import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Header } from '@react-navigation/elements';
 
 export default function ScheduleScreen() {
   return (
     <>
-    <Header title="Schedule" />
+    <NavigationHeader title="Schedule" />
     <ParallaxScrollView>
       <ThemedView style={styles.container}>
         <ThemedText type="title">Your Schedule</ThemedText>

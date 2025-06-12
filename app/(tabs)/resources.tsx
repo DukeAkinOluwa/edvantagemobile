@@ -1,9 +1,9 @@
 import { Dimensions, Pressable, StyleSheet, TextInput } from 'react-native';
 
+import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Header } from '@react-navigation/elements';
 
 import { useEffect, useState } from 'react';
 
@@ -131,7 +131,7 @@ export default function ScheduleScreen() {
 
     return (
         <>
-            <Header title="Resources" />
+            <NavigationHeader title="Resources" />
             <ParallaxScrollView>
                 <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
                     <TextInput
@@ -231,6 +231,7 @@ const styles = StyleSheet.create({
     resourceList: {
         paddingHorizontal: 10,
         paddingVertical: 10,
+        gap: 7,
     },
     fileCard: {
         marginBottom: 8,
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
-        shadowRadius: 4,
+        shadowRadius: 3,
 
         // Android shadow
         elevation: 4,
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     fileCardHeading: {
         gap: 15,
         flexDirection: "row",
-        alignItems: "center"
+        alignItems: "center",
     },
     fileCardHeadingIcon: {
         width: 37,
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     fileCardHeadingTexts: {
-        flexDirection: 'column'
+        flexDirection: 'column',
     },
     paginationContainer: {
         flexDirection: 'row',
