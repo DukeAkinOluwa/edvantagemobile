@@ -36,6 +36,7 @@ export function ThemedText({
 
 const styles = StyleSheet.create({
   default: {
+    fontFamily: 'Montserrat-Regular',
     fontSize: 16,
     lineHeight: 24,
   },

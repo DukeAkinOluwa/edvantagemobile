@@ -21,18 +21,22 @@ export const useGlobalStyles = () => {
     baseText: {
         fontSize: fontSizes.base,
         color: colorSet.text,
+        fontFamily: 'Montserrat-Regular',
     },
     smallText: {
         fontSize: fontSizes.sm,
         color: colorSet.text,
+        fontFamily: 'Montserrat-Regular',
     },
     mediumText: {
         fontSize: fontSizes.md,
         color: colorSet.text,
+        fontFamily: 'Montserrat-Medium',
     },
     largeText: {
         fontSize: fontSizes.lg,
         color: colorSet.text,
+        fontFamily: 'Montserrat-Bold',
     },
     xLargeText: {
         fontSize: fontSizes.xl,
