@@ -1,9 +1,11 @@
-import { Dimensions, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
 import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { screenHeight, screenWidth } from '@/global/functions';
+import { EventCardTemplate } from '@/global/templates';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
 export default function HomeScreen() {
@@ -55,7 +57,7 @@ export default function HomeScreen() {
           </ThemedView>
           <ThemedView style={styles.todaysTasksContent}>
             {scheduleData.map(data => (
-              <EventCard key={data.title} event={data} />
+              <EventCardTemplate key={data.title} event={data} />
             ))}
           </ThemedView>
         </ThemedView>
@@ -64,41 +66,8 @@ export default function HomeScreen() {
     </ThemedView>
   );
 
-  function EventCard(event: any) {
-    const cardData = event.event
-    return (
-      <ThemedView style={styles.eventCard}>
-        <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Event
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.title}
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Time
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.startTime} - {cardData.endTime}
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={styles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Location
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.location}
-          </ThemedText>
-        </ThemedView>
-      </ThemedView>
-    )
-  }
+  
 }
-
-const screenWidth = Dimensions.get('window').width;
-const screenHeight = Dimensions.get('window').height;
 const adjustedWidth = screenWidth - 30;
 
 const styles = StyleSheet.create({
@@ -137,18 +106,5 @@ const styles = StyleSheet.create({
   todaysTasksContent: {
     flexDirection: 'column',
     gap: 10
-  },
-  eventCard: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: .5,
-    borderColor: 'rgba(17, 17, 17, 0.2)',
-    borderStyle: 'solid',
-    padding: 10,
-    borderRadius: 8,
-    flexDirection: 'row',
-  },
-  eventCardSection: {
-    flexDirection: 'column',
   },
 });

@@ -1,4 +1,4 @@
-import { Dimensions, Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -8,11 +8,12 @@ import { ThemedView } from '@/components/ThemedView';
 import { useEffect, useState } from 'react';
 
 import { filesDummyData } from '@/dummydata/filesData';
+import { ResourceListCard } from '@/global/templates';
 import { useGlobalStyles } from '@/styles/globalStyles';
-import { FontAwesome } from '@expo/vector-icons';
 
+import { SearchBar } from '@/global/components';
+import { screenWidth } from '@/global/functions';
 
-const screenWidth = Dimensions.get('window').width;
 const boundaryWidth = screenWidth - 10;
 
 export default function ScheduleScreen() {
@@ -49,58 +50,6 @@ export default function ScheduleScreen() {
         return 'Other';
     };
 
-    const categoryIconMap: Record<string, string> = {
-        video: 'video-camera',
-        image: 'image',
-        document: 'file-text',
-        audio: 'music',
-        other: 'file',
-    };
-
-    const categoryIconColor: Record<string, string> = {
-        video: '#2A52BE',
-        image: '#00C853',
-        document: '#9C27B0',
-        audio: '#F44336',
-        other: '#FFC107',
-    };
-
-    const categoryIconBackgroundColor: Record<string, string> = {
-        video: 'rgba(1, 119, 251, 0.1)',
-        image: 'rgba(0, 200, 83, 0.1)',
-        document: 'rgba(156, 39, 176, 0.1)',
-        audio: 'rgba(244, 67, 54, 0.1)',
-        other: 'rgba(255, 193, 7, 0.1)',
-    };
-    
-    const FileTypeOption: React.FC<Props> = ({ file }) => {
-        const extension = file.filepath.split('.').pop() || '';
-        const category = getCategoryFromExtension(extension);
-        const lowerCaseCategory = category.toLowerCase()
-
-        const iconName = categoryIconMap[lowerCaseCategory] || 'file-o'
-        const iconColor = categoryIconColor[lowerCaseCategory]
-        const iconBackgroundColor = categoryIconBackgroundColor[lowerCaseCategory]
-
-        return (
-            <ThemedView style={styles.fileCard}>
-                <ThemedView style={styles.fileCardHeading}>
-                    <ThemedView style={[styles.fileCardHeadingIcon, {backgroundColor: iconBackgroundColor}]}>
-                        <FontAwesome name={iconName} size={22} color={iconColor} />
-                    </ThemedView>
-                    <ThemedView style={styles.fileCardHeadingTexts}>
-                        <ThemedText style={[globalStyles.mediumText, {fontWeight: 500}]}>{file.filename}</ThemedText>
-                        <ThemedText style={globalStyles.smallText}>{`Uploaded by ${file.uploadedBy}`}</ThemedText>
-                    </ThemedView>
-                </ThemedView>
-                <ThemedView>
-                    <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
-                </ThemedView>
-                <ThemedText style={globalStyles.baseText}>{`Likes: ${file.likes} | Downloads: ${file.downloads}`}</ThemedText>
-            </ThemedView>
-        );
-    };
-
     const [selectedCategory, setSelectedCategory] = useState<FileTypeCategory | 'All'>('All');
     const [currentPage, setCurrentPage] = useState(1);
     const filesPerPage = 10;
@@ -134,13 +83,7 @@ export default function ScheduleScreen() {
             <NavigationHeader title="Resources" />
             <ParallaxScrollView>
                 <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
-                    <TextInput
-                        placeholder="Search by title, author, or summary"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        style={styles.searchInput}
-                        placeholderTextColor="#999"
-                    />
+                    <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
                 </ThemedView>
                 <ThemedView style={styles.resourceFileTypeContainer}>
                     {allCategories.map((category, index) => (
@@ -165,7 +108,7 @@ export default function ScheduleScreen() {
                 <ThemedView style={styles.resourceList}>
                     {paginatedFiles.map((file, index) => {
                         const extension = file.filepath.split('.').pop() || '';
-                        return <FileTypeOption key={index} file={file} />;
+                        return <ResourceListCard key={index} file={file} />;
                     })}
 
                     <ThemedView style={styles.paginationContainer}>
