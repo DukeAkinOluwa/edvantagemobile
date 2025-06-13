@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   sent: {
-    backgroundColor: '#DCF8C6',
+    backgroundColor: 'rgba(1, 119, 251, .1)',
     alignSelf: 'flex-end',
   },
   received: {
