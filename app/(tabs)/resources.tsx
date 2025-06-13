@@ -76,10 +76,10 @@ export default function ScheduleScreen() {
     const totalPages = Math.ceil(filteredFiles.length / filesPerPage);
 
     return (
-        <>
+        <ThemedView style={{paddingBottom: 70, flex: 1}}>
             <NavigationHeader title="Resources" />
             <ParallaxScrollView>
-                    <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
+                <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
                 <ThemedView style={styles.resourceFileTypeContainer}>
                     {allCategories.map((category, index) => (
                         <Pressable
@@ -127,7 +127,7 @@ export default function ScheduleScreen() {
                     </ThemedView>
                 </ThemedView>
             </ParallaxScrollView>
-        </>
+        </ThemedView>
     );
 }
 
