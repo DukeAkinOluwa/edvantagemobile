@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
+import { FontAwesome } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Image, TouchableOpacity } from 'react-native';
 
@@ -36,18 +37,24 @@ export default function ChatRoomScreen() {
 
   return (
     <ThemedView style={styles.page}>
-      <TouchableOpacity
-        onPress={() => navigation.navigate('userProfileScreen', { chatId, chatName })}
-        style={[styles.profileHeader, {backgroundColor: 'red',}]}
-      >
-        <Image
-          source={ profileImage } // replace with actual user image
-          style={styles.avatar}
-        />
-        <ThemedText style={globalStyles.semiMediumText}>
-          {chatName}
-        </ThemedText>
-      </TouchableOpacity>
+      <ThemedView style={styles.profileHeader}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrowContainer}>
+          <FontAwesome name="angle-left" size={24} color="#2A52BE" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('userProfileScreen', { chatId, chatName })}
+          style={styles.profileInfo}
+        >
+          <Image
+            source={profileImage}
+            style={styles.avatar}
+          />
+          <ThemedText style={globalStyles.semiMediumText}>
+            {chatName}
+          </ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
 
       <FlatList
         data={messages}
@@ -78,6 +85,14 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     paddingBottom: 10,
+  },
+  backArrowContainer: {
+    height: 35,
+    width: 35,
+    borderRadius: 8,
+    backgroundColor: 'rgba(1, 119, 251, .1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   messagesContainer: {
     padding: 15,
@@ -115,13 +130,20 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2A52BE',
   },
+  profileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginLeft: 10,
+  },
   profileHeader: {
-    
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 15,
     paddingVertical: 10,
+    height: 60,
+    paddingTop: 10,
   },
   avatar: {
     width: 32,
