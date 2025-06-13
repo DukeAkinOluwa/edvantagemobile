@@ -46,12 +46,6 @@ export default function ChatScreen() {
         time: '2d ago',
         },
     ];
-    
-    const dynamicStyles = StyleSheet.create({
-        page: {
-            height: screenHeight - 15,
-        },
-    })
 
     const filteredChats = chatData.filter(chat =>
         chat.name.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -59,7 +53,7 @@ export default function ChatScreen() {
     );
 
     return (
-        <ThemedView style={[styles.page, dynamicStyles.page]}>
+        <ThemedView style={[styles.page]}>
         <NavigationHeader title="Messages" />
         <ParallaxScrollView>
             <SearchBar value={searchText} onChangeText={setSearchText} />
@@ -78,6 +72,8 @@ const styles = StyleSheet.create({
     page: {
         flexDirection: 'column',
         gap: 10,
+        flex: 1,
+        paddingBottom: 70, // Adjusted for Bottom Nav
     },
     searchInput: {
         fontSize: 16,
