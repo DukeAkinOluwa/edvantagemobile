@@ -54,6 +54,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="chatlistscreen"
+        options={{
+          title: 'Chats',
+          tabBarIcon: ({ focused }) => <FontAwesome name="comment" size={focused ? 30 : 24} color={focused ? colorSet.primary : 'gray'} style={{ marginBottom: 4 }} />,
+        }}
+      />
+      <Tabs.Screen
         name="resources"
         options={{
           title: 'Resources',
