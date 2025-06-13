@@ -4,13 +4,16 @@ import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { screenHeight, screenWidth } from '@/global/functions';
 import { EventCardTemplate } from '@/global/templates';
+import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
 export default function HomeScreen() {
 
   const globalStyles = useGlobalStyles()
+  const { screenWidth, screenHeight } = useResponsiveDimensions();
+  
+  const adjustedWidth = screenWidth - 30;
 
   const scheduleData = [
     {
@@ -39,14 +42,26 @@ export default function HomeScreen() {
     }
   ]
 
+  const dynamicStyles = StyleSheet.create({
+    page: {
+      height: screenHeight,
+    },
+    gamificationContainer: {
+      width: adjustedWidth,
+    },
+    todaysTasks: {
+      width: adjustedWidth,
+    },
+  })
+
   return (
-    <ThemedView style={styles.page}>
+    <ThemedView style={[styles.page, dynamicStyles.page]}>
       <NavigationHeader title="Dashboard" />
       <ParallaxScrollView>
-        <ThemedView style={styles.gamificationContainer} lightColor='#2A52BE' darkColor='#FAFBFD'>
+        <ThemedView style={[styles.gamificationContainer, dynamicStyles.gamificationContainer]} lightColor='#2A52BE' darkColor='#FAFBFD'>
 
         </ThemedView>
-        <ThemedView style={styles.todaysTasks}>
+        <ThemedView style={[styles.todaysTasks, dynamicStyles.todaysTasks]}>
           <ThemedView style={styles.cardHeading}>
             <ThemedText style={ globalStyles.semiLargeText }>
               Today&apos;s Schedule
@@ -68,17 +83,14 @@ export default function HomeScreen() {
 
   
 }
-const adjustedWidth = screenWidth - 30;
 
 const styles = StyleSheet.create({
   page: {
     flexDirection: 'column',
-    height: screenHeight,
     gap: 10,
   },
   gamificationContainer: {
     height: 120,
-    width: adjustedWidth,
     borderRadius: 8,
     // backgroundColor: "#2A52BE",
   },
@@ -86,7 +98,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 20,
-    width: adjustedWidth,
     
     // iOS shadow
     shadowColor: '#000',

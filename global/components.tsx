@@ -1,6 +1,6 @@
 // components/SearchBar.tsx
 import { ThemedView } from '@/components/ThemedView';
-import { screenWidth } from '@/global/functions';
+import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
 import React from 'react';
 import { StyleSheet, TextInput } from 'react-native';
 
@@ -9,20 +9,23 @@ type Props = {
   onChangeText: (text: string) => void;
 };
 
-const boundaryWidth = screenWidth - 10;
-
 export const SearchBar: React.FC<Props> = ({ value, onChangeText }) => {
-  return (
-    <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
-      <TextInput
-        placeholder="Search by title, author, or summary"
-        value={value}
-        onChangeText={onChangeText}
-        style={styles.searchInput}
-        placeholderTextColor="#999"
-      />
-    </ThemedView>
-  );
+
+    const { screenWidth } = useResponsiveDimensions()
+    
+    const boundaryWidth = screenWidth - 10;
+
+    return (
+        <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
+        <TextInput
+            placeholder="Search by title, author, or summary"
+            value={value}
+            onChangeText={onChangeText}
+            style={styles.searchInput}
+            placeholderTextColor="#999"
+        />
+        </ThemedView>
+    );
 };
 
 const styles = StyleSheet.create({

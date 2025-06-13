@@ -7,9 +7,7 @@ import { FontAwesome } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 
-import { screenWidth } from "./functions";
-
-const boundaryWidth = screenWidth - 20
+import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 
 type ChatListCardProps = {
   id: string;
@@ -74,18 +72,27 @@ const resourceGetCategoryFromExtension = (ext: string): string => {
 };
 
 export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
-  const globalStyles = useGlobalStyles();
+    const globalStyles = useGlobalStyles();
 
-  const extension = file.filepath.split('.').pop() || '';
-  const category = resourceGetCategoryFromExtension(extension);
-  const lowerCaseCategory = category.toLowerCase();
+    const extension = file.filepath.split('.').pop() || '';
+    const category = resourceGetCategoryFromExtension(extension);
+    const lowerCaseCategory = category.toLowerCase();
 
-  const iconName = resourceCategoryIconMap[lowerCaseCategory] || 'file-o';
-  const iconColor = resourceCategoryIconColor[lowerCaseCategory];
-  const iconBackgroundColor = resourceCategoryIconBackgroundColor[lowerCaseCategory];
+    const iconName = resourceCategoryIconMap[lowerCaseCategory] || 'file-o';
+    const iconColor = resourceCategoryIconColor[lowerCaseCategory];
+    const iconBackgroundColor = resourceCategoryIconBackgroundColor[lowerCaseCategory];
+  
+    const { screenWidth } = useResponsiveDimensions();
+    const boundaryWidth = screenWidth - 20
+
+    const dynamicStyles = StyleSheet.create({
+        fileCard: {
+            maxWidth: boundaryWidth - 20
+        }
+    })
 
   return (
-    <ThemedView style={resourceCardStyles.fileCard}>
+    <ThemedView style={[resourceCardStyles.fileCard, dynamicStyles.fileCard]}>
       <ThemedView style={resourceCardStyles.fileCardHeading}>
         <ThemedView
           style={[resourceCardStyles.fileCardHeadingIcon, { backgroundColor: iconBackgroundColor }]}
@@ -112,27 +119,36 @@ export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
 };
 
 export function ChatListCardTemplate({ chat }: { chat: ChatListCardProps }) {
-  const globalStyles = useGlobalStyles();
-  const navigation = useNavigation<any>();
+    const globalStyles = useGlobalStyles();
+    const navigation = useNavigation<any>();
+    const { screenWidth } = useResponsiveDimensions();
 
-  return (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('chatroomscreen', { chatId: chat.id, chatName: chat.name })}
-    >
-      <ThemedView style={chatListCardTemplateStyles.chatCard}>
-        <ThemedView style={chatListCardTemplateStyles.chatDetails}>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {chat.name}
-          </ThemedText>
-          <ThemedText style={globalStyles.smallText}>
-            {chat.message}
-          </ThemedText>
-        </ThemedView>
-        <ThemedText style={[globalStyles.smallText, chatListCardTemplateStyles.chatTime]}>
-          {chat.time}
-        </ThemedText>
-      </ThemedView>
-    </TouchableOpacity>
+    const boundaryWidth = screenWidth - 20; // Adjusted for padding/margin
+
+    const chatStyles = StyleSheet.create({
+        chatCard: {
+            width: boundaryWidth - 20,
+        }
+    })
+
+    return (
+        <TouchableOpacity
+        onPress={() => navigation.navigate('chatroomscreen', { chatId: chat.id, chatName: chat.name })}
+        >
+            <ThemedView style={[chatListCardTemplateStyles.chatCard, chatStyles.chatCard]}>
+                <ThemedView style={chatListCardTemplateStyles.chatDetails}>
+                <ThemedText style={globalStyles.semiMediumText}>
+                    {chat.name}
+                </ThemedText>
+                <ThemedText style={globalStyles.smallText}>
+                    {chat.message}
+                </ThemedText>
+                </ThemedView>
+                <ThemedText style={[globalStyles.smallText, chatListCardTemplateStyles.chatTime]}>
+                {chat.time}
+                </ThemedText>
+            </ThemedView>
+        </TouchableOpacity>
   );
 }
 
@@ -191,7 +207,6 @@ const eventCardStyles = StyleSheet.create({
 
 const chatListCardTemplateStyles = StyleSheet.create({
   chatCard: {
-    width: boundaryWidth - 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -219,7 +234,6 @@ const resourceCardStyles = StyleSheet.create({
     padding: 10,
     borderRadius: 6,
     gap: 10,
-    maxWidth: boundaryWidth - 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

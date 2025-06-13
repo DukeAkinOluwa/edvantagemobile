@@ -12,9 +12,6 @@ import { ResourceListCard } from '@/global/templates';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
 import { SearchBar } from '@/global/components';
-import { screenWidth } from '@/global/functions';
-
-const boundaryWidth = screenWidth - 10;
 
 export default function ScheduleScreen() {
 
@@ -82,9 +79,7 @@ export default function ScheduleScreen() {
         <>
             <NavigationHeader title="Resources" />
             <ParallaxScrollView>
-                <ThemedView style={[styles.searchContainer, { width: boundaryWidth }]}>
                     <SearchBar value={searchQuery} onChangeText={setSearchQuery} />
-                </ThemedView>
                 <ThemedView style={styles.resourceFileTypeContainer}>
                     {allCategories.map((category, index) => (
                         <Pressable
@@ -175,38 +170,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 10,
         gap: 7,
-    },
-    fileCard: {
-        marginBottom: 8,
-        padding: 10,
-        borderRadius: 6,
-        gap: 10,
-        maxWidth: boundaryWidth - 20,
-    
-        // iOS shadow
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3,
-
-        // Android shadow
-        elevation: 4,
-    },
-    fileCardHeading: {
-        gap: 15,
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    fileCardHeadingIcon: {
-        width: 37,
-        height: 37,
-        backgroundColor: "#2A52BEE6",
-        borderRadius: 5,
-        alignItems: 'center',
-        justifyContent: 'center'
-    },
-    fileCardHeadingTexts: {
-        flexDirection: 'column',
     },
     paginationContainer: {
         flexDirection: 'row',
