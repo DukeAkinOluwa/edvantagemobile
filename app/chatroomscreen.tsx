@@ -1,11 +1,14 @@
+import profileImage from '@/assets/images/dummy/Titilayo.jpg';
 import { RouteProp, useRoute } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, TextInput } from 'react-native';
 
-import { NavigationHeader } from '@/components/Header';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useGlobalStyles } from '@/styles/globalStyles';
+
+import { useNavigation } from '@react-navigation/native';
+import { Image, TouchableOpacity } from 'react-native';
 
 const messagesMock = [
   { id: '1', sender: 'me', text: 'Hey!' },
@@ -17,10 +20,12 @@ const messagesMock = [
 export default function ChatRoomScreen() {
   const globalStyles = useGlobalStyles();
   const route = useRoute<RouteProp<{ params: { chatId: string; chatName: string } }, 'params'>>();
-  const { chatName } = route.params;
+  const { chatName, chatId } = route.params;
+  const navigation = useNavigation<any>();
 
   const [messages, setMessages] = useState(messagesMock);
   const [input, setInput] = useState('');
+  
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -31,7 +36,18 @@ export default function ChatRoomScreen() {
 
   return (
     <ThemedView style={styles.page}>
-      <NavigationHeader title={chatName} />
+      <TouchableOpacity
+        onPress={() => navigation.navigate('userProfileScreen', { chatId, chatName })}
+        style={[styles.profileHeader, {backgroundColor: 'red',}]}
+      >
+        <Image
+          source={ profileImage } // replace with actual user image
+          style={styles.avatar}
+        />
+        <ThemedText style={globalStyles.semiMediumText}>
+          {chatName}
+        </ThemedText>
+      </TouchableOpacity>
 
       <FlatList
         data={messages}
@@ -99,4 +115,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2A52BE',
   },
+  profileHeader: {
+    
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+
 });
