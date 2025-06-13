@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Image, TouchableOpacity } from 'react-native';
 
@@ -39,7 +39,7 @@ export default function ChatRoomScreen() {
     <ThemedView style={styles.page}>
       <ThemedView style={styles.profileHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrowContainer}>
-          <FontAwesome name="angle-left" size={24} color="#2A52BE" />
+          <FontAwesome6 name="angle-left" size={24} color="#2A52BE" />
         </TouchableOpacity>
 
         <TouchableOpacity

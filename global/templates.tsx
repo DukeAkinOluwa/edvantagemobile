@@ -3,7 +3,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { StyleSheet } from "react-native";
 
-import { FontAwesome } from "@expo/vector-icons";
+import { FontAwesome6 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 
@@ -97,7 +97,7 @@ export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
         <ThemedView
           style={[resourceCardStyles.fileCardHeadingIcon, { backgroundColor: iconBackgroundColor }]}
         >
-          <FontAwesome name={iconName} size={22} color={iconColor} />
+          <FontAwesome6 name={iconName} size={22} color={iconColor} />
         </ThemedView>
         <ThemedView style={resourceCardStyles.fileCardHeadingTexts}>
           <ThemedText style={[globalStyles.mediumText, { fontWeight: '500' }]}>

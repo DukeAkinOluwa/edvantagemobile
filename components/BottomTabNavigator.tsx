@@ -1,4 +1,4 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -28,8 +28,8 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
 
         type RouteName = 'index' | 'schedule' | 'chatlistscreen' | 'resources' | 'explore';
 
-        const iconMap: Record<RouteName, keyof typeof FontAwesome.glyphMap> = {
-        index: 'home',
+        const iconMap: Record<RouteName, keyof typeof FontAwesome6.glyphMap> = {
+        index: 'house',
         schedule: 'calendar',
         chatlistscreen: 'comment',
         resources: 'book',
@@ -50,7 +50,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
             onPress={onPress}
             style={styles.tabButton}
           >
-            <FontAwesome
+            <FontAwesome6
               name={iconName}
               size={isFocused ? 28 : 22}
               color={isFocused ? colorSet.primary : 'gray'}

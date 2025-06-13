@@ -1,4 +1,4 @@
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome6 } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -14,10 +14,10 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={styles.headerIcons}>
         <TouchableOpacity onPress={() => router.push('/notifications-page')}>
-          <FontAwesome name="bell" size={25} />
+          <FontAwesome6 name="bell" size={25} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/profile-page')}>
-          <FontAwesome name="user-circle" size={25} color="#2A52BE" />
+          <FontAwesome6 name="user-circle" size={25} color="#2A52BE" />
         </TouchableOpacity>
       </View>
     </View>
