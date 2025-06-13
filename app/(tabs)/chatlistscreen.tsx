@@ -49,7 +49,7 @@ export default function ChatScreen() {
     
     const dynamicStyles = StyleSheet.create({
         page: {
-            height: screenHeight,
+            height: screenHeight - 15,
         },
     })
 

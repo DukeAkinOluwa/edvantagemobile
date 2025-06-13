@@ -44,7 +44,7 @@ export default function HomeScreen() {
 
   const dynamicStyles = StyleSheet.create({
     page: {
-      height: screenHeight,
+      height: screenHeight - 15,
     },
     gamificationContainer: {
       width: adjustedWidth,
