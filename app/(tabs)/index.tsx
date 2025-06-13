@@ -11,7 +11,7 @@ import { useGlobalStyles } from '@/styles/globalStyles';
 export default function HomeScreen() {
 
   const globalStyles = useGlobalStyles()
-  const { screenWidth, screenHeight } = useResponsiveDimensions();
+  const { screenWidth } = useResponsiveDimensions();
   
   const adjustedWidth = screenWidth - 30;
 
@@ -44,7 +44,8 @@ export default function HomeScreen() {
 
   const dynamicStyles = StyleSheet.create({
     page: {
-      height: screenHeight - 15,
+      flex: 1,
+      paddingBottom: 70,
     },
     gamificationContainer: {
       width: adjustedWidth,
