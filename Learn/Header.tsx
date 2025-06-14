@@ -3,7 +3,18 @@ import { FontAwesome6 } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+
+import Animated, {
+    interpolateColor,
+    useAnimatedProps,
+    useSharedValue,
+    withRepeat,
+    withTiming
+} from 'react-native-reanimated';
+
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface NavigationHeaderProps {
   title: string;
@@ -12,6 +23,29 @@ interface NavigationHeaderProps {
 export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
   const router = useRouter();
   const globalStyles = useGlobalStyles()
+
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = withRepeat(withTiming(3, { duration: 9000 }), -1, true);
+  }, []);
+
+  const animatedProps = useAnimatedProps(() => {
+    const color1 = interpolateColor(
+      progress.value % 3,
+      [0, 1, 2, 3],
+      ['#2B7FFF', '#2A52BE', '#FFD700', '#2B7FFF']
+    );
+    const color2 = interpolateColor(
+      (progress.value + 1) % 3,
+      [0, 1, 2, 3],
+      ['#2A52BE', '#FFD700', '#2B7FFF', '#2A52BE']
+    );
+
+    return {
+      colors: [color1, color2] as [string, string],
+    };
+  });
 
   return (
     <View style={styles.headerContainer}>
@@ -27,11 +61,12 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
             <FontAwesome6 name="bolt" size={25} color='#2A52BE' />
           }
           >
-            <LinearGradient
-              colors={['#2A52BE', '#2B7FFF']}
+            <AnimatedLinearGradient
+              colors={['#2B7FFF', '#2A52BE']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gradient}
+              animatedProps={animatedProps}
             />
           </MaskedView>
         </TouchableOpacity>
