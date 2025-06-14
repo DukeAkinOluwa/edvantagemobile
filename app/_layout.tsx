@@ -61,6 +61,10 @@ export default function RootLayout() {
           <Stack.Screen name="chatroomscreen" options={{ headerShown: false }} />
           <Stack.Screen name="userProfileScreen" options={{ headerShown: false }} />
           <Stack.Screen name="gamificationPage" options={{ headerShown: false }} />
+          <Stack.Screen name="profile-page" options={{ headerShown: false }} />
+          <Stack.Screen name="settingsPage" options={{ headerShown: false }} />
+          <Stack.Screen name="faqsPage" options={{ headerShown: false }} />
+          <Stack.Screen name="termsAndConditions" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

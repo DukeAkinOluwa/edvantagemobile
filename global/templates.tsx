@@ -9,6 +9,8 @@ import { TouchableOpacity } from "react-native";
 
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 
+import { useRouter } from "expo-router";
+
 type ChatListCardProps = {
   id: string;
   name: string;
@@ -29,6 +31,11 @@ type resourceCardProps = {
     uploadedAt: string;
   };
 };
+
+type ProfilePageNavItem = {
+  name: string;
+  link: string;
+}
 
 const resourceCategoryIconMap: Record<string, string> = {
   video: 'video-camera',
@@ -187,6 +194,17 @@ export function EventCardTemplate(event: any) {
     )
 }
 
+export function ProfilePageNavListTemplate({ list }: { list: ProfilePageNavItem }){
+
+  const router = useRouter()
+  
+  return(
+    <TouchableOpacity onPress={() => router.push(list.link as any)} style={profilePageNavListTemplateStyles.option}>
+      <ThemedText>{list.name}</ThemedText>
+    </TouchableOpacity>
+  )
+}
+
 
 
 const eventCardStyles = StyleSheet.create({
@@ -256,3 +274,11 @@ const resourceCardStyles = StyleSheet.create({
     flexDirection: 'column',
   },
 });
+
+const profilePageNavListTemplateStyles = StyleSheet.create({
+  option: {
+    paddingVertical: 5,
+    borderBottomWidth: .5,
+    borderColor: 'rgba(17, 17, 17, 0.2)',
+  }
+})
