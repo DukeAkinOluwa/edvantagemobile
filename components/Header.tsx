@@ -1,9 +1,10 @@
+import profileImage from '@/assets/images/dummy/Titilayo.jpg';
 import { useGlobalStyles } from '@/styles/globalStyles';
 import { FontAwesome6 } from '@expo/vector-icons';
 import MaskedView from '@react-native-masked-view/masked-view';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface NavigationHeaderProps {
   title: string;
@@ -36,7 +37,10 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
           </MaskedView>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/profile-page')}>
-          <FontAwesome6 name="user-circle" size={25} color="#2A52BE" />
+          <Image
+            source={profileImage}
+            style={styles.avatar}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -64,5 +68,10 @@ const styles = StyleSheet.create({
   gradient: {
     width: 60,
     height: 60,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
 });
