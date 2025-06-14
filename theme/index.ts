@@ -5,7 +5,7 @@ export const MyLightTheme = {
   ...NavigationDefault,
   colors: {
     ...NavigationDefault.colors,
-    background: '#2a52be', // your custom background color
+    background: '#FAFBFD', // your custom background color
   },
 };
 
