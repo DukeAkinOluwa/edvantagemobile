@@ -54,6 +54,16 @@ export const useGlobalStyles = () => {
     },
     actionText: {
         color: "#2A52BE"
+    },
+    actionText2: {
+        color: "#FAFBFD"
+    },
+    button1: {
+      backgroundColor: colorSet.primary,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
     }
   });
 };

@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { EventCardTemplate } from '@/global/templates';
 import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
 import { useGlobalStyles } from '@/styles/globalStyles';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, Pressable, Switch, TextInput } from 'react-native';
 
@@ -14,6 +15,7 @@ export default function HomeScreen() {
 
   const globalStyles = useGlobalStyles()
   const { screenWidth } = useResponsiveDimensions();
+  const router = useRouter()
   
   const adjustedWidth = screenWidth - 30;
 
@@ -53,6 +55,7 @@ export default function HomeScreen() {
   const [endTime, setEndTime] = useState('');
   
   const handleSave = () => {
+
     if (!title || !description || !startTime || !endTime) {
       alert("All fields are required.");
       return;
@@ -70,7 +73,7 @@ export default function HomeScreen() {
       title,
       startTime, //: startTime.toLocaleTimeString(),
       endTime, //: endTime.toLocaleTimeString(),
-      location: isGroupEvent ? `Group ID: ${location}` : "Personal",
+      location: location,
     };
 
     setScheduleData(prev => [...prev, newEvent]);
@@ -117,9 +120,14 @@ export default function HomeScreen() {
             </Pressable>
           </ThemedView>
           <ThemedView style={styles.todaysTasksContent}>
-            {scheduleData.map(data => (
+            {scheduleData.slice(0, 4).map(data => (
               <EventCardTemplate key={data.title} event={data} />
             ))}
+            <Pressable style={globalStyles.button1} onPress={() => router.push('/schedule')}>
+              <ThemedText style={[globalStyles.mediumText, globalStyles.actionText2]}>
+                See All
+              </ThemedText>
+            </Pressable>
           </ThemedView>
         </ThemedView>
 
