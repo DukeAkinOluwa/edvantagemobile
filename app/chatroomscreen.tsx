@@ -62,7 +62,7 @@ export default function ChatRoomScreen() {
         contentContainerStyle={styles.messagesContainer}
         renderItem={({ item }) => (
           <ThemedView style={[styles.messageBubble, item.sender === 'me' ? styles.sent : styles.received]}>
-            <ThemedText style={globalStyles.smallText}>{item.text}</ThemedText>
+            <ThemedText style={globalStyles.baseText}>{item.text}</ThemedText>
           </ThemedView>
         )}
       />

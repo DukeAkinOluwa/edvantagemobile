@@ -3,7 +3,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { StyleSheet } from "react-native";
 
-import { FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 
@@ -118,9 +118,16 @@ export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
       <ThemedView>
         <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
       </ThemedView>
-      <ThemedText style={globalStyles.baseText}>
-        Likes: {file.likes} | Downloads: {file.downloads}
-      </ThemedText>
+      <ThemedView style={{gap: 15, alignItems: 'center', flexDirection: 'row'}}>
+        <ThemedView style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+          <FontAwesome name='heart' size={17} color={'red'} />
+        <ThemedText style={globalStyles.baseText}>{file.likes}</ThemedText>
+        </ThemedView>
+        <ThemedView style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
+          <FontAwesome6 name='download' size={17} color={'#2A52BE'} />
+          <ThemedText style={globalStyles.baseText}>{file.downloads}</ThemedText>
+        </ThemedView>
+      </ThemedView>
     </ThemedView>
   );
 };
@@ -147,7 +154,7 @@ export function ChatListCardTemplate({ chat }: { chat: ChatListCardProps }) {
                 <ThemedText style={globalStyles.semiMediumText}>
                     {chat.name}
                 </ThemedText>
-                <ThemedText style={globalStyles.smallText}>
+                <ThemedText style={globalStyles.baseText}>
                     {chat.message}
                 </ThemedText>
                 </ThemedView>
