@@ -16,7 +16,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FAFBFD"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.akinoluwa.edvantage.dev"
     },
     "web": {
       "bundler": "metro",
@@ -38,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3100679a-6ab4-40ee-8d0a-2961097a0972"
+      }
+    },
+    "owner": "akinoluwa"
   }
 }
