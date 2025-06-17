@@ -65,6 +65,7 @@ export default function RootLayout() {
           <Stack.Screen name="settingsPage" options={{ headerShown: false }} />
           <Stack.Screen name="faqsPage" options={{ headerShown: false }} />
           <Stack.Screen name="termsAndConditions" options={{ headerShown: false }} />
+          <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

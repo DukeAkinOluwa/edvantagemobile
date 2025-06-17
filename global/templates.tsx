@@ -4,7 +4,6 @@ import { useGlobalStyles } from "@/styles/globalStyles";
 import { StyleSheet } from "react-native";
 
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
 import { TouchableOpacity } from "react-native";
 
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
@@ -132,39 +131,33 @@ export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
   );
 };
 
-export function ChatListCardTemplate({ chat }: { chat: ChatListCardProps }) {
-    const globalStyles = useGlobalStyles();
-    const navigation = useNavigation<any>();
-    const { screenWidth } = useResponsiveDimensions();
+export function ChatListCardTemplate({ chat, onPress, }: { chat: ChatListCardProps; onPress: () => void; }) {
+  const globalStyles = useGlobalStyles();
+  const { screenWidth } = useResponsiveDimensions();
 
-    const boundaryWidth = screenWidth - 20; // Adjusted for padding/margin
+  const boundaryWidth = screenWidth - 20; // Adjusted for padding/margin
 
-    const chatStyles = StyleSheet.create({
-        chatCard: {
-            width: boundaryWidth - 20,
-        }
-    })
+  const chatStyles = StyleSheet.create({
+    chatCard: {
+      width: boundaryWidth - 20,
+    },
+  });
 
-    return (
-        <TouchableOpacity
-        onPress={() => navigation.navigate('chatroomscreen', { chatId: chat.id, chatName: chat.name })}
-        >
-            <ThemedView style={[chatListCardTemplateStyles.chatCard, chatStyles.chatCard]}>
-                <ThemedView style={chatListCardTemplateStyles.chatDetails}>
-                <ThemedText style={globalStyles.semiMediumText}>
-                    {chat.name}
-                </ThemedText>
-                <ThemedText style={globalStyles.baseText}>
-                    {chat.message}
-                </ThemedText>
-                </ThemedView>
-                <ThemedText style={[globalStyles.smallText, chatListCardTemplateStyles.chatTime]}>
-                {chat.time}
-                </ThemedText>
-            </ThemedView>
-        </TouchableOpacity>
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <ThemedView style={[chatListCardTemplateStyles.chatCard, chatStyles.chatCard]}>
+        <ThemedView style={chatListCardTemplateStyles.chatDetails}>
+          <ThemedText style={globalStyles.semiMediumText}>{chat.name}</ThemedText>
+          <ThemedText style={globalStyles.baseText}>{chat.message}</ThemedText>
+        </ThemedView>
+        <ThemedText style={[globalStyles.smallText, chatListCardTemplateStyles.chatTime]}>
+          {chat.time}
+        </ThemedText>
+      </ThemedView>
+    </TouchableOpacity>
   );
 }
+
 
 export function EventCardTemplate(event: any) {
 

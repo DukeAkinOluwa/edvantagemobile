@@ -9,9 +9,12 @@ import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
 
 import { SearchBar } from '@/global/components';
 import { ChatListCardTemplate } from '@/global/templates';
+import { useRouter } from 'expo-router';
 
 
 export default function ChatScreen() {
+
+    const router = useRouter();
     
     const { screenHeight, screenWidth} = useResponsiveDimensions()
 
@@ -60,7 +63,7 @@ export default function ChatScreen() {
 
             <ThemedView style={styles.chatListContainer}>
             {filteredChats.map(chat => (
-                <ChatListCardTemplate key={chat.id} chat={chat} />
+                <ChatListCardTemplate key={chat.id} chat={chat} onPress={() => router.push(`/chat/${chat.id}`)} />
             ))}
             </ThemedView>
         </ParallaxScrollView>
