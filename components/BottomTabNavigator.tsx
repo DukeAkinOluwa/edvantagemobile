@@ -1,7 +1,7 @@
 import { FontAwesome6 } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 import ChatListScreen from '@/app/(tabs)/chatlistscreen';
 import ExploreScreen from '@/app/(tabs)/explore';
@@ -11,6 +11,7 @@ import ScheduleScreen from '@/app/(tabs)/schedule';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemedView } from './ThemedView';
 
 const Tab = createBottomTabNavigator();
 
@@ -18,8 +19,14 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const theme = useColorScheme() ?? 'light';
   const colorSet = Colors[theme];
 
+  const dynamicStyles = StyleSheet.create({
+    tabBarContainer: {
+      shadowColor: theme === 'light' ? '#000' : '#FFF',
+    }
+  })
+
   return (
-    <View style={styles.tabBarContainer}>
+    <ThemedView style={[styles.tabBarContainer, dynamicStyles.tabBarContainer]}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label = options.title ?? route.name;
@@ -62,7 +69,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
           </TouchableOpacity>
         );
       })}
-    </View>
+    </ThemedView>
   );
 };
 
@@ -90,11 +97,9 @@ const styles = StyleSheet.create({
     height: 70,
     paddingBottom: Platform.OS === 'ios' ? 20 : 10,
     paddingTop: 5,
-    backgroundColor: 'rgba(255,255,255,0.95)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: -3 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
