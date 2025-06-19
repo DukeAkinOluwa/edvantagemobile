@@ -8,7 +8,23 @@ import React, { useState } from 'react';
 import { Alert, Platform, Pressable, StyleSheet, Switch, TextInput } from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
 
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+
 export default function userProfileSettingsPage() {
+    const deviceTheme = useColorScheme() ?? 'light';
+    const colorSet = Colors[deviceTheme];
+    type ThemeSetting = 'light' | 'dark' | 'system';
+    const [themeSetting, setThemeSetting] = useState<ThemeSetting>('system');
+    const effectiveTheme = themeSetting === 'system' ? deviceTheme ?? 'light' : themeSetting;
+
+    console.log(effectiveTheme)
+
+  const dynamicStyles = StyleSheet.create({
+    tabBarContainer: {
+      shadowColor: effectiveTheme === 'light' ? '#000' : '#FFF',
+    }
+  })
 
     const { screenHeight, screenWidth } = useResponsiveDimensions()
     const globalStyles = useGlobalStyles()
@@ -50,12 +66,11 @@ export default function userProfileSettingsPage() {
     };
 
     // APPEARANCE
-    const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const [language, setLanguage] = useState('english');
 
     const toggleTheme = () => {
-        const newTheme = theme === 'light' ? 'dark' : 'light';
-        setTheme(newTheme);
+        const newTheme = effectiveTheme === 'light' ? 'dark' : 'light';
+        setThemeSetting(newTheme);
         alert(`${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`);
     };
 
@@ -171,10 +186,17 @@ export default function userProfileSettingsPage() {
             {/* APPEARANCE */}
             <ThemedView style={responsiveStyles.card}>
                 <ThemedText style={[styles.sectionTitle, globalStyles.semiLargeText]}>Appearance Settings</ThemedText>
-                <ThemedView style={[styles.row, responsiveStyles.row]}>
-                <ThemedText style={styles.label}>Theme: {theme === 'dark' ? 'Dark' : 'Light'} Mode</ThemedText>
-                <Switch value={theme === 'dark'} onValueChange={toggleTheme} />
-                </ThemedView>
+                <RNPickerSelect
+                    onValueChange={(value: ThemeSetting) => setThemeSetting(value)}
+                    value={themeSetting}
+                    items={[
+                        { label: 'System Default', value: 'system' },
+                        { label: 'Light', value: 'light' },
+                        { label: 'Dark', value: 'dark' }
+                    ]}
+                    placeholder={{ label: 'Choose Theme', value: null }}
+                    style={pickerStyles}
+                />
 
                 <ThemedText style={[styles.label, { marginTop: 20 }]}>Language</ThemedText>
                 <RNPickerSelect
