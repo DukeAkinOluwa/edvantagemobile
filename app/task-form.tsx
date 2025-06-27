@@ -109,6 +109,15 @@ const TaskForm: React.FC = () => {
     setShowEndDatePicker(true);
   };
 
+  const formatTimeToAMPM = (date: Date): string => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert 0 or 12 to 12 for 12-hour format
+    const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
   const handleSubmit = async () => {
     if (
       !title.trim() ||
@@ -127,6 +136,9 @@ const TaskForm: React.FC = () => {
       return;
     }
 
+    const startTimeAMPM = formatTimeToAMPM(startTime);
+    const endTimeAMPM = formatTimeToAMPM(endTime);
+
     const task = {
       id: Date.now().toString(),
       title,
@@ -136,6 +148,8 @@ const TaskForm: React.FC = () => {
       isGroupEvent,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
+      startTimeAMPM,
+      endTimeAMPM,
     };
 
     const tasks = (await getData("tasks")) || [];

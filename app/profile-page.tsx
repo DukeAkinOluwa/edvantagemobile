@@ -63,7 +63,7 @@ export default function ProfilePage() {
                 },
               ]}
             >
-              Name: {userData.firstName || ""} {userData.lastName || ""}
+              {userData.firstName || ""} {userData.lastName || ""}
             </Text>
             <Text
               style={[

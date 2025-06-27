@@ -38,6 +38,8 @@ interface Task {
   isGroupEvent: boolean;
   startTime: string;
   endTime: string;
+  startTimeAMPM: string; // Added AM/PM time
+  endTimeAMPM: string; // Added AM/PM time
 }
 
 export default function HomeScreen() {
@@ -79,6 +81,15 @@ export default function HomeScreen() {
     return () => subscription.remove();
   }, [themeMode]);
 
+  const formatTimeToAMPM = (date: Date): string => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes();
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12; // Convert 0 or 12 to 12 for 12-hour format
+    const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
   const handleStartDateChange = (event: any, selected: Date | undefined) => {
     setShowStartDatePicker(Platform.OS === "ios");
     if (selected) {
@@ -107,6 +118,9 @@ export default function HomeScreen() {
       return;
     }
 
+    const startTimeAMPM = formatTimeToAMPM(startTime);
+    const endTimeAMPM = formatTimeToAMPM(endTime);
+
     const newTask = {
       id: Date.now().toString(),
       title,
@@ -116,6 +130,8 @@ export default function HomeScreen() {
       isGroupEvent,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
+      startTimeAMPM,
+      endTimeAMPM,
     };
 
     const tasks = (await getData("tasks")) || [];
@@ -179,17 +195,20 @@ export default function HomeScreen() {
       ]}
     >
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <View>
-          <Text> Event</Text>
-          <Text> {item.title}</Text>
+        <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Text>Event</Text>
+          <Text>{item.title}</Text>
         </View>
-        <View>
-          <Text> Time</Text>
-          <Text>Start Time</Text>
+        <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Text>Time</Text>
+          <Text>
+            {item.startTimeAMPM} - {item.endTimeAMPM}
+          </Text>
+          {/* Updated to display startTimeAMPM */}
         </View>
-        <View>
-          <Text> Location</Text>
-          <Text> {item.location}</Text>
+        <View style={{ justifyContent: "center", alignItems: "center" }}>
+          <Text>Location</Text>
+          <Text>{item.location}</Text>
         </View>
       </View>
       <Button

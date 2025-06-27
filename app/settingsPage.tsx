@@ -7,6 +7,7 @@ import { useGlobalStyles } from "@/styles/globalStyles";
 import React, { useEffect, useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -246,6 +247,19 @@ export default function userProfileSettingsPage() {
       <NavigationHeader title="Settings" />
       <ParallaxScrollView>
         <ThemedView style={{ gap: 20, paddingVertical: 10 }}>
+          <View style={styles.profilePicContainer}>
+            <Image
+              source={{ uri: profilePic || "https://via.placeholder.com/100" }}
+              style={styles.profilePic}
+            />
+            <ThemedView style={globalStyles.button1}>
+              <Pressable onPress={pickImage}>
+                <ThemedText style={globalStyles.actionText2}>
+                  Choose Profile Image
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
+          </View>
           {/* PROFILE */}
           <ThemedView style={responsiveStyles.card}>
             <ThemedText style={[styles.title, globalStyles.semiLargeText]}>
@@ -339,7 +353,7 @@ export default function userProfileSettingsPage() {
               multiline
             />
             <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={saveProfileChanges}>
+              <Pressable onPress={handleSave}>
                 <ThemedText style={globalStyles.actionText2}>
                   Save Changes
                 </ThemedText>
@@ -404,7 +418,7 @@ export default function userProfileSettingsPage() {
               style={pickerStyles}
             />
             <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={saveAppearance}>
+              <Pressable onPress={handleSave}>
                 <ThemedText style={globalStyles.actionText2}>
                   Save Preferences
                 </ThemedText>
