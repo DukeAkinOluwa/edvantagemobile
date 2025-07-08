@@ -1,54 +1,170 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, Platform, Pressable, StyleSheet, Switch, TextInput } from 'react-native';
-import RNPickerSelect from 'react-native-picker-select';
+import { NavigationHeader } from "@/components/Header";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
+import { useGlobalStyles } from "@/styles/globalStyles";
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import RNPickerSelect from "react-native-picker-select";
 
-import { NavigationHeader } from '@/components/Header';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
-import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
-import { useGlobalStyles } from '@/styles/globalStyles';
+import { useTheme, useUserData } from "@/components/Header";
+import { Colors } from "@/constants/Colors";
+import { useColorScheme } from "@/hooks/useColorScheme";
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+import { getData } from "../utils/storage";
 
-import { useThemeContext } from '@/context/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+export default function userProfileSettingsPage() {
+  const { theme, setThemeMode } = useTheme();
+  const { userData, setUserData } = useUserData();
+  const [firstName, setFirstName] = useState(userData.firstName || "");
+  const [lastName, setLastName] = useState(userData.lastName || "");
+  const [email, setEmail] = useState(userData.email || "");
+  const [university, setUniversity] = useState(userData.university || "");
+  const [bio, setBio] = useState(userData.bio || "");
+  const [dob, setDob] = useState(
+    userData.dob ? new Date(userData.dob) : new Date()
+  );
+  const [showDobPicker, setShowDobPicker] = useState(false);
+  const [gender, setGender] = useState(userData.gender || "");
+  const [profilePic, setProfilePic] = useState<string | undefined>(
+    userData.profilePic
+  );
+  const [course, setCourse] = useState(userData.course || "");
+  const [level, setLevel] = useState(userData.level || "100");
+  const [localThemeMode, setLocalThemeMode] = useState(
+    userData.themeMode || "system"
+  );
+  const [allowNotifications, setAllowNotifications] = useState(
+    userData.allowNotifications !== false
+  );
+  const [allowAlarms, setAllowAlarms] = useState(
+    userData.allowAlarms !== false
+  );
 
-type ThemeSetting = 'light' | 'dark' | 'system';
+  useEffect(() => {
+    const loadData = async () => {
+      const savedUserData = await getData("userData");
+      if (savedUserData) {
+        setFirstName(savedUserData.firstName || "");
+        setLastName(savedUserData.lastName || "");
+        setEmail(savedUserData.email || "");
+        setUniversity(savedUserData.university || "");
+        setBio(savedUserData.bio || "");
+        setDob(savedUserData.dob ? new Date(savedUserData.dob) : new Date());
+        setGender(savedUserData.gender || "");
+        setProfilePic(savedUserData.profilePic || undefined);
+        setCourse(savedUserData.course || "");
+        setLevel(savedUserData.level || "100");
+        setLocalThemeMode(savedUserData.themeMode || "system");
+        setAllowNotifications(savedUserData.allowNotifications !== false);
+        setAllowAlarms(savedUserData.allowAlarms !== false);
+        setThemeMode(savedUserData.themeMode || "system");
+      }
+    };
+    loadData();
+  }, []);
 
-const notificationItems = [
-  { label: 'Email Notifications', key: 'emailNotifications' },
-  { label: 'Push Notifications', key: 'pushNotifications' },
-  { label: 'Task Reminders', key: 'taskReminders' },
-  { label: 'Event Alerts', key: 'eventAlerts' },
-  { label: 'Group Messages', key: 'groupMessages' },
-  { label: 'Achievement Alerts', key: 'achievementAlerts' },
-] as const;
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission denied",
+        "Allow access to select a profile picture."
+      );
+      return;
+    }
 
-const privacyItems = [
-  { label: 'Show Online Status', key: 'showOnlineStatus' },
-  { label: 'Profile Visible to Groups', key: 'showProfileToGroups' },
-  { label: 'Allow Friend Requests', key: 'allowFriendRequests' },
-  { label: 'Allow Data Collection', key: 'dataCollection' },
-] as const;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
 
-export default function UserProfileSettingsPage() {
-  const { screenWidth } = useResponsiveDimensions();
-  const globalStyles = useGlobalStyles();
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setProfilePic(uri);
+    }
+  };
 
-  const { themeSetting, setThemeSetting, resolvedTheme } = useThemeContext();
-  const effectiveTheme = resolvedTheme;
-  const colorSet = Colors[effectiveTheme] || Colors.light;
+  const handleSave = async () => {
+    const newUserData = {
+      firstName: firstName.trim() || undefined,
+      lastName: lastName.trim() || undefined,
+      email: email.trim() || undefined,
+      university: university.trim() || undefined,
+      bio: bio.trim() || undefined,
+      dob: dob.toISOString(),
+      gender: gender.trim() || undefined,
+      profilePic,
+      course: course.trim() || undefined,
+      level: level || undefined,
+      themeMode: localThemeMode,
+      allowNotifications,
+      allowAlarms,
+    };
 
-  const [language, setLanguage] = useState('english');
-  const [profileData, setProfileData] = useState({
-    name: '',
-    email: '',
-    university: '',
-    department: '',
-    level: '',
-    bio: '',
+    try {
+      await setUserData(newUserData);
+      setThemeMode(localThemeMode as "system" | "light" | "dark");
+      Alert.alert("Success", "Settings saved!");
+    } catch (error) {
+      Alert.alert("Error", "Failed to save settings.");
+      console.error("Save error:", error);
+    }
+  };
+
+  /////////////////////////////////////////////////////////////
+  const deviceTheme = useColorScheme() ?? "light";
+  const colorSet = Colors[deviceTheme];
+  type ThemeSetting = "light" | "dark" | "system";
+  const [themeSetting, setThemeSetting] = useState<ThemeSetting>("system");
+  const effectiveTheme =
+    themeSetting === "system" ? deviceTheme ?? "light" : themeSetting;
+
+  console.log(effectiveTheme);
+
+  const dynamicStyles = StyleSheet.create({
+    tabBarContainer: {
+      shadowColor: effectiveTheme === "light" ? "#000" : "#FFF",
+    },
   });
 
+  const { screenHeight, screenWidth } = useResponsiveDimensions();
+  const globalStyles = useGlobalStyles();
+
+  // PROFILE
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+    university: "",
+    department: "",
+    level: "",
+    bio: "",
+  });
+
+  const handleProfileChange = (field: string, value: string) => {
+    setProfileData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const saveProfileChanges = () => {
+    alert("Profile updated successfully!");
+  };
+
+  // NOTIFICATIONS
   const [notificationSettings, setNotificationSettings] = useState({
     emailNotifications: true,
     pushNotifications: true,
@@ -58,6 +174,30 @@ export default function UserProfileSettingsPage() {
     achievementAlerts: true,
   });
 
+  const toggleNotification = (key: keyof typeof notificationSettings) => {
+    setNotificationSettings((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const saveNotification = () => {
+    alert("Notification preferences saved.");
+  };
+
+  // APPEARANCE
+  const [language, setLanguage] = useState("english");
+
+  const toggleTheme = () => {
+    const newTheme = effectiveTheme === "light" ? "dark" : "light";
+    setThemeSetting(newTheme);
+    alert(
+      `${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`
+    );
+  };
+
+  const saveAppearance = () => {
+    alert("Appearance preferences saved.");
+  };
+
+  // PRIVACY
   const [privacy, setPrivacy] = useState({
     showOnlineStatus: true,
     showProfileToGroups: true,
@@ -65,203 +205,263 @@ export default function UserProfileSettingsPage() {
     dataCollection: true,
   });
 
-  const handleProfileChange = (field: string, value: string) =>
-    setProfileData((prev) => ({ ...prev, [field]: value }));
+  const togglePrivacy = (key: keyof typeof privacy) => {
+    setPrivacy((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
-  const toggleSetting = (key: string, setter: React.Dispatch<any>) =>
-    setter((prev: any) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+  const exportData = () => {
+    Alert.alert("Data Export", "Your data export has been initiated.");
+  };
 
-  const saveMessage = (msg: string) => () => Alert.alert('Info', msg);
-
-  const exportData = () =>
-    Alert.alert('Data Export', 'Your data export has been initiated.');
+  const savePrivacy = () => {
+    alert("Privacy settings saved.");
+  };
 
   const responsiveStyles = StyleSheet.create({
-    input: { width: screenWidth - 50 },
-    row: { width: screenWidth - 50 },
+    input: {
+      width: screenWidth - 20 - 10 - 20,
+    },
+    row: {
+      width: screenWidth - 20 - 10 - 20,
+    },
     card: {
-      width: screenWidth - 23,
+      width: screenWidth - 20 - 3,
       gap: 10,
       borderRadius: 8,
       paddingHorizontal: 15,
       paddingVertical: 20,
-      shadowColor: '#000',
+
+      // iOS shadow
+      shadowColor: "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
+
+      // Android shadow
       elevation: 4,
     },
   });
-
-  const renderToggleRow = (
-    label: string,
-    value: boolean,
-    onToggle: () => void
-  ) => (
-    <ThemedView style={[styles.row, responsiveStyles.row]}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
-      <Switch value={value} onValueChange={onToggle} />
-    </ThemedView>
-  );
-
-  useEffect(() => {
-    const loadThemeSetting = async () => {
-      try {
-        const savedTheme = await AsyncStorage.getItem('themeSetting');
-        if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system') {
-          setThemeSetting(savedTheme);
-        }
-      } catch (e) {
-        console.error('Failed to load theme setting', e);
-      }
-    };
-    loadThemeSetting();
-  }, []);
-
-  useEffect(() => {
-    const saveThemeSetting = async () => {
-      try {
-        await AsyncStorage.setItem('themeSetting', themeSetting);
-      } catch (e) {
-        console.error('Failed to save theme setting', e);
-      }
-    };
-    saveThemeSetting();
-  }, [themeSetting]);
 
   return (
     <ThemedView style={{ flex: 1, gap: 10 }}>
       <NavigationHeader title="Settings" />
       <ParallaxScrollView>
         <ThemedView style={{ gap: 20, paddingVertical: 10 }}>
-
+          <View style={styles.profilePicContainer}>
+            <Image
+              source={{ uri: profilePic || "https://via.placeholder.com/100" }}
+              style={styles.profilePic}
+            />
+            <ThemedView style={globalStyles.button1}>
+              <Pressable onPress={pickImage}>
+                <ThemedText style={globalStyles.actionText2}>
+                  Choose Profile Image
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
+          </View>
           {/* PROFILE */}
           <ThemedView style={responsiveStyles.card}>
-            <ThemedText style={[styles.title, globalStyles.semiLargeText]}>Profile Information</ThemedText>
+            <ThemedText style={[styles.title, globalStyles.semiLargeText]}>
+              Profile Information
+            </ThemedText>
 
-            {[
-              { placeholder: 'Full Name', field: 'name' },
-              { placeholder: 'Email Address', field: 'email', keyboardType: 'email-address' },
-              { placeholder: 'University/Institution', field: 'university' },
-              { placeholder: 'Department', field: 'department' },
-            ].map(({ placeholder, field, keyboardType = 'default' }) => (
-              <TextInput
-                key={field}
-                placeholder={placeholder}
-                value={profileData[field as keyof typeof profileData] ?? ''}
-                keyboardType={keyboardType as any}
-                style={[styles.input, responsiveStyles.input, globalStyles.baseText]}
-                onChangeText={(text) => handleProfileChange(field, text)}
-              />
-            ))}
-
-            <RNPickerSelect
-              onValueChange={(value) => handleProfileChange('level', value)}
-              placeholder={{ label: 'Select your level', value: null }}
-              items={[
-                { label: '100 Level', value: '100 Level' },
-                { label: '200 Level', value: '200 Level' },
-                { label: '300 Level', value: '300 Level' },
-                { label: '400 Level', value: '400 Level' },
-                { label: '500 Level', value: '500 Level' },
-                { label: 'Postgraduate', value: 'Postgraduate' },
+            <TextInput
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
               ]}
-              value={profileData.level}
-              style={pickerStyles}
+              placeholder="First Name"
+              placeholderTextColor={theme.border}
+              value={firstName}
+              onChangeText={setFirstName}
+            />
+            <TextInput
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
+              ]}
+              placeholder="Last Name"
+              placeholderTextColor={theme.border}
+              value={lastName}
+              onChangeText={setLastName}
             />
 
             <TextInput
-              style={[styles.input, responsiveStyles.input, globalStyles.baseText]}
-              placeholder="Bio"
-              value={profileData.bio ?? ''}
-              multiline
-              onChangeText={(text) => handleProfileChange('bio', text)}
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
+              ]}
+              keyboardType="email-address"
+              placeholder="Email Address"
+              placeholderTextColor={theme.border}
+              value={email}
+              onChangeText={setEmail}
+            />
+            <TextInput
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
+              ]}
+              placeholder="University/Institution"
+              placeholderTextColor={theme.border}
+              value={university}
+              onChangeText={setUniversity}
+            />
+            <TextInput
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
+              ]}
+              placeholder="Department"
+              placeholderTextColor={theme.border}
+              value={course}
+              onChangeText={setCourse}
             />
 
+            <Picker
+              selectedValue={level}
+              onValueChange={setLevel}
+              style={[
+                styles.picker,
+                { color: theme.text, backgroundColor: theme.background },
+              ]}
+              dropdownIconColor={theme.text}
+            >
+              {["100", "200", "300", "400", "500", "Postgraduate"].map(
+                (lvl) => (
+                  <Picker.Item key={lvl} label={`${lvl} Level`} value={lvl} />
+                )
+              )}
+            </Picker>
+
+            <TextInput
+              style={[
+                styles.input,
+                responsiveStyles.input,
+                globalStyles.baseText,
+              ]}
+              placeholder="Bio"
+              placeholderTextColor={theme.border}
+              value={bio}
+              onChangeText={setBio}
+              multiline
+            />
             <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={saveMessage('Profile updated successfully!')}>
-                <ThemedText style={globalStyles.actionText2}>Save Changes</ThemedText>
+              <Pressable onPress={handleSave}>
+                <ThemedText style={globalStyles.actionText2}>
+                  Save Changes
+                </ThemedText>
               </Pressable>
             </ThemedView>
           </ThemedView>
 
           {/* NOTIFICATIONS */}
           <ThemedView style={responsiveStyles.card}>
-            <ThemedText style={[styles.sectionTitle, globalStyles.semiLargeText]}>
+            <ThemedText
+              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+            >
               Notification Preferences
             </ThemedText>
-            {notificationItems.map(({ label, key }) =>
-              renderToggleRow(label, notificationSettings[key], () =>
-                toggleSetting(key, setNotificationSettings)
-              )
-            )}
-            <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={saveMessage('Notification preferences saved.')}>
-                <ThemedText style={globalStyles.actionText2}>Save Preferences</ThemedText>
-              </Pressable>
-            </ThemedView>
+            <View style={styles.switchContainer}>
+              <Text style={styles.label}>Enable Notifications</Text>
+              <Switch
+                value={allowNotifications}
+                onValueChange={setAllowNotifications}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={theme.background}
+              />
+            </View>
           </ThemedView>
 
           {/* APPEARANCE */}
           <ThemedView style={responsiveStyles.card}>
-            <ThemedText style={[styles.sectionTitle, globalStyles.semiLargeText]}>
+            <ThemedText
+              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+            >
               Appearance Settings
             </ThemedText>
-
-            <RNPickerSelect
-              onValueChange={(value: ThemeSetting) => setThemeSetting(value)}
-              value={themeSetting}
-              items={[
-                { label: 'System Default', value: 'system' },
-                { label: 'Light', value: 'light' },
-                { label: 'Dark', value: 'dark' },
+            <Picker
+              selectedValue={localThemeMode}
+              onValueChange={(value) =>
+                setLocalThemeMode(value as "system" | "light" | "dark")
+              }
+              style={[
+                styles.picker,
+                { color: theme.text, backgroundColor: theme.background },
               ]}
-              style={pickerStyles}
-            />
+              dropdownIconColor={theme.text}
+            >
+              <Picker.Item label="System Default" value="system" />
+              <Picker.Item label="Light Mode" value="light" />
+              <Picker.Item label="Dark Mode" value="dark" />
+            </Picker>
 
-            <ThemedText style={[styles.label, { marginTop: 20 }]}>Language</ThemedText>
+            <ThemedText style={[styles.label, { marginTop: 20 }]}>
+              Language
+            </ThemedText>
             <RNPickerSelect
-              onValueChange={setLanguage}
+              onValueChange={(value) => setLanguage(value)}
               value={language}
-              placeholder={{ label: 'Select language', value: null }}
+              placeholder={{ label: "Select language", value: null }}
               items={[
-                { label: 'English', value: 'english' },
-                { label: 'Yoruba', value: 'yoruba' },
-                { label: 'Hausa', value: 'hausa' },
-                { label: 'Igbo', value: 'igbo' },
+                { label: "English", value: "english" },
+                { label: "Yoruba", value: "yoruba" },
+                { label: "Hausa", value: "hausa" },
+                { label: "Igbo", value: "igbo" },
               ]}
               style={pickerStyles}
             />
-
             <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={saveMessage('Appearance preferences saved.')}>
-                <ThemedText style={globalStyles.actionText2}>Save Preferences</ThemedText>
+              <Pressable onPress={handleSave}>
+                <ThemedText style={globalStyles.actionText2}>
+                  Save Preferences
+                </ThemedText>
               </Pressable>
             </ThemedView>
           </ThemedView>
 
           {/* PRIVACY */}
           <ThemedView style={responsiveStyles.card}>
-            <ThemedText style={[styles.sectionTitle, globalStyles.semiLargeText]}>
+            <ThemedText
+              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+            >
               Privacy Settings
             </ThemedText>
-            {privacyItems.map(({ label, key }) =>
-              renderToggleRow(label, privacy[key], () => toggleSetting(key, setPrivacy))
-            )}
+            {[
+              ["Show Online Status", "showOnlineStatus"],
+              ["Profile Visible to Groups", "showProfileToGroups"],
+              ["Allow Friend Requests", "allowFriendRequests"],
+              ["Allow Data Collection", "dataCollection"],
+            ].map(([label, key]) => (
+              <ThemedView key={key} style={[styles.row, responsiveStyles.row]}>
+                <ThemedText style={styles.label}>{label}</ThemedText>
+                <Switch
+                  value={privacy[key as keyof typeof privacy]}
+                  onValueChange={() => togglePrivacy(key as any)}
+                />
+              </ThemedView>
+            ))}
           </ThemedView>
 
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={exportData}>
-              <ThemedText style={globalStyles.actionText2}>Download Your Data</ThemedText>
+              <ThemedText style={globalStyles.actionText2}>
+                Download Your Data
+              </ThemedText>
             </Pressable>
           </ThemedView>
           <ThemedView style={globalStyles.button1}>
-            <Pressable onPress={saveMessage('Privacy settings saved.')}>
-              <ThemedText style={globalStyles.actionText2}>Save Privacy Settings</ThemedText>
-            </Pressable>
+            <TouchableOpacity onPress={handleSave}>
+              <ThemedText style={globalStyles.actionText2}>
+                Save Privacy Settings
+              </ThemedText>
+            </TouchableOpacity>
           </ThemedView>
         </ThemedView>
       </ParallaxScrollView>
@@ -271,20 +471,62 @@ export default function UserProfileSettingsPage() {
 
 const styles = StyleSheet.create({
   title: { marginBottom: 16, marginTop: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: '600', marginVertical: 20 },
+  sectionTitle: { fontSize: 18, fontWeight: "600", marginVertical: 20 },
   input: {
     borderWidth: 0.5,
-    borderColor: 'rgba(17, 17, 17, 0.2)',
+    borderColor: "rgba(17, 17, 17, 0.2)",
+    borderStyle: "solid",
     borderRadius: 6,
-    padding: Platform.OS === 'ios' ? 12 : 10,
+    padding: Platform.OS === "ios" ? 12 : 10,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   label: {
     fontSize: 16,
+  },
+
+  scrollContainer: {
+    flex: 1,
+  },
+  contentContainer: {
+    paddingBottom: 20,
+  },
+  container: {
+    padding: 20,
+  },
+  input1: {
+    borderWidth: 1,
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+  profilePicContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 10,
+  },
+  picker: {
+    height: 50,
+    width: "100%",
+  },
+  label1: {
+    fontSize: 16,
+    marginVertical: 10,
+    textAlign: "center",
+  },
+  switchContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginVertical: 10,
   },
 });
 
@@ -294,9 +536,9 @@ const pickerStyles = {
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: "gray",
     borderRadius: 6,
-    color: 'black',
+    color: "black",
     paddingRight: 30,
     marginBottom: 12,
   },
@@ -305,9 +547,9 @@ const pickerStyles = {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: 'gray',
+    borderColor: "gray",
     borderRadius: 6,
-    color: 'black',
+    color: "black",
     paddingRight: 30,
     marginBottom: 12,
   },

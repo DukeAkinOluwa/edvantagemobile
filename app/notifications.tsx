@@ -1,8 +1,8 @@
-import { NavigationHeader, useTheme } from "@/components/Header";
+import { cancelNotification } from "@/utils/notifications";
+import { getData, saveData } from "@/utils/storage";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Button, FlatList, StyleSheet, Text, View } from "react-native";
-import { cancelNotification } from "../utils/notifications";
-import { getData, saveData } from "../utils/storage";
+import { useTheme } from "./_layout";
 
 interface NotificationRecord {
   id: string;
@@ -109,7 +109,6 @@ export default function NotificationsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <NavigationHeader title="Notifications" />
       {notifications.length === 0 ? (
         <Text style={[styles.noNotifications, { color: theme.text }]}>
           No notifications yet.

@@ -8,10 +8,42 @@
     "scheme": "edvantagemobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#007AFF"
+    },
     "ios": {
-      "supportsTablet": true
+      "NSPhotoLibraryUsageDescription": "Allow access to select a profile picture.",
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["audio"]
+      }
     },
     "android": {
+      "notification": {
+        "icon": "./assets/notification-icon.png",
+        "color": "#007AFF",
+        "channels": [
+          {
+            "id": "alarms",
+            "name": "Alarms",
+            "sound": true,
+            "priority": "max"
+          },
+          {
+            "id": "notifications",
+            "name": "Notifications",
+            "sound": true,
+            "priority": "default"
+          }
+        ]
+      },
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.VIBRATE",
+        "android.permission.WAKE_LOCK"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FAFBFD"
@@ -25,6 +57,14 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#007AFF",
+          "sounds": []
+        }
+      ],
       "expo-router",
       [
         "expo-splash-screen",
