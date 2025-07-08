@@ -1,4 +1,5 @@
-import { ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider as AppThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 
 
 import * as Font from 'expo-font';
@@ -9,16 +10,40 @@ import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 import { MyDarkTheme, MyLightTheme } from '@/theme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const [themeSetting, setThemeSetting] = useState<'light' | 'dark' | 'system'>('system');
+  const [currentTheme, setCurrentTheme] = useState<'light' | 'dark'>('light');
   
   const [fontsLoaded, setFontsLoaded] = useState(false);
   
+  useEffect(() => {
+    const loadTheme = async () => {
+      const savedTheme = await AsyncStorage.getItem('themeSetting');
+      const theme = savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system' ? savedTheme : 'system';
+      setThemeSetting(theme);
+
+      const systemTheme = Appearance.getColorScheme() ?? 'light';
+      setCurrentTheme(theme === 'system' ? systemTheme : theme);
+    };
+
+    loadTheme();
+
+    // Listen for changes in system theme if 'system' is selected
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      if (themeSetting === 'system') {
+        setCurrentTheme(colorScheme ?? 'light');
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     async function loadFonts() {
@@ -54,21 +79,23 @@ export default function RootLayout() {
 
   return (
     <SafeAreaView style={{flex: 1,}}>
-      <ThemeProvider value={colorScheme === 'dark' ? MyDarkTheme : MyLightTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-          <Stack.Screen name="chatroomscreen" options={{ headerShown: false }} />
-          <Stack.Screen name="userProfileScreen" options={{ headerShown: false }} />
-          <Stack.Screen name="gamificationPage" options={{ headerShown: false }} />
-          <Stack.Screen name="profile-page" options={{ headerShown: false }} />
-          <Stack.Screen name="settingsPage" options={{ headerShown: false }} />
-          <Stack.Screen name="faqsPage" options={{ headerShown: false }} />
-          <Stack.Screen name="termsAndConditions" options={{ headerShown: false }} />
-          <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <AppThemeProvider>
+        <NavThemeProvider value={currentTheme === 'dark' ? MyDarkTheme : MyLightTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+            <Stack.Screen name="chatroomscreen" options={{ headerShown: false }} />
+            <Stack.Screen name="userProfileScreen" options={{ headerShown: false }} />
+            <Stack.Screen name="gamificationPage" options={{ headerShown: false }} />
+            <Stack.Screen name="profile-page" options={{ headerShown: false }} />
+            <Stack.Screen name="settingsPage" options={{ headerShown: false }} />
+            <Stack.Screen name="faqsPage" options={{ headerShown: false }} />
+            <Stack.Screen name="termsAndConditions" options={{ headerShown: false }} />
+            <Stack.Screen name="chat/[chatId]" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="auto" />
+        </NavThemeProvider>
+      </AppThemeProvider>
     </SafeAreaView>
   );
 }
