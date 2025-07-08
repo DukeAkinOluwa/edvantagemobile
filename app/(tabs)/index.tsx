@@ -188,34 +188,31 @@ export default function HomeScreen() {
       style={[
         styles.taskItem,
         {
-          backgroundColor: theme.background,
-          borderColor: theme.border,
-          gap: 13,
+          // backgroundColor: theme.background,
+          // borderColor: theme.border,
+          gap: 10,
         },
       ]}
     >
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Event</Text>
-          <Text>{item.title}</Text>
+      {/* <View style={{ flexDirection: "row", justifyContent: "space-between" }}> */}
+        <View style={{ flexDirection: "column" }}>
+          <Text style={globalStyles.smallText}>Event</Text>
+          <Text style={globalStyles.semiMediumText}>{item.title}</Text>
         </View>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Time</Text>
-          <Text>
-            {item.startTimeAMPM} - {item.endTimeAMPM}
-          </Text>
-          {/* Updated to display startTimeAMPM */}
+        <View style={{ flexDirection: "column" }}>
+          <Text style={globalStyles.smallText}>Time</Text>
+          <Text style={globalStyles.semiMediumText}> {item.startTimeAMPM} - {item.endTimeAMPM} </Text>
         </View>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Location</Text>
-          <Text>{item.location}</Text>
+        <View style={{ flexDirection: "column" }}>
+          <Text style={globalStyles.smallText}>Location</Text>
+          <Text style={globalStyles.semiMediumText}>{item.location}</Text>
         </View>
-      </View>
-      <Button
+      {/* </View> */}
+      {/* <Button
         title="Delete"
         color={theme.accent}
         onPress={() => deleteTask(item.id)}
-      />
+      /> */}
     </View>
   );
 
@@ -259,6 +256,7 @@ export default function HomeScreen() {
                 renderItem={renderTask}
                 keyExtractor={(item) => item.id}
                 style={styles.taskList}
+                ItemSeparatorComponent={() => <ThemedView style={{ height: 10 }} />}
               />
             )}
             <Pressable
@@ -437,13 +435,22 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.4)",
   },
-  container: { flex: 1, padding: 20 },
-  taskList: { marginTop: 20 },
+  container: {
+    flex: 1,
+    padding: 20
+  },
+  taskList: {
+    marginTop: 20
+  },
   taskItem: {
-    padding: 15,
-    marginBottom: 10,
-    borderRadius: 5,
-    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: .5,
+    borderColor: 'rgba(17, 17, 17, 0.2)',
+    borderStyle: 'solid',
+    padding: 10,
+    borderRadius: 8,
+    flexDirection: 'row',
   },
   taskTitle: {
     fontSize: 18,

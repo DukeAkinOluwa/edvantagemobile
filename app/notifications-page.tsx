@@ -1,6 +1,7 @@
 import { NavigationHeader, useTheme } from "@/components/Header";
+import { ThemedView } from "@/components/ThemedView";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Button, FlatList, StyleSheet, Text, View } from "react-native";
+import { Alert, Button, FlatList, StyleSheet, Text } from "react-native";
 import { cancelNotification } from "../utils/notifications";
 import { getData, saveData } from "../utils/storage";
 
@@ -69,7 +70,7 @@ export default function NotificationsScreen() {
   };
 
   const renderNotification = ({ item }: { item: NotificationRecord }) => (
-    <View
+    <ThemedView
       style={[
         styles.notificationItem,
         { backgroundColor: theme.background, borderColor: theme.border },
@@ -94,21 +95,21 @@ export default function NotificationsScreen() {
       <Text style={[styles.notificationTimestamp, { color: theme.text }]}>
         {new Date(item.timestamp).toLocaleString()}
       </Text>
-    </View>
+    </ThemedView>
   );
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
         <Text style={{ color: theme.text, textAlign: "center" }}>
           Loading notifications...
         </Text>
-      </View>
+      </ThemedView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <NavigationHeader title="Notifications" />
       {notifications.length === 0 ? (
         <Text style={[styles.noNotifications, { color: theme.text }]}>
@@ -129,7 +130,7 @@ export default function NotificationsScreen() {
           />
         </>
       )}
-    </View>
+    </ThemedView>
   );
 }
 
