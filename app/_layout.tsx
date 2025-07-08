@@ -14,9 +14,27 @@ import "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RootLayout() {
+
+  interface UserData {
+    firstName?: string;
+    lastName?: string;
+    bio?: string;
+    dob?: string;
+    gender?: string;
+    profilePic?: string;
+    course?: string;
+    level?: string;
+    department?: string;
+    faculty?: string;
+    university: string; // required!
+    themeMode?: "system" | "light" | "dark";
+  }
+
   const colorScheme = useColorScheme();
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [userData, setUserDataState] = useState({});
+  const [userData, setUserDataState] = useState<UserData>({
+    university: '', // Required field initialized
+  });
   const [theme, setTheme] = useState(lightTheme);
   const [themeMode, setThemeModeState] = useState<"system" | "light" | "dark">(
     "system"
@@ -75,7 +93,7 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [themeMode]);
 
-  const handleSetUserData = async (data) => {
+  const handleSetUserData = async (data: Partial<UserData>) => {
     const newUserData = { ...userData, ...data };
     setUserDataState(newUserData);
     await saveData("userData", newUserData);
@@ -152,6 +170,14 @@ export default function RootLayout() {
               />
               <Stack.Screen
                 name="chat/[chatId]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="study/[studyId]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="projects/[projectId]"
                 options={{ headerShown: false }}
               />
             </Stack>
