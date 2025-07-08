@@ -1,11 +1,12 @@
 import { NavigationHeader, useTheme, useUserData } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { ProfilePageNavListTemplate } from "@/global/templates";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet } from "react-native";
 
 export default function ProfilePage() {
   const { theme } = useTheme();
@@ -45,76 +46,47 @@ export default function ProfilePage() {
         <NavigationHeader title="Profile" />
 
         <ParallaxScrollView>
-          <View
-            style={[styles.container, { backgroundColor: theme.background }]}
+          <ThemedView
+            style={[styles.container]}
           >
-            <Image
-              source={{
-                uri: userData.profilePic || "https://via.placeholder.com/150",
-              }}
-              style={styles.avatar}
-            />
-            <Text
-              style={[
-                {
-                  color: theme.text,
-                  fontFamily: globalStyles.semiLargeText.fontFamily,
-                  fontSize: globalStyles.semiLargeText.fontSize,
-                },
-              ]}
+            <ThemedView>
+              <Image
+                source={{
+                  uri: userData.profilePic || "https://via.placeholder.com/150",
+                }}
+                style={styles.avatar}
+              />
+            </ThemedView>
+            <ThemedText
+              style={[globalStyles.semiLargeText]}
             >
               {userData.firstName || ""} {userData.lastName || ""}
-            </Text>
-            <Text
-              style={[
-                {
-                  color: theme.text,
-                  fontFamily: globalStyles.semiLargeText.fontFamily,
-                  fontSize: globalStyles.mediumText.fontSize,
-                },
-              ]}
+            </ThemedText>
+            <ThemedText
+              style={[globalStyles.mediumText]}
             >
               {userData.university || "University not set"}
-            </Text>
+            </ThemedText>
 
-            <View style={{ flexDirection: "row" }}>
-              <Text
-                style={[
-                  {
-                    color: theme.text,
-                    fontFamily: globalStyles.smallText.fontFamily,
-                    fontSize: globalStyles.smallText.fontSize,
-                  },
-                ]}
+            <ThemedView style={{ flexDirection: "row" }}>
+              <ThemedText
+                style={[globalStyles.smallText]}
               >
                 {userData.course || "Course: Not set"}
-              </Text>
-              <Text
-                style={[
-                  ,
-                  {
-                    color: theme.text,
-                    fontFamily: globalStyles.smallText.fontFamily,
-                    fontSize: globalStyles.smallText.fontSize,
-                  },
-                ]}
+              </ThemedText>
+              <ThemedText
+                style={[globalStyles.smallText]}
               >
                 {" "}
                 |{" "}
-              </Text>
-              <Text
-                style={[
-                  {
-                    color: theme.text,
-                    fontFamily: globalStyles.smallText.fontFamily,
-                    fontSize: globalStyles.smallText.fontSize,
-                  },
-                ]}
+              </ThemedText>
+              <ThemedText
+                style={[globalStyles.smallText]}
               >
                 {userData.level || "Level: Not set"}
-              </Text>
-            </View>
-          </View>
+              </ThemedText>
+            </ThemedView>
+          </ThemedView>
           <ThemedView
             style={[
               styles.profilePageNavigationContainer,
