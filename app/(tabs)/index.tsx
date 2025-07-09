@@ -202,52 +202,26 @@ export default function HomeScreen() {
       style={[
         styles.taskItem,
         {
-          // backgroundColor: theme.background,
+          backgroundColor: theme.background,
           // borderColor: theme.border,
           gap: 10,
         },
       ]}
     >
-      <ThemedView
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          backgroundColor: theme.background,
-        }}
-      >
-        <ThemedView
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: theme.background,
-          }}
-        >
-          <ThemedText style={{ color: theme.text }}>Event</ThemedText>
-          <ThemedText style={{ color: theme.text }}>{item.title}</ThemedText>
+        <ThemedView style={{ flexDirection: "column" }}>
+          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Event</ThemedText>
+          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>{item.title}</ThemedText>
         </ThemedView>
-        <ThemedView
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: theme.background,
-          }}
-        >
-          <ThemedText style={{ color: theme.text }}>Time</ThemedText>
-          <ThemedText style={{ color: theme.text }}>
+        <ThemedView style={{ flexDirection: "column" }}>
+          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Time</ThemedText>
+          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>
             {item.startTimeAMPM} - {item.endTimeAMPM}
           </ThemedText>
         </ThemedView>
-        <ThemedView
-          style={{
-            justifyContent: "center",
-            alignItems: "center",
-            backgroundColor: theme.background,
-          }}
-        >
-          <ThemedText style={{ color: theme.text }}>Location</ThemedText>
-          <ThemedText style={{ color: theme.text }}>{item.location}</ThemedText>
+        <ThemedView style={{ flexDirection: "column" }}>
+          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Location</ThemedText>
+          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>{item.location}</ThemedText>
         </ThemedView>
-      </ThemedView>
       {/* <Button
         title="Delete"
         color={theme.primary}
@@ -318,7 +292,6 @@ export default function HomeScreen() {
                 style={[
                   globalStyles.mediumText,
                   globalStyles.actionText2,
-                  { color: theme.text },
                 ]}
               >
                 See All
