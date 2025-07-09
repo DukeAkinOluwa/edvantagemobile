@@ -1,16 +1,15 @@
-import { ThemedText } from "@/components/ThemedText";
-import { ThemedView } from "@/components/ThemedView";
-import { useGlobalStyles } from "@/styles/globalStyles";
-import { StyleSheet } from "react-native";
-
-import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native";
-
 import { useTheme } from "@/components/Header";
-import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
-
+import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { StyleSheet, TouchableOpacity } from "react-native";
+
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
+import { useGlobalStyles } from "@/styles/globalStyles";
+
+// ===== Types =====
 type ChatListCardProps = {
   id: string;
   name: string;
@@ -18,7 +17,7 @@ type ChatListCardProps = {
   time: string;
 };
 
-type resourceCardProps = {
+type ResourceCardProps = {
   file: {
     filepath: string;
     filename: string;
@@ -37,6 +36,33 @@ type ProfilePageNavItem = {
   link: string;
 };
 
+interface StudyCardProps {
+  studyGroup: {
+    id: string;
+    title: string;
+    description: string;
+    type: 'Study';
+  };
+  onPress?: () => void;
+}
+
+interface ProjectItem {
+  id: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: string;
+  tasks: {
+    title: string;
+    description: string;
+    dueDate: string;
+    status: string;
+    assignedTo: string;
+  };
+  type: 'Projects';
+}
+
+// ===== Utility Maps & Functions =====
 const resourceCategoryIconMap: Record<string, string> = {
   video: "video-camera",
   image: "image",
@@ -61,178 +87,70 @@ const resourceCategoryIconBackgroundColor: Record<string, string> = {
   other: "rgba(255, 193, 7, 0.1)",
 };
 
-const resourceExtensionCategories: { [key: string]: string[] } = {
-  Video: ["mp4", "m4a", "avi", "mov", "wmv", "flv", "mkv", "webm"],
-  Image: ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp"],
-  Document: ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "odt"],
-  Audio: ["mp3", "wav", "aac", "flac", "ogg"],
+const resourceExtensionCategories: Record<string, string[]> = {
+  Video: ['mp4', 'm4a', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
+  Image: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'],
+  Document: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'odt'],
+  Audio: ['mp3', 'wav', 'aac', 'flac', 'ogg'],
 };
 
-const resourceGetCategoryFromExtension = (ext: string): string => {
-  const cleanedExt = ext.toLowerCase().replace(".", "");
+const getResourceCategoryFromExtension = (ext: string): string => {
+  const cleaned = ext.toLowerCase().replace('.', '');
   for (const category in resourceExtensionCategories) {
-    if (resourceExtensionCategories[category].includes(cleanedExt)) {
+    if (resourceExtensionCategories[category].includes(cleaned)) {
       return category;
     }
   }
   return "Other";
 };
 
-export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
-  const { theme } = useTheme();
+// ===== Components =====
+export const ResourceListCard: React.FC<ResourceCardProps> = ({ file }) => {
   const globalStyles = useGlobalStyles();
-
-  const extension = file.filepath.split(".").pop() || "";
-  const category = resourceGetCategoryFromExtension(extension);
-  const lowerCaseCategory = category.toLowerCase();
-
-  const iconName = resourceCategoryIconMap[lowerCaseCategory] || "file";
-  const iconColor =
-    theme.accent || resourceCategoryIconColor[lowerCaseCategory];
-  const iconBackgroundColor =
-    theme.backgroundSecondary ||
-    resourceCategoryIconBackgroundColor[lowerCaseCategory];
-
   const { screenWidth } = useResponsiveDimensions();
-  const boundaryWidth = screenWidth - 20;
 
-  const dynamicStyles = StyleSheet.create({
-    fileCard: {
-      maxWidth: boundaryWidth - 20,
-    },
-  });
+  const extension = file.filepath.split('.').pop() || '';
+  const category = getResourceCategoryFromExtension(extension).toLowerCase();
 
   return (
-    <ThemedView
-      style={[
-        resourceCardStyles.fileCard,
-        dynamicStyles.fileCard,
-        { backgroundColor: theme.background },
-      ]}
-    >
-      <ThemedView
-        style={[
-          resourceCardStyles.fileCardHeading,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <ThemedView
-          style={[
-            resourceCardStyles.fileCardHeadingIcon,
-            { backgroundColor: iconBackgroundColor },
-          ]}
-        >
-          <FontAwesome6 name={iconName} size={22} color={iconColor} />
+    <ThemedView style={[resourceCardStyles.fileCard, { maxWidth: screenWidth - 40 }]}>
+      <ThemedView style={resourceCardStyles.fileCardHeading}>
+        <ThemedView style={[resourceCardStyles.fileCardHeadingIcon, { backgroundColor: resourceCategoryIconBackgroundColor[category] }]}>
+          <FontAwesome6 name={resourceCategoryIconMap[category]} size={22} color={resourceCategoryIconColor[category]} />
         </ThemedView>
-        <ThemedView
-          style={[
-            resourceCardStyles.fileCardHeadingTexts,
-            { backgroundColor: theme.background },
-          ]}
-        >
-          <ThemedText
-            style={[
-              globalStyles.mediumText,
-              { fontWeight: "500", color: theme.text },
-            ]}
-          >
-            {file.filename}
-          </ThemedText>
-          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-            Uploaded by {file.uploadedBy}
-          </ThemedText>
+        <ThemedView style={resourceCardStyles.fileCardHeadingTexts}>
+          <ThemedText style={[globalStyles.mediumText, { fontWeight: '500' }]}>{file.filename}</ThemedText>
+          <ThemedText style={globalStyles.smallText}>Uploaded by {file.uploadedBy}</ThemedText>
         </ThemedView>
       </ThemedView>
-      <ThemedView style={{ backgroundColor: theme.background }}>
-        <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
-          {file.summary}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView
-        style={{
-          gap: 15,
-          alignItems: "center",
-          flexDirection: "row",
-          backgroundColor: theme.background,
-        }}
-      >
-        <ThemedView
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            backgroundColor: theme.background,
-          }}
-        >
-          <FontAwesome name="heart" size={17} color={theme.accent || "red"} />
-          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
-            {file.likes}
-          </ThemedText>
+
+      <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
+
+      <ThemedView style={{ gap: 15, alignItems: 'center', flexDirection: 'row' }}>
+        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <FontAwesome name='heart' size={17} color={'red'} />
+          <ThemedText style={globalStyles.baseText}>{file.likes}</ThemedText>
         </ThemedView>
-        <ThemedView
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 5,
-            backgroundColor: theme.background,
-          }}
-        >
-          <FontAwesome6
-            name="download"
-            size={17}
-            color={theme.primary || "#2A52BE"}
-          />
-          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
-            {file.downloads}
-          </ThemedText>
+        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <FontAwesome6 name='download' size={17} color={'#2A52BE'} />
+          <ThemedText style={globalStyles.baseText}>{file.downloads}</ThemedText>
         </ThemedView>
       </ThemedView>
     </ThemedView>
   );
 };
 
-export function ChatListCardTemplate({
-  chat,
-  onPress,
-}: {
-  chat: ChatListCardProps;
-  onPress: () => void;
-}) {
-  const { theme } = useTheme();
+export function ChatListCardTemplate({ chat, onPress }: { chat: ChatListCardProps; onPress: () => void }) {
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
-
-  const boundaryWidth = screenWidth - 20; // Adjusted for padding/margin
-
-  const chatStyles = StyleSheet.create({
-    chatCard: {
-      width: boundaryWidth - 20,
-    },
-  });
+  const { theme } = useTheme()
 
   return (
     <TouchableOpacity onPress={onPress}>
-      <ThemedView
-        style={[
-          chatListCardTemplateStyles.chatCard,
-          chatStyles.chatCard,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <ThemedView
-          style={[
-            chatListCardTemplateStyles.chatDetails,
-            { backgroundColor: theme.background },
-          ]}
-        >
-          <ThemedText
-            style={[globalStyles.semiMediumText, { color: theme.text }]}
-          >
-            {chat.name}
-          </ThemedText>
-          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
-            {chat.message}
-          </ThemedText>
+      <ThemedView style={[chatListCardTemplateStyles.chatCard, { width: screenWidth - 40 }]}>
+        <ThemedView style={chatListCardTemplateStyles.chatDetails}>
+          <ThemedText style={globalStyles.semiMediumText}>{chat.name}</ThemedText>
+          <ThemedText style={globalStyles.baseText}>{chat.message}</ThemedText>
         </ThemedView>
         <ThemedText
           style={[
@@ -248,127 +166,69 @@ export function ChatListCardTemplate({
   );
 }
 
-export function EventCardTemplate(event: any) {
-  const { theme } = useTheme();
-  const globalStyles = useGlobalStyles();
-
-  const cardData = event.event;
-
+export function StudyCardTemplate({ studyGroup, onPress }: StudyCardProps) {
   return (
-    <ThemedView
-      style={[
-        eventCardStyles.eventCard,
-        { borderColor: theme.border, backgroundColor: theme.background },
-      ]}
-    >
-      <ThemedView
-        style={[
-          eventCardStyles.eventCardSection,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Event
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {cardData.title}
-        </ThemedText>
+    <TouchableOpacity onPress={onPress}>
+      <ThemedView style={studyCardStyles.card}>
+        <ThemedText style={studyCardStyles.title}>{studyGroup.title}</ThemedText>
+        <ThemedText style={studyCardStyles.description}>{studyGroup.description}</ThemedText>
       </ThemedView>
-      <ThemedView
-        style={[
-          eventCardStyles.eventCardSection,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Time
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {cardData.startTime} - {cardData.endTime}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView
-        style={[
-          eventCardStyles.eventCardSection,
-          { backgroundColor: theme.background },
-        ]}
-      >
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Location
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {cardData.location}
-        </ThemedText>
-      </ThemedView>
-    </ThemedView>
-  );
-}
-
-export function ProfilePageNavListTemplate({
-  list,
-}: {
-  list: ProfilePageNavItem;
-}) {
-  const { theme } = useTheme();
-  const router = useRouter();
-
-  return (
-    <TouchableOpacity
-      onPress={() => router.push(list.link as any)}
-      style={[
-        profilePageNavListTemplateStyles.option,
-        { borderColor: theme.border, backgroundColor: theme.background },
-      ]}
-    >
-      <ThemedText style={{ color: theme.text }}>{list.name}</ThemedText>
     </TouchableOpacity>
   );
 }
 
-const eventCardStyles = StyleSheet.create({
-  eventCard: {
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 0.5,
-    borderColor: "#ccc",
-    borderStyle: "solid",
-    padding: 10,
-    borderRadius: 8,
-    flexDirection: "row",
-  },
-  eventCardSection: {
-    flexDirection: "column",
-  },
-});
+export function ProjectCardTemplate({ project, onPress }: { project: ProjectItem; onPress: () => void }) {
+  return (
+    <TouchableOpacity onPress={onPress}>
+      <ThemedView style={projectCardStyles.card}>
+        <ThemedView style={projectCardStyles.header}>
+          <ThemedText style={projectCardStyles.title}>{project.title}</ThemedText>
+          <ThemedText style={[projectCardStyles.priority, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
+            {project.priority.toUpperCase()}
+          </ThemedText>
+        </ThemedView>
+        <ThemedText style={projectCardStyles.description}>{project.description}</ThemedText>
+        <ThemedText style={projectCardStyles.meta}>Due: {project.dueDate}</ThemedText>
+        <ThemedView style={projectCardStyles.task}>
+          <ThemedText style={projectCardStyles.taskTitle}>Task: {project.tasks.title}</ThemedText>
+          <ThemedText style={projectCardStyles.taskStatus}>Status: {project.tasks.status}</ThemedText>
+        </ThemedView>
+      </ThemedView>
+    </TouchableOpacity>
+  );
+}
 
-const chatListCardTemplateStyles = StyleSheet.create({
-  chatCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderRadius: 8,
-    padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  chatDetails: {
-    flexDirection: "column",
-    gap: 4,
-  },
-  chatTime: {
-    color: "#777",
-  },
-});
+export function EventCardTemplate({ event }: any) {
+  const globalStyles = useGlobalStyles();
+  const cardData = event.event;
 
+  return (
+    <ThemedView style={eventCardStyles.eventCard}>
+      {['Event', 'Time', 'Location'].map((label, i) => (
+        <ThemedView style={eventCardStyles.eventCardSection} key={i}>
+          <ThemedText style={globalStyles.smallText}>{label}</ThemedText>
+          <ThemedText style={globalStyles.semiMediumText}>
+            {label === 'Event' && cardData.title}
+            {label === 'Time' && `${cardData.startTime} - ${cardData.endTime}`}
+            {label === 'Location' && cardData.location}
+          </ThemedText>
+        </ThemedView>
+      ))}
+    </ThemedView>
+  );
+}
+
+export function ProfilePageNavListTemplate({ list }: { list: ProfilePageNavItem }) {
+  const router = useRouter();
+
+  return (
+    <TouchableOpacity onPress={() => router.push(list.link as any)} style={profilePageNavListTemplateStyles.option}>
+      <ThemedText>{list.name}</ThemedText>
+    </TouchableOpacity>
+  );
+}
+
+// ===== Styles =====
 const resourceCardStyles = StyleSheet.create({
   fileCard: {
     marginBottom: 8,
@@ -398,10 +258,117 @@ const resourceCardStyles = StyleSheet.create({
   },
 });
 
+const chatListCardTemplateStyles = StyleSheet.create({
+  chatCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderRadius: 8,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  chatDetails: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  chatTime: {
+    color: '#777',
+  },
+});
+
+const studyCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#f0f4ff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  title: {
+    fontWeight: '600',
+    fontSize: 16,
+    marginBottom: 4,
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+  },
+});
+
+const projectCardStyles = StyleSheet.create({
+  card: {
+    backgroundColor: '#fff4e6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  title: {
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  priority: {
+    fontWeight: '600',
+  },
+  description: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 6,
+  },
+  meta: {
+    fontSize: 13,
+    color: '#777',
+  },
+  task: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  taskTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  taskStatus: {
+    fontSize: 13,
+    color: '#666',
+  },
+});
+
+const eventCardStyles = StyleSheet.create({
+  eventCard: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 0.5,
+    borderColor: 'rgba(17, 17, 17, 0.2)',
+    padding: 10,
+    borderRadius: 8,
+    flexDirection: 'row',
+  },
+  eventCardSection: {
+    flexDirection: 'column',
+  },
+});
+
 const profilePageNavListTemplateStyles = StyleSheet.create({
   option: {
     paddingVertical: 5,
     borderBottomWidth: 0.5,
-    borderColor: "#ccc",
+    borderColor: 'rgba(17, 17, 17, 0.2)',
   },
 });
