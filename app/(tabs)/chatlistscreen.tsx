@@ -58,10 +58,7 @@ export default function ChatScreen() {
   return (
     <ThemedView style={[styles.page, { backgroundColor: theme.background }]}>
       <NavigationHeader title="Messages" />
-      <ParallaxScrollView
-        style={{ backgroundColor: theme.background }}
-        contentContainerStyle={{ backgroundColor: theme.background }}
-      >
+      <ParallaxScrollView>
         <SearchBar
           value={searchText}
           onChangeText={setSearchText}

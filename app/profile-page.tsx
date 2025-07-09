@@ -48,8 +48,8 @@ export default function ProfilePage() {
         <NavigationHeader title="Profile" />
 
         <ParallaxScrollView>
-          <View
-            style={[styles.container, { backgroundColor: theme.background }]}
+          <ThemedView
+            style={[styles.container]}
           >
             <Image
               source={{
@@ -114,7 +114,7 @@ export default function ProfilePage() {
                 {userData.level || "Level: Not set"}
               </Text>
             </View>
-          </View>
+          </ThemedView>
           <ThemedView
             style={[
               styles.profilePageNavigationContainer,
