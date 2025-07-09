@@ -6,7 +6,7 @@ import { ProfilePageNavListTemplate } from "@/global/templates";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import React from "react";
-import { Image, StyleSheet } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 export default function ProfilePage() {
   const { theme } = useTheme();
@@ -42,55 +42,84 @@ export default function ProfilePage() {
 
   return (
     <>
-      <ThemedView style={{ flex: 1, padding: 10 }}>
+      <ThemedView
+        style={{ flex: 1, padding: 10, backgroundColor: theme.background }}
+      >
         <NavigationHeader title="Profile" />
 
         <ParallaxScrollView>
-          <ThemedView
-            style={[styles.container]}
+          <View
+            style={[styles.container, { backgroundColor: theme.background }]}
           >
-            <ThemedView>
-              <Image
-                source={{
-                  uri: userData.profilePic || "https://via.placeholder.com/150",
-                }}
-                style={styles.avatar}
-              />
-            </ThemedView>
-            <ThemedText
-              style={[globalStyles.semiLargeText]}
+            <Image
+              source={{
+                uri: userData.profilePic || "https://via.placeholder.com/150",
+              }}
+              style={[styles.avatar, { borderColor: theme.border }]}
+            />
+            <Text
+              style={[
+                {
+                  color: theme.text,
+                  fontFamily: globalStyles.semiLargeText.fontFamily,
+                  fontSize: globalStyles.semiLargeText.fontSize,
+                },
+              ]}
             >
               {userData.firstName || ""} {userData.lastName || ""}
-            </ThemedText>
+            </Text>
             <ThemedText
               style={[globalStyles.mediumText]}
             >
               {userData.university || "University not set"}
             </ThemedText>
 
-            <ThemedView style={{ flexDirection: "row" }}>
-              <ThemedText
-                style={[globalStyles.smallText]}
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: theme.background,
+              }}
+            >
+              <Text
+                style={[
+                  {
+                    color: theme.text,
+                    fontFamily: globalStyles.smallText.fontFamily,
+                    fontSize: globalStyles.smallText.fontSize,
+                  },
+                ]}
               >
                 {userData.course || "Course: Not set"}
-              </ThemedText>
-              <ThemedText
-                style={[globalStyles.smallText]}
+              </Text>
+              <Text
+                style={[
+                  {
+                    color: theme.text,
+                    fontFamily: globalStyles.smallText.fontFamily,
+                    fontSize: globalStyles.smallText.fontSize,
+                  },
+                ]}
               >
-                {" "}
-                |{" "}
-              </ThemedText>
-              <ThemedText
-                style={[globalStyles.smallText]}
+                {" | "}
+              </Text>
+              <Text
+                style={[
+                  {
+                    color: theme.text,
+                    fontFamily: globalStyles.smallText.fontFamily,
+                    fontSize: globalStyles.smallText.fontSize,
+                  },
+                ]}
               >
                 {userData.level || "Level: Not set"}
-              </ThemedText>
-            </ThemedView>
-          </ThemedView>
+              </Text>
+            </View>
+          </View>
           <ThemedView
             style={[
               styles.profilePageNavigationContainer,
               dynamicStyles.profilePageNavigationContainer,
+              { borderColor: theme.border, backgroundColor: theme.background },
             ]}
           >
             {profileNavigationList.map((list) => (
