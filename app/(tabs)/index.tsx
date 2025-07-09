@@ -1,5 +1,4 @@
-import { darkTheme, lightTheme } from "@/assets/colors";
-import { NavigationHeader } from "@/components/Header";
+import { NavigationHeader, useTheme } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -10,12 +9,10 @@ import {
   scheduleEventNotification,
 } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
-import userDataInfo from "@/utils/userDataInfo";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
-  Appearance,
   Button,
   FlatList,
   Modal,
@@ -23,10 +20,8 @@ import {
   Pressable,
   StyleSheet,
   Switch,
-  Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from "react-native";
 
 interface Task {
@@ -38,11 +33,12 @@ interface Task {
   isGroupEvent: boolean;
   startTime: string;
   endTime: string;
-  startTimeAMPM: string; // Added AM/PM time
-  endTimeAMPM: string; // Added AM/PM time
+  startTimeAMPM: string;
+  endTimeAMPM: string;
 }
 
 export default function HomeScreen() {
+  const { theme } = useTheme();
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
   const router = useRouter();
@@ -56,51 +52,62 @@ export default function HomeScreen() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [theme, setTheme] = useState(lightTheme);
-  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
-    "system"
-  );
-
-  useEffect(() => {
-    const initialize = async () => {
-      await userDataInfo.initialize();
-      const data = userDataInfo.getData();
-      setThemeMode(data.themeMode || "system");
-      setTheme(data.themeMode === "dark" ? darkTheme : lightTheme);
-    };
-    initialize();
-  }, []);
-
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (themeMode === "system") {
-        setTheme(colorScheme === "dark" ? darkTheme : lightTheme);
-      }
-    });
-    return () => subscription.remove();
-  }, [themeMode]);
+  const [showEndTimePicker, setShowEndTimePicker] = useState(false);
 
   const formatTimeToAMPM = (date: Date): string => {
     let hours = date.getHours();
     const minutes = date.getMinutes();
     const ampm = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12; // Convert 0 or 12 to 12 for 12-hour format
+    hours = hours % 12 || 12;
     const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
     return `${hours}:${minutesStr} ${ampm}`;
   };
 
   const handleStartDateChange = (event: any, selected: Date | undefined) => {
-    setShowStartDatePicker(Platform.OS === "ios");
-    if (selected) {
-      setStartTime(selected);
+    if (Platform.OS === "android") {
+      setShowStartDatePicker(false);
+      if (selected) {
+        setStartTime(selected);
+        setShowStartTimePicker(true);
+      }
+    } else {
+      if (selected) {
+        setStartTime(selected);
+      }
+    }
+  };
+
+  const handleStartTimeChange = (event: any, selected: Date | undefined) => {
+    setShowStartTimePicker(false);
+    if (selected && startTime) {
+      const newDate = new Date(startTime);
+      newDate.setHours(selected.getHours(), selected.getMinutes());
+      setStartTime(newDate);
     }
   };
 
   const handleEndDateChange = (event: any, selected: Date | undefined) => {
-    setShowEndDatePicker(Platform.OS === "ios");
-    if (selected) {
-      setEndTime(selected);
+    if (Platform.OS === "android") {
+      setShowEndDatePicker(false);
+      if (selected) {
+        setEndTime(selected);
+        setShowEndTimePicker(true);
+      }
+    } else {
+      if (selected) {
+        setEndTime(selected);
+      }
+    }
+  };
+
+  const handleEndTimeChange = (event: any, selected: Date | undefined) => {
+    setShowEndTimePicker(false);
+    if (selected && endTime) {
+      const newDate = new Date(endTime);
+      newDate.setHours(selected.getHours(), selected.getMinutes());
+      setEndTime(newDate);
     }
   };
 
@@ -126,7 +133,7 @@ export default function HomeScreen() {
       title,
       description,
       location,
-      level: userDataInfo.getData().level || "100",
+      level: "100", // Default level as per task-form.tsx
       isGroupEvent,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
@@ -153,12 +160,19 @@ export default function HomeScreen() {
     page: {
       flex: 1,
       paddingBottom: 70,
+      backgroundColor: theme.background,
     },
     gamificationContainer: {
       width: adjustedWidth,
+      backgroundColor: theme.primary,
     },
     todaysTasks: {
       width: adjustedWidth,
+      backgroundColor: theme.background,
+    },
+    parallaxScrollView: {
+      flex: 1,
+      backgroundColor: theme.background,
     },
   });
 
@@ -184,7 +198,7 @@ export default function HomeScreen() {
   };
 
   const renderTask = ({ item }: { item: Task }) => (
-    <View
+    <ThemedView
       style={[
         styles.taskItem,
         {
@@ -194,29 +208,52 @@ export default function HomeScreen() {
         },
       ]}
     >
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Event</Text>
-          <Text>{item.title}</Text>
-        </View>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Time</Text>
-          <Text>
+      <ThemedView
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          backgroundColor: theme.background,
+        }}
+      >
+        <ThemedView
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: theme.background,
+          }}
+        >
+          <ThemedText style={{ color: theme.text }}>Event</ThemedText>
+          <ThemedText style={{ color: theme.text }}>{item.title}</ThemedText>
+        </ThemedView>
+        <ThemedView
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: theme.background,
+          }}
+        >
+          <ThemedText style={{ color: theme.text }}>Time</ThemedText>
+          <ThemedText style={{ color: theme.text }}>
             {item.startTimeAMPM} - {item.endTimeAMPM}
-          </Text>
-          {/* Updated to display startTimeAMPM */}
-        </View>
-        <View style={{ justifyContent: "center", alignItems: "center" }}>
-          <Text>Location</Text>
-          <Text>{item.location}</Text>
-        </View>
-      </View>
-      <Button
+          </ThemedText>
+        </ThemedView>
+        <ThemedView
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: theme.background,
+          }}
+        >
+          <ThemedText style={{ color: theme.text }}>Location</ThemedText>
+          <ThemedText style={{ color: theme.text }}>{item.location}</ThemedText>
+        </ThemedView>
+      </ThemedView>
+      {/* <Button
         title="Delete"
-        color={theme.accent}
+        color={theme.primary}
         onPress={() => deleteTask(item.id)}
-      />
-    </View>
+      /> */}
+    </ThemedView>
   );
 
   return (
@@ -228,27 +265,38 @@ export default function HomeScreen() {
             styles.gamificationContainer,
             dynamicStyles.gamificationContainer,
           ]}
-          lightColor="#2A52BE"
-          darkColor="#FAFBFD"
-        ></ThemedView>
+        />
         <ThemedView style={[styles.todaysTasks, dynamicStyles.todaysTasks]}>
-          <ThemedView style={styles.cardHeading}>
-            <ThemedText style={globalStyles.semiLargeText}>
+          <ThemedView
+            style={[styles.cardHeading, { backgroundColor: theme.background }]}
+          >
+            <ThemedText
+              style={[globalStyles.semiLargeText, { color: theme.text }]}
+            >
               Today's Schedule
             </ThemedText>
             <Pressable onPress={() => router.push("/task-form")}>
               <ThemedText
-                style={[globalStyles.mediumText, globalStyles.actionText]}
+                style={[
+                  globalStyles.mediumText,
+                  globalStyles.actionText,
+                  { color: theme.primary },
+                ]}
               >
                 New Event
               </ThemedText>
             </Pressable>
           </ThemedView>
-          <ThemedView style={styles.todaysTasksContent}>
+          <ThemedView
+            style={[
+              styles.todaysTasksContent,
+              { backgroundColor: theme.background },
+            ]}
+          >
             {tasks.length === 0 ? (
-              <Text style={[styles.noTasks, { color: theme.text }]}>
+              <ThemedText style={[styles.noTasks, { color: theme.text }]}>
                 No tasks created yet.
-              </Text>
+              </ThemedText>
             ) : (
               <FlatList
                 data={tasks.sort(
@@ -262,11 +310,15 @@ export default function HomeScreen() {
               />
             )}
             <Pressable
-              style={globalStyles.button1}
+              style={[globalStyles.button1, { backgroundColor: theme.primary }]}
               onPress={() => router.push("/schedule")}
             >
               <ThemedText
-                style={[globalStyles.mediumText, globalStyles.actionText2]}
+                style={[
+                  globalStyles.mediumText,
+                  globalStyles.actionText2,
+                  { color: theme.text },
+                ]}
               >
                 See All
               </ThemedText>
@@ -280,80 +332,151 @@ export default function HomeScreen() {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <ThemedView style={styles.modalBackdrop}>
+        <ThemedView
+          style={[
+            styles.modalBackdrop,
+            { backgroundColor: theme.modalBackdrop || theme.background + "80" },
+          ]}
+        >
           <Pressable
             style={styles.backdropTouchableArea}
             onPress={() => setModalVisible(false)}
           />
-          <ThemedView style={styles.modalContent}>
+          <ThemedView
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.background, borderColor: theme.border },
+            ]}
+          >
             <TextInput
-              placeholder="Title"
+              placeholder="Task Title *"
               value={title}
               onChangeText={setTitle}
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.border,
+                  color: theme.text,
+                  placeholderTextColor: theme.border,
+                },
+              ]}
             />
             <TextInput
-              placeholder="Description"
+              placeholder="Description *"
               value={description}
               onChangeText={setDescription}
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.border,
+                  color: theme.text,
+                  placeholderTextColor: theme.border,
+                },
+              ]}
+              multiline
             />
-            <ThemedView style={styles.switchRow}>
-              <ThemedText>Is Group Event</ThemedText>
-              <Switch value={isGroupEvent} onValueChange={setIsGroupEvent} />
+            <ThemedView
+              style={[styles.switchRow, { backgroundColor: theme.background }]}
+            >
+              <ThemedText style={{ color: theme.text }}>Group Event</ThemedText>
+              <Switch
+                value={isGroupEvent}
+                onValueChange={setIsGroupEvent}
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={theme.background}
+              />
             </ThemedView>
             <TextInput
-              placeholder="Location"
+              placeholder="Location *"
               value={location}
               onChangeText={setLocation}
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  borderColor: theme.border,
+                  color: theme.text,
+                  placeholderTextColor: theme.border,
+                },
+              ]}
             />
             <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-              <Text style={[styles.input, { color: theme.text }]}>
+              <ThemedText style={[styles.input, { color: theme.text }]}>
                 Start Time:{" "}
-                {startTime ? startTime.toLocaleString() : "Select Start Time"}
-              </Text>
+                {startTime ? startTime.toLocaleString() : "Select Start Time *"}
+              </ThemedText>
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
                 value={startTime || new Date()}
-                mode="datetime"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "calendar"}
                 onChange={handleStartDateChange}
                 minimumDate={new Date()}
+                onTouchCancel={() => setShowStartDatePicker(false)}
+              />
+            )}
+            {showStartTimePicker && (
+              <DateTimePicker
+                value={startTime || new Date()}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "clock"}
+                onChange={handleStartTimeChange}
+                onTouchCancel={() => setShowStartTimePicker(false)}
               />
             )}
             <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-              <Text style={[styles.input, { color: theme.text }]}>
+              <ThemedText style={[styles.input, { color: theme.text }]}>
                 End Time:{" "}
-                {endTime ? endTime.toLocaleString() : "Select End Time"}
-              </Text>
+                {endTime ? endTime.toLocaleString() : "Select End Time *"}
+              </ThemedText>
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
                 value={endTime || new Date()}
-                mode="datetime"
-                display={Platform.OS === "ios" ? "spinner" : "default"}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "calendar"}
                 onChange={handleEndDateChange}
                 minimumDate={startTime || new Date()}
+                onTouchCancel={() => setShowEndDatePicker(false)}
+              />
+            )}
+            {showEndTimePicker && (
+              <DateTimePicker
+                value={endTime || new Date()}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "clock"}
+                onChange={handleEndTimeChange}
+                onTouchCancel={() => setShowEndTimePicker(false)}
               />
             )}
             {Platform.OS === "ios" &&
-              (showStartDatePicker || showEndDatePicker) && (
+              (showStartDatePicker ||
+                showStartTimePicker ||
+                showEndDatePicker ||
+                showEndTimePicker) && (
                 <Button
                   title="Confirm"
                   onPress={() => {
                     setShowStartDatePicker(false);
+                    setShowStartTimePicker(false);
                     setShowEndDatePicker(false);
+                    setShowEndTimePicker(false);
                   }}
                   color={theme.primary}
                 />
               )}
-            <Pressable style={styles.customButton} onPress={handleSave}>
+            <Pressable
+              style={[styles.customButton, { backgroundColor: theme.primary }]}
+              onPress={handleSave}
+            >
               <ThemedText
-                style={[globalStyles.semiLargeText, styles.customButtonText]}
+                style={[
+                  globalStyles.semiLargeText,
+                  styles.customButtonText,
+                  { color: theme.text },
+                ]}
               >
-                Save
+                Create Task
               </ThemedText>
             </Pressable>
           </ThemedView>
@@ -376,7 +499,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 15,
     paddingVertical: 20,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -394,22 +516,20 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 20,
     width: "100%",
     maxWidth: 400,
     elevation: 5,
+    borderWidth: 1,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
@@ -423,7 +543,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   customButton: {
-    backgroundColor: "#2A52BE",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -435,24 +554,13 @@ const styles = StyleSheet.create({
   },
   backdropTouchableArea: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
   },
-  container: { flex: 1, padding: 20 },
   taskList: { marginTop: 20 },
   taskItem: {
     padding: 15,
     marginBottom: 10,
     borderRadius: 5,
     borderWidth: 1,
-  },
-  taskTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 5,
-  },
-  taskDetail: {
-    fontSize: 14,
-    marginBottom: 5,
   },
   noTasks: {
     fontSize: 16,

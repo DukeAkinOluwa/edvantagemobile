@@ -1,22 +1,32 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
-import { NavigationHeader } from '@/components/Header';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { NavigationHeader, useTheme } from "@/components/Header";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
 
 export default function ScheduleScreen() {
+  const { theme } = useTheme();
+
   return (
     <>
-    <NavigationHeader title="Schedule" />
-    <ParallaxScrollView>
-      <ThemedView style={styles.container}>
-        <ThemedText type="title">Your Schedule</ThemedText>
-        <ThemedText>
-          View upcoming events, tasks, and academic deadlines. Stay on top of your day.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      <NavigationHeader title="Schedule" />
+      <ParallaxScrollView
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={{ backgroundColor: theme.background }}
+      >
+        <ThemedView
+          style={[styles.container, { backgroundColor: theme.background }]}
+        >
+          <ThemedText type="title" style={{ color: theme.text }}>
+            Your Schedule
+          </ThemedText>
+          <ThemedText style={{ color: theme.text }}>
+            View upcoming events, tasks, and academic deadlines. Stay on top of
+            your day.
+          </ThemedText>
+        </ThemedView>
+      </ParallaxScrollView>
     </>
   );
 }
@@ -31,6 +41,7 @@ const styles = StyleSheet.create({
     width: 300,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    position: "absolute",
+    borderColor: "rgba(17, 17, 17, 0.2)",
   },
 });

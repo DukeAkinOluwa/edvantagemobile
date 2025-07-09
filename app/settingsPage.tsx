@@ -139,7 +139,8 @@ export default function userProfileSettingsPage() {
 
   const dynamicStyles = StyleSheet.create({
     tabBarContainer: {
-      shadowColor: effectiveTheme === "light" ? "#000" : "#FFF",
+      shadowColor:
+        theme.shadow || (effectiveTheme === "light" ? "#000" : "#FFF"),
     },
   });
 
@@ -232,7 +233,7 @@ export default function userProfileSettingsPage() {
       paddingVertical: 20,
 
       // iOS shadow
-      shadowColor: "#000",
+      shadowColor: theme.shadow || "#000",
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
@@ -243,14 +244,28 @@ export default function userProfileSettingsPage() {
   });
 
   return (
-    <ThemedView style={{ flex: 1, gap: 10 }}>
+    <ThemedView style={{ flex: 1, gap: 10, backgroundColor: theme.background }}>
       <NavigationHeader title="Settings" />
-      <ParallaxScrollView>
-        <ThemedView style={{ gap: 20, paddingVertical: 10 }}>
-          <View style={styles.profilePicContainer}>
+      <ParallaxScrollView
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={{ backgroundColor: theme.background }}
+      >
+        <ThemedView
+          style={{
+            gap: 20,
+            paddingVertical: 10,
+            backgroundColor: theme.background,
+          }}
+        >
+          <View
+            style={[
+              styles.profilePicContainer,
+              { backgroundColor: theme.background },
+            ]}
+          >
             <Image
               source={{ uri: profilePic || "https://via.placeholder.com/100" }}
-              style={styles.profilePic}
+              style={[styles.profilePic, { borderColor: theme.border }]}
             />
             <ThemedView style={globalStyles.button1}>
               <Pressable onPress={pickImage}>
@@ -261,8 +276,19 @@ export default function userProfileSettingsPage() {
             </ThemedView>
           </View>
           {/* PROFILE */}
-          <ThemedView style={responsiveStyles.card}>
-            <ThemedText style={[styles.title, globalStyles.semiLargeText]}>
+          <ThemedView
+            style={[
+              responsiveStyles.card,
+              { backgroundColor: theme.background },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.title,
+                globalStyles.semiLargeText,
+                { color: theme.text },
+              ]}
+            >
               Profile Information
             </ThemedText>
 
@@ -271,6 +297,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               placeholder="First Name"
               placeholderTextColor={theme.border}
@@ -282,6 +313,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               placeholder="Last Name"
               placeholderTextColor={theme.border}
@@ -294,6 +330,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               keyboardType="email-address"
               placeholder="Email Address"
@@ -306,6 +347,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               placeholder="University/Institution"
               placeholderTextColor={theme.border}
@@ -317,6 +363,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               placeholder="Department"
               placeholderTextColor={theme.border}
@@ -345,6 +396,11 @@ export default function userProfileSettingsPage() {
                 styles.input,
                 responsiveStyles.input,
                 globalStyles.baseText,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.background,
+                  color: theme.text,
+                },
               ]}
               placeholder="Bio"
               placeholderTextColor={theme.border}
@@ -362,14 +418,30 @@ export default function userProfileSettingsPage() {
           </ThemedView>
 
           {/* NOTIFICATIONS */}
-          <ThemedView style={responsiveStyles.card}>
+          <ThemedView
+            style={[
+              responsiveStyles.card,
+              { backgroundColor: theme.background },
+            ]}
+          >
             <ThemedText
-              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+              style={[
+                styles.sectionTitle,
+                globalStyles.semiLargeText,
+                { color: theme.text },
+              ]}
             >
               Notification Preferences
             </ThemedText>
-            <View style={styles.switchContainer}>
-              <Text style={styles.label}>Enable Notifications</Text>
+            <View
+              style={[
+                styles.switchContainer,
+                { backgroundColor: theme.background },
+              ]}
+            >
+              <Text style={[styles.label, { color: theme.text }]}>
+                Enable Notifications
+              </Text>
               <Switch
                 value={allowNotifications}
                 onValueChange={setAllowNotifications}
@@ -380,9 +452,18 @@ export default function userProfileSettingsPage() {
           </ThemedView>
 
           {/* APPEARANCE */}
-          <ThemedView style={responsiveStyles.card}>
+          <ThemedView
+            style={[
+              responsiveStyles.card,
+              { backgroundColor: theme.background },
+            ]}
+          >
             <ThemedText
-              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+              style={[
+                styles.sectionTitle,
+                globalStyles.semiLargeText,
+                { color: theme.text },
+              ]}
             >
               Appearance Settings
             </ThemedText>
@@ -402,7 +483,9 @@ export default function userProfileSettingsPage() {
               <Picker.Item label="Dark Mode" value="dark" />
             </Picker>
 
-            <ThemedText style={[styles.label, { marginTop: 20 }]}>
+            <ThemedText
+              style={[styles.label, { marginTop: 20, color: theme.text }]}
+            >
               Language
             </ThemedText>
             <RNPickerSelect
@@ -415,7 +498,32 @@ export default function userProfileSettingsPage() {
                 { label: "Hausa", value: "hausa" },
                 { label: "Igbo", value: "igbo" },
               ]}
-              style={pickerStyles}
+              style={{
+                inputIOS: {
+                  fontSize: 16,
+                  paddingVertical: 10,
+                  paddingHorizontal: 12,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  borderRadius: 6,
+                  color: theme.text,
+                  paddingRight: 30,
+                  marginBottom: 12,
+                  backgroundColor: theme.background,
+                },
+                inputAndroid: {
+                  fontSize: 16,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderWidth: 1,
+                  borderColor: theme.border,
+                  borderRadius: 6,
+                  color: theme.text,
+                  paddingRight: 30,
+                  marginBottom: 12,
+                  backgroundColor: theme.background,
+                },
+              }}
             />
             <ThemedView style={globalStyles.button1}>
               <Pressable onPress={handleSave}>
@@ -427,9 +535,18 @@ export default function userProfileSettingsPage() {
           </ThemedView>
 
           {/* PRIVACY */}
-          <ThemedView style={responsiveStyles.card}>
+          <ThemedView
+            style={[
+              responsiveStyles.card,
+              { backgroundColor: theme.background },
+            ]}
+          >
             <ThemedText
-              style={[styles.sectionTitle, globalStyles.semiLargeText]}
+              style={[
+                styles.sectionTitle,
+                globalStyles.semiLargeText,
+                { color: theme.text },
+              ]}
             >
               Privacy Settings
             </ThemedText>
@@ -439,11 +556,22 @@ export default function userProfileSettingsPage() {
               ["Allow Friend Requests", "allowFriendRequests"],
               ["Allow Data Collection", "dataCollection"],
             ].map(([label, key]) => (
-              <ThemedView key={key} style={[styles.row, responsiveStyles.row]}>
-                <ThemedText style={styles.label}>{label}</ThemedText>
+              <ThemedView
+                key={key}
+                style={[
+                  styles.row,
+                  responsiveStyles.row,
+                  { backgroundColor: theme.background },
+                ]}
+              >
+                <ThemedText style={[styles.label, { color: theme.text }]}>
+                  {label}
+                </ThemedText>
                 <Switch
                   value={privacy[key as keyof typeof privacy]}
                   onValueChange={() => togglePrivacy(key as any)}
+                  trackColor={{ false: theme.border, true: theme.primary }}
+                  thumbColor={theme.background}
                 />
               </ThemedView>
             ))}

@@ -6,6 +6,7 @@ import { StyleSheet } from "react-native";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 import { TouchableOpacity } from "react-native";
 
+import { useTheme } from "@/components/Header";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 
 import { useRouter } from "expo-router";
@@ -34,104 +35,170 @@ type resourceCardProps = {
 type ProfilePageNavItem = {
   name: string;
   link: string;
-}
+};
 
 const resourceCategoryIconMap: Record<string, string> = {
-  video: 'video-camera',
-  image: 'image',
-  document: 'file-text',
-  audio: 'music',
-  other: 'file',
+  video: "video-camera",
+  image: "image",
+  document: "file-text",
+  audio: "music",
+  other: "file",
 };
 
 const resourceCategoryIconColor: Record<string, string> = {
-  video: '#2A52BE',
-  image: '#00C853',
-  document: '#9C27B0',
-  audio: '#F44336',
-  other: '#FFC107',
+  video: "#2A52BE",
+  image: "#00C853",
+  document: "#9C27B0",
+  audio: "#F44336",
+  other: "#FFC107",
 };
 
 const resourceCategoryIconBackgroundColor: Record<string, string> = {
-  video: 'rgba(1, 119, 251, 0.1)',
-  image: 'rgba(0, 200, 83, 0.1)',
-  document: 'rgba(156, 39, 176, 0.1)',
-  audio: 'rgba(244, 67, 54, 0.1)',
-  other: 'rgba(255, 193, 7, 0.1)',
+  video: "rgba(1, 119, 251, 0.1)",
+  image: "rgba(0, 200, 83, 0.1)",
+  document: "rgba(156, 39, 176, 0.1)",
+  audio: "rgba(244, 67, 54, 0.1)",
+  other: "rgba(255, 193, 7, 0.1)",
 };
 
 const resourceExtensionCategories: { [key: string]: string[] } = {
-  Video: ['mp4', 'm4a', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm'],
-  Image: ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'],
-  Document: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'txt', 'odt'],
-  Audio: ['mp3', 'wav', 'aac', 'flac', 'ogg'],
+  Video: ["mp4", "m4a", "avi", "mov", "wmv", "flv", "mkv", "webm"],
+  Image: ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp"],
+  Document: ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "txt", "odt"],
+  Audio: ["mp3", "wav", "aac", "flac", "ogg"],
 };
 
 const resourceGetCategoryFromExtension = (ext: string): string => {
-  const cleanedExt = ext.toLowerCase().replace('.', '');
+  const cleanedExt = ext.toLowerCase().replace(".", "");
   for (const category in resourceExtensionCategories) {
     if (resourceExtensionCategories[category].includes(cleanedExt)) {
       return category;
     }
   }
-  return 'Other';
+  return "Other";
 };
 
 export const ResourceListCard: React.FC<resourceCardProps> = ({ file }) => {
-    const globalStyles = useGlobalStyles();
+  const { theme } = useTheme();
+  const globalStyles = useGlobalStyles();
 
-    const extension = file.filepath.split('.').pop() || '';
-    const category = resourceGetCategoryFromExtension(extension);
-    const lowerCaseCategory = category.toLowerCase();
+  const extension = file.filepath.split(".").pop() || "";
+  const category = resourceGetCategoryFromExtension(extension);
+  const lowerCaseCategory = category.toLowerCase();
 
-    const iconName = resourceCategoryIconMap[lowerCaseCategory] || 'file-o';
-    const iconColor = resourceCategoryIconColor[lowerCaseCategory];
-    const iconBackgroundColor = resourceCategoryIconBackgroundColor[lowerCaseCategory];
-  
-    const { screenWidth } = useResponsiveDimensions();
-    const boundaryWidth = screenWidth - 20
+  const iconName = resourceCategoryIconMap[lowerCaseCategory] || "file";
+  const iconColor =
+    theme.accent || resourceCategoryIconColor[lowerCaseCategory];
+  const iconBackgroundColor =
+    theme.backgroundSecondary ||
+    resourceCategoryIconBackgroundColor[lowerCaseCategory];
 
-    const dynamicStyles = StyleSheet.create({
-        fileCard: {
-            maxWidth: boundaryWidth - 20
-        }
-    })
+  const { screenWidth } = useResponsiveDimensions();
+  const boundaryWidth = screenWidth - 20;
+
+  const dynamicStyles = StyleSheet.create({
+    fileCard: {
+      maxWidth: boundaryWidth - 20,
+    },
+  });
 
   return (
-    <ThemedView style={[resourceCardStyles.fileCard, dynamicStyles.fileCard]}>
-      <ThemedView style={resourceCardStyles.fileCardHeading}>
+    <ThemedView
+      style={[
+        resourceCardStyles.fileCard,
+        dynamicStyles.fileCard,
+        { backgroundColor: theme.background },
+      ]}
+    >
+      <ThemedView
+        style={[
+          resourceCardStyles.fileCardHeading,
+          { backgroundColor: theme.background },
+        ]}
+      >
         <ThemedView
-          style={[resourceCardStyles.fileCardHeadingIcon, { backgroundColor: iconBackgroundColor }]}
+          style={[
+            resourceCardStyles.fileCardHeadingIcon,
+            { backgroundColor: iconBackgroundColor },
+          ]}
         >
           <FontAwesome6 name={iconName} size={22} color={iconColor} />
         </ThemedView>
-        <ThemedView style={resourceCardStyles.fileCardHeadingTexts}>
-          <ThemedText style={[globalStyles.mediumText, { fontWeight: '500' }]}>
+        <ThemedView
+          style={[
+            resourceCardStyles.fileCardHeadingTexts,
+            { backgroundColor: theme.background },
+          ]}
+        >
+          <ThemedText
+            style={[
+              globalStyles.mediumText,
+              { fontWeight: "500", color: theme.text },
+            ]}
+          >
             {file.filename}
           </ThemedText>
-          <ThemedText style={globalStyles.smallText}>
+          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
             Uploaded by {file.uploadedBy}
           </ThemedText>
         </ThemedView>
       </ThemedView>
-      <ThemedView>
-        <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
+      <ThemedView style={{ backgroundColor: theme.background }}>
+        <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
+          {file.summary}
+        </ThemedText>
       </ThemedView>
-      <ThemedView style={{gap: 15, alignItems: 'center', flexDirection: 'row'}}>
-        <ThemedView style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
-          <FontAwesome name='heart' size={17} color={'red'} />
-        <ThemedText style={globalStyles.baseText}>{file.likes}</ThemedText>
+      <ThemedView
+        style={{
+          gap: 15,
+          alignItems: "center",
+          flexDirection: "row",
+          backgroundColor: theme.background,
+        }}
+      >
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            backgroundColor: theme.background,
+          }}
+        >
+          <FontAwesome name="heart" size={17} color={theme.accent || "red"} />
+          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
+            {file.likes}
+          </ThemedText>
         </ThemedView>
-        <ThemedView style={{flexDirection: 'row', alignItems: 'center', gap: 5}}>
-          <FontAwesome6 name='download' size={17} color={'#2A52BE'} />
-          <ThemedText style={globalStyles.baseText}>{file.downloads}</ThemedText>
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+            backgroundColor: theme.background,
+          }}
+        >
+          <FontAwesome6
+            name="download"
+            size={17}
+            color={theme.primary || "#2A52BE"}
+          />
+          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
+            {file.downloads}
+          </ThemedText>
         </ThemedView>
       </ThemedView>
     </ThemedView>
   );
 };
 
-export function ChatListCardTemplate({ chat, onPress, }: { chat: ChatListCardProps; onPress: () => void; }) {
+export function ChatListCardTemplate({
+  chat,
+  onPress,
+}: {
+  chat: ChatListCardProps;
+  onPress: () => void;
+}) {
+  const { theme } = useTheme();
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
 
@@ -145,12 +212,35 @@ export function ChatListCardTemplate({ chat, onPress, }: { chat: ChatListCardPro
 
   return (
     <TouchableOpacity onPress={onPress}>
-      <ThemedView style={[chatListCardTemplateStyles.chatCard, chatStyles.chatCard]}>
-        <ThemedView style={chatListCardTemplateStyles.chatDetails}>
-          <ThemedText style={globalStyles.semiMediumText}>{chat.name}</ThemedText>
-          <ThemedText style={globalStyles.baseText}>{chat.message}</ThemedText>
+      <ThemedView
+        style={[
+          chatListCardTemplateStyles.chatCard,
+          chatStyles.chatCard,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <ThemedView
+          style={[
+            chatListCardTemplateStyles.chatDetails,
+            { backgroundColor: theme.background },
+          ]}
+        >
+          <ThemedText
+            style={[globalStyles.semiMediumText, { color: theme.text }]}
+          >
+            {chat.name}
+          </ThemedText>
+          <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
+            {chat.message}
+          </ThemedText>
         </ThemedView>
-        <ThemedText style={[globalStyles.smallText, chatListCardTemplateStyles.chatTime]}>
+        <ThemedText
+          style={[
+            globalStyles.smallText,
+            chatListCardTemplateStyles.chatTime,
+            { color: theme.text },
+          ]}
+        >
           {chat.time}
         </ThemedText>
       </ThemedView>
@@ -158,90 +248,124 @@ export function ChatListCardTemplate({ chat, onPress, }: { chat: ChatListCardPro
   );
 }
 
-
 export function EventCardTemplate(event: any) {
+  const { theme } = useTheme();
+  const globalStyles = useGlobalStyles();
 
-    const globalStyles = useGlobalStyles()
-    const cardData = event.event
+  const cardData = event.event;
 
-    return (
-      <ThemedView style={eventCardStyles.eventCard}>
-        <ThemedView style={eventCardStyles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Event
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.title}
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={eventCardStyles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Time
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.startTime} - {cardData.endTime}
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={eventCardStyles.eventCardSection}>
-          <ThemedText style={globalStyles.smallText}>
-            Location
-          </ThemedText>
-          <ThemedText style={globalStyles.semiMediumText}>
-            {cardData.location}
-          </ThemedText>
-        </ThemedView>
+  return (
+    <ThemedView
+      style={[
+        eventCardStyles.eventCard,
+        { borderColor: theme.border, backgroundColor: theme.background },
+      ]}
+    >
+      <ThemedView
+        style={[
+          eventCardStyles.eventCardSection,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Event
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {cardData.title}
+        </ThemedText>
       </ThemedView>
-    )
+      <ThemedView
+        style={[
+          eventCardStyles.eventCardSection,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Time
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {cardData.startTime} - {cardData.endTime}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView
+        style={[
+          eventCardStyles.eventCardSection,
+          { backgroundColor: theme.background },
+        ]}
+      >
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Location
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {cardData.location}
+        </ThemedText>
+      </ThemedView>
+    </ThemedView>
+  );
 }
 
-export function ProfilePageNavListTemplate({ list }: { list: ProfilePageNavItem }){
+export function ProfilePageNavListTemplate({
+  list,
+}: {
+  list: ProfilePageNavItem;
+}) {
+  const { theme } = useTheme();
+  const router = useRouter();
 
-  const router = useRouter()
-  
-  return(
-    <TouchableOpacity onPress={() => router.push(list.link as any)} style={profilePageNavListTemplateStyles.option}>
-      <ThemedText>{list.name}</ThemedText>
+  return (
+    <TouchableOpacity
+      onPress={() => router.push(list.link as any)}
+      style={[
+        profilePageNavListTemplateStyles.option,
+        { borderColor: theme.border, backgroundColor: theme.background },
+      ]}
+    >
+      <ThemedText style={{ color: theme.text }}>{list.name}</ThemedText>
     </TouchableOpacity>
-  )
+  );
 }
-
-
 
 const eventCardStyles = StyleSheet.create({
   eventCard: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: .5,
-    borderColor: 'rgba(17, 17, 17, 0.2)',
-    borderStyle: 'solid',
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 0.5,
+    borderColor: "#ccc",
+    borderStyle: "solid",
     padding: 10,
     borderRadius: 8,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   eventCardSection: {
-    flexDirection: 'column',
+    flexDirection: "column",
   },
-})
+});
 
 const chatListCardTemplateStyles = StyleSheet.create({
   chatCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     borderRadius: 8,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 2,
   },
   chatDetails: {
-    flexDirection: 'column',
+    flexDirection: "column",
     gap: 4,
   },
   chatTime: {
-    color: '#777',
+    color: "#777",
   },
 });
 
@@ -251,7 +375,7 @@ const resourceCardStyles = StyleSheet.create({
     padding: 10,
     borderRadius: 6,
     gap: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -259,25 +383,25 @@ const resourceCardStyles = StyleSheet.create({
   },
   fileCardHeading: {
     gap: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   fileCardHeadingIcon: {
     width: 37,
     height: 37,
     borderRadius: 5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   fileCardHeadingTexts: {
-    flexDirection: 'column',
+    flexDirection: "column",
   },
 });
 
 const profilePageNavListTemplateStyles = StyleSheet.create({
   option: {
     paddingVertical: 5,
-    borderBottomWidth: .5,
-    borderColor: 'rgba(17, 17, 17, 0.2)',
-  }
-})
+    borderBottomWidth: 0.5,
+    borderColor: "#ccc",
+  },
+});

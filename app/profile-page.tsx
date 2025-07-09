@@ -41,10 +41,15 @@ export default function ProfilePage() {
 
   return (
     <>
-      <ThemedView style={{ flex: 1, padding: 10 }}>
+      <ThemedView
+        style={{ flex: 1, padding: 10, backgroundColor: theme.background }}
+      >
         <NavigationHeader title="Profile" />
 
-        <ParallaxScrollView>
+        <ParallaxScrollView
+          style={{ backgroundColor: theme.background }}
+          contentContainerStyle={{ backgroundColor: theme.background }}
+        >
           <View
             style={[styles.container, { backgroundColor: theme.background }]}
           >
@@ -52,7 +57,7 @@ export default function ProfilePage() {
               source={{
                 uri: userData.profilePic || "https://via.placeholder.com/150",
               }}
-              style={styles.avatar}
+              style={[styles.avatar, { borderColor: theme.border }]}
             />
             <Text
               style={[
@@ -77,7 +82,12 @@ export default function ProfilePage() {
               {userData.university || "University not set"}
             </Text>
 
-            <View style={{ flexDirection: "row" }}>
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: theme.background,
+              }}
+            >
               <Text
                 style={[
                   {
@@ -91,7 +101,6 @@ export default function ProfilePage() {
               </Text>
               <Text
                 style={[
-                  ,
                   {
                     color: theme.text,
                     fontFamily: globalStyles.smallText.fontFamily,
@@ -99,8 +108,7 @@ export default function ProfilePage() {
                   },
                 ]}
               >
-                {" "}
-                |{" "}
+                {" | "}
               </Text>
               <Text
                 style={[
@@ -119,6 +127,7 @@ export default function ProfilePage() {
             style={[
               styles.profilePageNavigationContainer,
               dynamicStyles.profilePageNavigationContainer,
+              { borderColor: theme.border, backgroundColor: theme.background },
             ]}
           >
             {profileNavigationList.map((list) => (

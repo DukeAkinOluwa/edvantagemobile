@@ -1,3 +1,4 @@
+import { useTheme } from "@/components/Header";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import React from "react";
@@ -8,6 +9,7 @@ import {
   Text,
   TouchableOpacity,
 } from "react-native";
+import { ThemedView } from "./ThemedView";
 
 import ChatListScreen from "@/app/(tabs)/chatlistscreen";
 import ExploreScreen from "@/app/(tabs)/explore";
@@ -15,19 +17,15 @@ import HomeScreen from "@/app/(tabs)/index";
 import ResourcesScreen from "@/app/(tabs)/resources";
 import ScheduleScreen from "@/app/(tabs)/schedule";
 
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
-import { ThemedView } from "./ThemedView";
-
 const Tab = createBottomTabNavigator();
 
 const CustomTabBar = ({ state, descriptors, navigation }: any) => {
-  const theme = useColorScheme() ?? "light";
-  const colorSet = Colors[theme];
+  const { theme } = useTheme();
 
   const dynamicStyles = StyleSheet.create({
     tabBarContainer: {
-      shadowColor: theme === "light" ? "#000" : "#FFF",
+      shadowColor: theme.text,
+      backgroundColor: theme.background,
     },
   });
 
@@ -54,7 +52,6 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
           explore: "plane",
         };
 
-        // Cast route.name as RouteName
         const iconName = iconMap[route.name as RouteName];
 
         const onPress = () => {
@@ -71,13 +68,13 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
             <FontAwesome6
               name={iconName}
               size={isFocused ? 28 : 22}
-              color={isFocused ? colorSet.primary : "gray"}
+              color={isFocused ? theme.primary : theme.border}
               style={{ marginBottom: 4 }}
             />
             <Text
               style={[
                 styles.tabLabel,
-                { color: isFocused ? colorSet.primary : "gray" },
+                { color: isFocused ? theme.primary : theme.border },
               ]}
             >
               {label}
@@ -90,10 +87,17 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
 };
 
 export default function BottomTabNavigator() {
+  const { theme } = useTheme();
+
   return (
     <Tab.Navigator
       initialRouteName="index"
-      screenOptions={{ headerShown: false }}
+      screenOptions={{
+        headerShown: false,
+        tabBarBackground: () => (
+          <ThemedView style={{ flex: 1, backgroundColor: theme.background }} />
+        ),
+      }}
       tabBar={(props) => <CustomTabBar {...props} />}
     >
       <Tab.Screen

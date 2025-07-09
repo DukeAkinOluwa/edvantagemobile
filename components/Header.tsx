@@ -6,8 +6,15 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { lightTheme } from "../assets/colors";
+import {
+  Appearance,
+  Image,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { darkTheme, lightTheme } from "../assets/colors";
 import { requestNotificationPermissions } from "../utils/notifications";
 
 interface ThemeContextType {
@@ -40,12 +47,65 @@ export const ThemeContext = createContext<ThemeContextType>({
 });
 
 export const UserDataContext = createContext<UserDataContextType>({
-  userData: {},
+  userData: { university: "" },
   setUserData: () => {},
 });
 
 export const useTheme = () => useContext(ThemeContext);
 export const useUserData = () => useContext(UserDataContext);
+
+export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
+  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
+    "system"
+  );
+  const [theme, setTheme] = useState(lightTheme);
+
+  useEffect(() => {
+    const initialize = async () => {
+      const savedData = await getData("userData");
+      const savedThemeMode = savedData?.themeMode || "system";
+      setThemeMode(savedThemeMode);
+      if (savedThemeMode !== "system") {
+        setTheme(savedThemeMode === "dark" ? darkTheme : lightTheme);
+      } else {
+        setTheme(
+          Appearance.getColorScheme() === "dark" ? darkTheme : lightTheme
+        );
+      }
+    };
+    initialize();
+  }, []);
+
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      if (themeMode === "system") {
+        setTheme(colorScheme === "dark" ? darkTheme : lightTheme);
+      }
+    });
+    return () => subscription.remove();
+  }, [themeMode]);
+
+  const handleSetThemeMode = async (mode: "system" | "light" | "dark") => {
+    setThemeMode(mode);
+    const newTheme =
+      mode === "system"
+        ? Appearance.getColorScheme() === "dark"
+          ? darkTheme
+          : lightTheme
+        : mode === "dark"
+        ? darkTheme
+        : lightTheme;
+    setTheme(newTheme);
+    const userData = (await getData("userData")) || {};
+    await saveData("userData", { ...userData, themeMode: mode });
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, setThemeMode: handleSetThemeMode }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
 
 interface NavigationHeaderProps {
   title: string;
@@ -98,21 +158,33 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
   }, []);
 
   return (
-    <View style={styles.headerContainer}>
-      <Text style={[styles.headerTitle, globalStyles.semiLargeText]}>
+    <View
+      style={[styles.headerContainer, { backgroundColor: theme.background }]}
+    >
+      <Text
+        style={[
+          styles.headerTitle,
+          globalStyles.semiLargeText,
+          { color: theme.text },
+        ]}
+      >
         {title}
       </Text>
-      <View style={styles.headerButtons}>
+      <View
+        style={[styles.headerButtons, { backgroundColor: theme.background }]}
+      >
         <TouchableOpacity
           onPress={() => router.push("/notifications-page")}
           style={styles.button}
           activeOpacity={0.7}
         >
           <View style={styles.notificationButton}>
-            <FontAwesome6 name="bell" size={25} />
+            <FontAwesome6 name="bell" size={25} color={theme.text} />
             {newNotificationCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                <Text style={styles.badgeText}>{newNotificationCount}</Text>
+              <View style={[styles.badge, { backgroundColor: "red" }]}>
+                <Text style={[styles.badgeText, { color: theme.text }]}>
+                  {newNotificationCount}
+                </Text>
               </View>
             )}
           </View>
@@ -124,10 +196,12 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
         >
           <MaskedView
             style={{ height: 25, width: 25 }}
-            maskElement={<FontAwesome6 name="bolt" size={25} color="#2A52BE" />}
+            maskElement={
+              <FontAwesome6 name="bolt" size={25} color={theme.primary} />
+            }
           >
             <LinearGradient
-              colors={["#2A52BE", "#2B7FFF"]}
+              colors={[theme.primary, theme.accent || theme.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.gradient}
@@ -143,7 +217,7 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
             source={{
               uri: userData.profilePic || "https://via.placeholder.com/40",
             }}
-            style={styles.profilePic}
+            style={[styles.profilePic, { borderColor: theme.border }]}
           />
         </TouchableOpacity>
       </View>
@@ -162,22 +236,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 21,
   },
-  headerIcons: {
-    flexDirection: "row",
-    gap: 20,
-    height: 30,
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  gradient: {
-    width: 60,
-    height: 60,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
   headerButtons: {
     flexDirection: "row",
     alignItems: "center",
@@ -194,7 +252,6 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
   },
   notificationButton: {
     position: "relative",
@@ -210,8 +267,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   badgeText: {
-    color: "#fff",
     fontSize: 12,
     fontWeight: "bold",
+  },
+  gradient: {
+    width: 60,
+    height: 60,
   },
 });
