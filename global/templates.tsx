@@ -16,6 +16,8 @@ type ChatListCardProps = {
   name: string;
   message: string;
   time: string;
+  imageLink: string;
+  type: 'Personal' | 'Group';
 };
 
 type ResourceCardProps = {
@@ -147,17 +149,12 @@ export function ChatListCardTemplate({ chat, onPress }: { chat: ChatListCardProp
   return (
     <TouchableOpacity onPress={onPress}>
       <ThemedView style={[chatListCardTemplateStyles.chatCard, { width: screenWidth - 40 }]}>
+        <Image source={{uri: chat.imageLink}} style={chatListCardTemplateStyles.userImage}/>
         <ThemedView style={chatListCardTemplateStyles.chatDetails}>
           <ThemedText style={globalStyles.semiMediumText}>{chat.name}</ThemedText>
           <ThemedText style={globalStyles.baseText}>{chat.message}</ThemedText>
         </ThemedView>
-        <ThemedText
-          style={[
-            globalStyles.smallText,
-            chatListCardTemplateStyles.chatTime,
-            { color: theme.text },
-          ]}
-        >
+        <ThemedText style={[ globalStyles.smallText, chatListCardTemplateStyles.chatTime, { color: theme.text }, ]} >
           {chat.time}
         </ThemedText>
       </ThemedView>
@@ -296,22 +293,28 @@ const resourceCardStyles = StyleSheet.create({
 const chatListCardTemplateStyles = StyleSheet.create({
   chatCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     borderRadius: 8,
-    padding: 12,
+    paddingVertical: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    elevation: 2,
+    gap: 10,
+  },
+  userImage: {
+    height: 50,
+    width: 50,
+    borderRadius: 25,
   },
   chatDetails: {
     flexDirection: 'column',
-    gap: 4,
   },
   chatTime: {
     color: '#777',
+    position: 'absolute',
+    top: 12,
+    right: 12,
   },
 });
 

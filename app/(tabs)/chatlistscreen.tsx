@@ -29,6 +29,7 @@ export default function ChatScreen() {
         message: string;
         type: 'Personal' | 'Group';
         time: string;
+        imageLink: string;
     }
 
     interface StudyGroup {
@@ -60,10 +61,10 @@ export default function ChatScreen() {
 
     // --- Sample Data ---
     const personalChats: PersonalOrGroupChat[] = [
-        { id: '1', name: 'John Doe', message: 'Hey, how are you?', type: 'Personal', time: '9:45 AM' },
-        { id: '2', name: 'Study Group', message: 'Don’t forget our 4PM meeting!', type: 'Group', time: '8:30 AM' },
-        { id: '3', name: 'Jane Smith', message: 'I sent the slides.', type: 'Personal', time: 'Yesterday' },
-        { id: '4', name: 'Project Team', message: 'Code repo has been updated.', type: 'Group', time: '2d ago' },
+        { id: '1', name: 'John Doe', message: 'Hey, how are you?', type: 'Personal', time: '9:45 AM', imageLink: 'https://i.pravatar.cc/150?img=5' },
+        { id: '2', name: 'Study Group', message: 'Don’t forget our 4PM meeting!', type: 'Group', time: '8:30 AM', imageLink: 'https://i.pravatar.cc/150?img=4' },
+        { id: '3', name: 'Jane Smith', message: 'I sent the slides.', type: 'Personal', time: 'Yesterday', imageLink: 'https://i.pravatar.cc/150?img=3' },
+        { id: '4', name: 'Project Team', message: 'Code repo has been updated.', type: 'Group', time: '2d ago', imageLink: 'https://i.pravatar.cc/150?img=2' },
     ];
 
     const studyGroups: StudyGroup[] = [
@@ -163,32 +164,33 @@ export default function ChatScreen() {
                 </ThemedView>
 
                 <ThemedView style={styles.listContainer}>
-                {selectedCategory === 'General' &&
-                    (filteredList as PersonalOrGroupChat[]).map(chat => (
-                    <ChatListCardTemplate
-                        key={chat.id}
-                        chat={chat}
-                        onPress={() => router.push(`/chat/${chat.id}`)}
-                    />
-                ))}
-
-                {selectedCategory === 'Study' &&
-                    (filteredList as StudyGroup[]).map(study => (
-                    <StudyCardTemplate
-                        key={study.id}
-                        studyGroup={study}
-                        onPress={() => router.push(`/study/${study.id}`)}
-                    />
-                    ))}
-
-                {selectedCategory === 'Projects' &&
-                    (filteredList as ProjectItem[]).map(project => (
-                    <ProjectCardTemplate
-                        key={project.id}
-                        project={project}
-                        onPress={() => router.push(`/projects/${project.id}`)}
-                    />
-                    ))}
+                    {selectedCategory === 'General' &&
+                        (filteredList as PersonalOrGroupChat[]).map(chat => (
+                            <ChatListCardTemplate
+                                key={chat.id}
+                                chat={chat}
+                                onPress={() => router.push(`/chat/${chat.id}`)}
+                            />
+                        ))
+                    }
+                    {selectedCategory === 'Study' &&
+                        (filteredList as StudyGroup[]).map(study => (
+                            <StudyCardTemplate
+                                key={study.id}
+                                studyGroup={study}
+                                onPress={() => router.push(`/study/${study.id}`)}
+                            />
+                        ))
+                    }
+                    {selectedCategory === 'Projects' &&
+                        (filteredList as ProjectItem[]).map(project => (
+                            <ProjectCardTemplate
+                                key={project.id}
+                                project={project}
+                                onPress={() => router.push(`/projects/${project.id}`)}
+                            />
+                        ))
+                    }
                 </ThemedView>
             </ParallaxScrollView>
         </ThemedView>
@@ -206,7 +208,7 @@ const styles = StyleSheet.create({
     listContainer: {
         paddingHorizontal: 15,
         paddingVertical: 10,
-        gap: 10,
+        // gap: 10,
     },
     categorySelector: {
         flexDirection: 'row',
