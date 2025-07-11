@@ -8,6 +8,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
+import { Image } from "react-native";
 
 // ===== Types =====
 type ChatListCardProps = {
@@ -42,6 +43,8 @@ interface StudyCardProps {
     title: string;
     description: string;
     type: 'Study';
+    imageLink: string;
+    members: string[];
   };
   onPress?: () => void;
 }
@@ -52,14 +55,10 @@ interface ProjectItem {
   description: string;
   dueDate: string;
   priority: string;
-  tasks: {
-    title: string;
-    description: string;
-    dueDate: string;
-    status: string;
-    assignedTo: string;
-  };
+  tasks: [];
   type: 'Projects';
+  imageLink: string;
+  members: string[];
 }
 
 // ===== Utility Maps & Functions =====
@@ -167,31 +166,57 @@ export function ChatListCardTemplate({ chat, onPress }: { chat: ChatListCardProp
 }
 
 export function StudyCardTemplate({ studyGroup, onPress }: StudyCardProps) {
+  
+  const { screenWidth } = useResponsiveDimensions();
+  const globalStyles = useGlobalStyles()
+
+  const responsiveStyles = StyleSheet.create({
+    cardImage: {
+      width: screenWidth - 40,
+    }
+  })
+
   return (
     <TouchableOpacity onPress={onPress}>
       <ThemedView style={studyCardStyles.card}>
-        <ThemedText style={studyCardStyles.title}>{studyGroup.title}</ThemedText>
-        <ThemedText style={studyCardStyles.description}>{studyGroup.description}</ThemedText>
+        <Image source={{uri: studyGroup.imageLink}} style={[studyCardStyles.cardImage, responsiveStyles.cardImage]}/>
+        <ThemedView style={studyCardStyles.cardBody}>
+          <ThemedText style={[globalStyles.semiLargeText]}>{studyGroup.title}</ThemedText>
+          <ThemedText style={[globalStyles.semiMediumLightText]}>{studyGroup.description}</ThemedText>
+          <ThemedText style={globalStyles.semiMediumText}>{studyGroup.members.length} members</ThemedText>
+        </ThemedView>
       </ThemedView>
     </TouchableOpacity>
   );
 }
 
 export function ProjectCardTemplate({ project, onPress }: { project: ProjectItem; onPress: () => void }) {
+  
+  const { screenWidth } = useResponsiveDimensions();
+  const globalStyles = useGlobalStyles()
+
+  const responsiveStyles = StyleSheet.create({
+    cardImage: {
+      width: screenWidth - 40,
+    }
+  })
+
   return (
     <TouchableOpacity onPress={onPress}>
       <ThemedView style={projectCardStyles.card}>
-        <ThemedView style={projectCardStyles.header}>
-          <ThemedText style={projectCardStyles.title}>{project.title}</ThemedText>
-          <ThemedText style={[projectCardStyles.priority, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
-            {project.priority.toUpperCase()}
-          </ThemedText>
-        </ThemedView>
-        <ThemedText style={projectCardStyles.description}>{project.description}</ThemedText>
-        <ThemedText style={projectCardStyles.meta}>Due: {project.dueDate}</ThemedText>
-        <ThemedView style={projectCardStyles.task}>
-          <ThemedText style={projectCardStyles.taskTitle}>Task: {project.tasks.title}</ThemedText>
-          <ThemedText style={projectCardStyles.taskStatus}>Status: {project.tasks.status}</ThemedText>
+        <Image source={{uri: project.imageLink}} style={[studyCardStyles.cardImage, responsiveStyles.cardImage]}/>
+        <ThemedView style={projectCardStyles.cardBody}>
+          <ThemedText style={[globalStyles.semiLargeText]}>{project.title}</ThemedText>
+          <ThemedText style={[globalStyles.semiMediumLightText]}>{project.description}</ThemedText>
+          <ThemedView style={projectCardStyles.relevantSummary}>
+            <ThemedText style={globalStyles.semiMediumLightText}>Due: {project.dueDate}</ThemedText>
+            <ThemedText style={globalStyles.semiMediumLightText}>{project.tasks.length} tasks</ThemedText>
+            <ThemedText style={[globalStyles.semiMediumLightText, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
+              {project.priority.toUpperCase()}
+            </ThemedText>
+          </ThemedView>
+          {/* <ThemedText style={projectCardStyles.taskStatus}>Status: {project.tasks.status}</ThemedText> */}
+          <ThemedText style={globalStyles.semiMediumText}>{project.members.length} members</ThemedText>
         </ThemedView>
       </ThemedView>
     </TouchableOpacity>
@@ -267,7 +292,7 @@ const chatListCardTemplateStyles = StyleSheet.create({
     padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -284,21 +309,18 @@ const studyCardStyles = StyleSheet.create({
   card: {
     backgroundColor: '#f0f4ff',
     borderRadius: 12,
-    padding: 16,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
   },
-  title: {
-    fontWeight: '600',
-    fontSize: 16,
-    marginBottom: 4,
+  cardImage: {
+    height: 70,
   },
-  description: {
-    fontSize: 14,
-    color: '#555',
+  cardBody: {
+    padding: 15,
   },
 });
 
@@ -306,43 +328,21 @@ const projectCardStyles = StyleSheet.create({
   card: {
     backgroundColor: '#fff4e6',
     borderRadius: 12,
-    padding: 16,
     marginBottom: 10,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 21 },
+    elevation: 2,
   },
-  header: {
+  cardBody: {
+    padding: 15,
+    gap: 5,
+  },
+  relevantSummary: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  title: {
-    fontWeight: '700',
-    fontSize: 16,
-  },
-  priority: {
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 14,
-    color: '#444',
-    marginBottom: 6,
-  },
-  meta: {
-    fontSize: 13,
-    color: '#777',
-  },
-  task: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  taskTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    alignItems: 'center',
+    gap: 10,
   },
   taskStatus: {
     fontSize: 13,

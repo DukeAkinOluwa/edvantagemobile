@@ -36,6 +36,8 @@ export default function ChatScreen() {
         title: string;
         description: string;
         type: 'Study';
+        imageLink: string;
+        members: string[];
     }
 
     interface ProjectItem {
@@ -44,14 +46,10 @@ export default function ChatScreen() {
         description: string;
         dueDate: string;
         priority: string;
-        tasks: {
-        title: string;
-        description: string;
-        dueDate: string;
-        status: string;
-        assignedTo: string;
-        };
+        tasks: [];
         type: 'Projects';
+        imageLink: string;
+        members: string[];
     }
 
     type FileTypeCategory = 'General' | 'Study' | 'Projects';
@@ -69,24 +67,42 @@ export default function ChatScreen() {
     ];
 
     const studyGroups: StudyGroup[] = [
-        { id: '13434232', title: 'Group 1', description: 'Group for smart people', type: 'Study' },
+        { 
+            id: '13434232',
+            title: 'CS 301 Study Group',
+            description: 'For students taking Data Structures and Algorithms this semester.',
+            type: 'Study',
+            imageLink: '/assets/images/dummy/Titilayo.jpg',
+            members: ['98245', '43849', '49380', '32498', '98433'],
+        },
     ];
 
     const projects: ProjectItem[] = [
         {
-        id: '34324',
-        title: 'Work Project',
-        description: 'Project',
-        dueDate: '25/03/2026',
-        priority: 'high',
-        tasks: {
-            title: 'First Task',
-            description: 'First Descrip',
-            dueDate: '25/02/2026',
-            status: 'completed',
-            assignedTo: 'user648329',
-        },
-        type: 'Projects',
+            id: '34324',
+            title: 'Advanced Machine Learning Research',
+            description: 'Research project on implementing advanced ML algorithms for educational pattern recognition',
+            dueDate: '25/03/2026',
+            priority: 'high',
+            tasks: [
+                {
+                    title: 'Literature review',
+                    description: 'First Descrip',
+                    dueDate: '25/02/2026',
+                    status: 'completed',
+                    assignedTo: 'user648329',
+                },
+                {
+                    title: 'Data collection',
+                    description: 'First Descrip',
+                    dueDate: '25/02/2026',
+                    status: 'pending',
+                    assignedTo: 'user648329',
+                }
+            ],
+            type: 'Projects',
+            imageLink: '/assets/images/dummy/Titilayo.jpg',
+            members: ['98245', '43849', '49380', '32498', '98433'],
         },
     ];
 

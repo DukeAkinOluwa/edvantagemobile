@@ -28,6 +28,11 @@ export const useGlobalStyles = () => {
         color: colorSet.text,
         fontFamily: 'Montserrat-Regular',
     },
+    semiMediumLightText: {
+        fontSize: fontSizes.base,
+        color: colorSet.text,
+        fontFamily: 'Montserrat-Regular'
+    },
     semiMediumText: {
         fontSize: fontSizes.base,
         color: colorSet.text,
