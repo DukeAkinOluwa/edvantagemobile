@@ -194,6 +194,7 @@ export function ProjectCardTemplate({ project, onPress }: { project: ProjectItem
   
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles()
+  const { theme } = useTheme();
 
   const responsiveStyles = StyleSheet.create({
     cardImage: {
@@ -209,11 +210,20 @@ export function ProjectCardTemplate({ project, onPress }: { project: ProjectItem
           <ThemedText style={[globalStyles.semiLargeText]}>{project.title}</ThemedText>
           <ThemedText style={[globalStyles.semiMediumLightText]}>{project.description}</ThemedText>
           <ThemedView style={projectCardStyles.relevantSummary}>
-            <ThemedText style={globalStyles.semiMediumLightText}>Due: {project.dueDate}</ThemedText>
-            <ThemedText style={globalStyles.semiMediumLightText}>{project.tasks.length} tasks</ThemedText>
-            <ThemedText style={[globalStyles.semiMediumLightText, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
-              {project.priority.toUpperCase()}
-            </ThemedText>
+            <ThemedView style={projectCardStyles.relevantSummaryMember}>
+              <FontAwesome6 name={"calendar"} size={18} color={theme.text} />
+              <ThemedText style={globalStyles.semiMediumText}>{project.dueDate}</ThemedText>
+            </ThemedView>
+            <ThemedView style={projectCardStyles.relevantSummaryMember}>
+              <FontAwesome6 name={"file"} size={18} color={theme.text} />
+              <ThemedText style={globalStyles.semiMediumText}>{project.tasks.length} tasks</ThemedText>
+            </ThemedView>
+            <ThemedView style={projectCardStyles.relevantSummaryMember}>
+              <FontAwesome6 name={"clock"} size={18} color={project.priority === 'high' ? '#E63946' : '#2A9D8F'} />
+              <ThemedText style={[globalStyles.semiMediumText, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
+                {project.priority.toUpperCase()}
+              </ThemedText>
+            </ThemedView>
           </ThemedView>
           {/* <ThemedText style={projectCardStyles.taskStatus}>Status: {project.tasks.status}</ThemedText> */}
           <ThemedText style={globalStyles.semiMediumText}>{project.members.length} members</ThemedText>
@@ -342,7 +352,12 @@ const projectCardStyles = StyleSheet.create({
   relevantSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 18,
+  },
+  relevantSummaryMember: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   taskStatus: {
     fontSize: 13,
