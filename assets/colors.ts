@@ -7,6 +7,14 @@ export const lightTheme = {
   secondary: "#5856D6",
   accent: "#FF2D55",
   border: "#E5E5E5",
+  shadow: "#000",
+  placeholder: "#687076",
+  error: "#FF0000",
+  backgroundSecondary: "#F4F4F4",
+  icon: "#687076",
+  tabIconDefault: "#687076",
+  tabIconSelected: "#0a7ea4",
+  tint: "#0a7ea4",
 };
 
 export const darkTheme = {
@@ -16,6 +24,14 @@ export const darkTheme = {
   secondary: "#5E5CE6",
   accent: "#FF375F",
   border: "#2C2C2E",
+  shadow: "#fff",
+  placeholder: "#9BA1A6",
+  error: "#FF5555",
+  backgroundSecondary: "#2C2C2E",
+  icon: "#9BA1A6",
+  tabIconDefault: "#9BA1A6",
+  tabIconSelected: "#fff",
+  tint: "#fff",
 };
 
 export const getSystemTheme = () => {

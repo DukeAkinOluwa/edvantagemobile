@@ -5,17 +5,18 @@ import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
-import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  Appearance,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
-import { darkTheme, lightTheme } from "../assets/colors";
+import React, {
+  createContext,
+  memo,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
+import { lightTheme } from "../assets/colors";
 import { requestNotificationPermissions } from "../utils/notifications";
+import { ThemedText } from "./ThemedText";
 
 interface ThemeContextType {
   theme: typeof lightTheme;
@@ -32,11 +33,19 @@ interface UserDataContextType {
     profilePic?: string;
     course?: string;
     level?: string;
+    department?: string;
+    faculty?: string;
+    university?: string;
+    email?: string;
     themeMode?: string;
     allowNotifications?: boolean;
     allowAlarms?: boolean;
-    email?: string;
-    university: string;
+    privacy?: {
+      showOnlineStatus: boolean;
+      showProfileToGroups: boolean;
+      allowFriendRequests: boolean;
+      dataCollection: boolean;
+    };
   };
   setUserData: (data: Partial<UserDataContextType["userData"]>) => void;
 }
@@ -51,65 +60,32 @@ export const UserDataContext = createContext<UserDataContextType>({
   setUserData: () => {},
 });
 
-export const useTheme = () => useContext(ThemeContext);
-export const useUserData = () => useContext(UserDataContext);
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+};
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
-    "system"
-  );
-  const [theme, setTheme] = useState(lightTheme);
-
-  useEffect(() => {
-    const initialize = async () => {
-      const savedData = await getData("userData");
-      const savedThemeMode = savedData?.themeMode || "system";
-      setThemeMode(savedThemeMode);
-      if (savedThemeMode !== "system") {
-        setTheme(savedThemeMode === "dark" ? darkTheme : lightTheme);
-      } else {
-        setTheme(
-          Appearance.getColorScheme() === "dark" ? darkTheme : lightTheme
-        );
-      }
-    };
-    initialize();
-  }, []);
-
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      if (themeMode === "system") {
-        setTheme(colorScheme === "dark" ? darkTheme : lightTheme);
-      }
-    });
-    return () => subscription.remove();
-  }, [themeMode]);
-
-  const handleSetThemeMode = async (mode: "system" | "light" | "dark") => {
-    setThemeMode(mode);
-    const newTheme =
-      mode === "system"
-        ? Appearance.getColorScheme() === "dark"
-          ? darkTheme
-          : lightTheme
-        : mode === "dark"
-        ? darkTheme
-        : lightTheme;
-    setTheme(newTheme);
-    const userData = (await getData("userData")) || {};
-    await saveData("userData", { ...userData, themeMode: mode });
-  };
-
-  return (
-    <ThemeContext.Provider value={{ theme, setThemeMode: handleSetThemeMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+export const useUserData = () => {
+  const context = useContext(UserDataContext);
+  if (!context) {
+    throw new Error("useUserData must be used within a UserDataProvider");
+  }
+  return context;
 };
 
 interface NavigationHeaderProps {
   title: string;
 }
+
+// Memoized Image component to prevent unnecessary re-renders
+const ProfileImage = memo(
+  ({ uri, borderColor }: { uri: string; borderColor: string }) => (
+    <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
+  )
+);
 
 export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
   const router = useRouter();
@@ -118,39 +94,56 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
   const { userData } = useUserData();
   const [newNotificationCount, setNewNotificationCount] = useState(0);
 
+  // Memoize the image URI to prevent flickering
+  const imageUri = useMemo(() => {
+    return userData.profilePic || "https://via.placeholder.com/40";
+  }, [userData.profilePic]);
+
   const updateNotificationCount = async () => {
-    const notificationHistory = (await getData("notificationHistory")) || [];
-    const newCount = notificationHistory.filter(
-      (n: { isNew: boolean }) => n.isNew
-    ).length;
-    setNewNotificationCount(newCount);
+    try {
+      const notificationHistory = (await getData("notificationHistory")) || [];
+      const newCount = notificationHistory.filter(
+        (n: { isNew: boolean }) => n.isNew
+      ).length;
+      setNewNotificationCount(newCount);
+    } catch (error) {
+      // Silently handle errors to avoid UI disruption
+    }
   };
 
   useEffect(() => {
     const initialize = async () => {
-      await requestNotificationPermissions();
-      await updateNotificationCount();
+      try {
+        await requestNotificationPermissions();
+        await updateNotificationCount();
+      } catch (error) {
+        // Silently handle initialization errors
+      }
     };
     initialize();
 
     const subscription = Notifications.addNotificationReceivedListener(
       async (notification) => {
-        const notificationHistory =
-          (await getData("notificationHistory")) || [];
-        const newNotification = {
-          id: notification.request.identifier,
-          title: notification.request.content.title,
-          body: notification.request.content.body,
-          timestamp: Date.now(),
-          isNew: true,
-        };
-        notificationHistory.push(newNotification);
-        await saveData("notificationHistory", notificationHistory);
-        await updateNotificationCount();
+        try {
+          const notificationHistory =
+            (await getData("notificationHistory")) || [];
+          const newNotification = {
+            id: notification.request.identifier,
+            title: notification.request.content.title,
+            body: notification.request.content.body,
+            timestamp: Date.now(),
+            isNew: true,
+          };
+          notificationHistory.push(newNotification);
+          await saveData("notificationHistory", notificationHistory);
+          await updateNotificationCount();
+        } catch (error) {
+          // Silently handle notification save errors
+        }
       }
     );
 
-    const interval = setInterval(updateNotificationCount, 1000);
+    const interval = setInterval(updateNotificationCount, 5000);
     return () => {
       clearInterval(interval);
       subscription.remove();
@@ -161,15 +154,9 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
     <View
       style={[styles.headerContainer, { backgroundColor: theme.background }]}
     >
-      <Text
-        style={[
-          styles.headerTitle,
-          globalStyles.semiLargeText,
-          { color: theme.text },
-        ]}
-      >
+      <ThemedText type="semiLarge" style={styles.headerTitle}>
         {title}
-      </Text>
+      </ThemedText>
       <View
         style={[styles.headerButtons, { backgroundColor: theme.background }]}
       >
@@ -181,10 +168,10 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
           <View style={styles.notificationButton}>
             <FontAwesome6 name="bell" size={25} color={theme.text} />
             {newNotificationCount > 0 && (
-              <View style={[styles.badge, { backgroundColor: "red" }]}>
-                <Text style={[styles.badgeText, { color: theme.text }]}>
+              <View style={[styles.badge, { backgroundColor: theme.error }]}>
+                <ThemedText type="base" style={styles.badgeText}>
                   {newNotificationCount}
-                </Text>
+                </ThemedText>
               </View>
             )}
           </View>
@@ -213,12 +200,7 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
           style={styles.profileButton}
           activeOpacity={0.7}
         >
-          <Image
-            source={{
-              uri: userData.profilePic || "https://via.placeholder.com/40",
-            }}
-            style={[styles.profilePic, { borderColor: theme.border }]}
-          />
+          <ProfileImage uri={imageUri} borderColor={theme.border} />
         </TouchableOpacity>
       </View>
     </View>

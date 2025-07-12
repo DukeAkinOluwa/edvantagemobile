@@ -1,684 +1,553 @@
-import { NavigationHeader } from "@/components/Header";
-import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { NavigationHeader, useTheme, useUserData } from "@/components/Header";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import React, { useEffect, useState } from "react";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Switch,
-  Text,
   TextInput,
   TouchableOpacity,
-  View,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
 
-import { useTheme, useUserData } from "@/components/Header";
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
-import { Picker } from "@react-native-picker/picker";
-import * as ImagePicker from "expo-image-picker";
-import { getData } from "../utils/storage";
+const ProfileImage = memo(
+  ({ uri, borderColor }: { uri: string; borderColor: string }) => (
+    <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
+  )
+);
 
-export default function userProfileSettingsPage() {
+export default function SettingsPage() {
   const { theme, setThemeMode } = useTheme();
   const { userData, setUserData } = useUserData();
-  const [firstName, setFirstName] = useState(userData.firstName || "");
-  const [lastName, setLastName] = useState(userData.lastName || "");
-  const [email, setEmail] = useState(userData.email || "");
-  const [university, setUniversity] = useState(userData.university || "");
-  const [bio, setBio] = useState(userData.bio || "");
-  const [dob, setDob] = useState(
-    userData.dob ? new Date(userData.dob) : new Date()
-  );
-  const [showDobPicker, setShowDobPicker] = useState(false);
-  const [gender, setGender] = useState(userData.gender || "");
-  const [profilePic, setProfilePic] = useState<string | undefined>(
-    userData.profilePic
-  );
-  const [course, setCourse] = useState(userData.course || "");
-  const [level, setLevel] = useState(userData.level || "100");
-  const [localThemeMode, setLocalThemeMode] = useState(
-    userData.themeMode || "system"
-  );
-  const [allowNotifications, setAllowNotifications] = useState(
-    userData.allowNotifications !== false
-  );
-  const [allowAlarms, setAllowAlarms] = useState(
-    userData.allowAlarms !== false
-  );
+  const [error, setError] = useState<string | null>(null);
+
+  const { screenWidth } = useResponsiveDimensions();
+  const globalStyles = useGlobalStyles();
+
+  // Use context directly to avoid local state desync
+  const imageUri = useMemo(() => {
+    return userData.profilePic || "https://via.placeholder.com/100";
+  }, [userData.profilePic]);
 
   useEffect(() => {
-    const loadData = async () => {
-      const savedUserData = await getData("userData");
-      if (savedUserData) {
-        setFirstName(savedUserData.firstName || "");
-        setLastName(savedUserData.lastName || "");
-        setEmail(savedUserData.email || "");
-        setUniversity(savedUserData.university || "");
-        setBio(savedUserData.bio || "");
-        setDob(savedUserData.dob ? new Date(savedUserData.dob) : new Date());
-        setGender(savedUserData.gender || "");
-        setProfilePic(savedUserData.profilePic || undefined);
-        setCourse(savedUserData.course || "");
-        setLevel(savedUserData.level || "100");
-        setLocalThemeMode(savedUserData.themeMode || "system");
-        setAllowNotifications(savedUserData.allowNotifications !== false);
-        setAllowAlarms(savedUserData.allowAlarms !== false);
-        setThemeMode(savedUserData.themeMode || "system");
+    const validateProfilePic = async () => {
+      try {
+        if (
+          userData.profilePic &&
+          userData.profilePic.startsWith(FileSystem.documentDirectory)
+        ) {
+          const fileInfo = await FileSystem.getInfoAsync(userData.profilePic);
+          if (!fileInfo.exists) {
+            await setUserData({ profilePic: undefined });
+          }
+        }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        console.error("Profile pic validation error:", err);
+        setError(`Failed to validate profile picture: ${errorMessage}`);
       }
     };
-    loadData();
-  }, []);
+    validateProfilePic();
+  }, [userData.profilePic, setUserData]);
 
   const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission denied",
-        "Allow access to select a profile picture."
-      );
-      return;
+    try {
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Please allow access to your photo library."
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.3, // Reduced quality for smaller file size
+      });
+
+      if (!result.canceled) {
+        const uri = result.assets[0].uri;
+        const fileName = `profile_${Date.now()}.jpg`;
+        const persistentUri = `${FileSystem.documentDirectory}${fileName}`;
+
+        // Ensure document directory exists
+        await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory, {
+          intermediates: true,
+        });
+
+        // Verify source file
+        const sourceInfo = await FileSystem.getInfoAsync(uri);
+        if (!sourceInfo.exists) {
+          throw new Error("Selected image URI is invalid");
+        }
+
+        // Move image to persistent storage
+        await FileSystem.moveAsync({
+          from: uri,
+          to: persistentUri,
+        });
+
+        // Verify the file exists
+        const fileInfo = await FileSystem.getInfoAsync(persistentUri);
+        if (!fileInfo.exists) {
+          throw new Error("Failed to save profile picture");
+        }
+
+        // Delete old profile picture
+        if (
+          userData.profilePic &&
+          userData.profilePic.startsWith(FileSystem.documentDirectory)
+        ) {
+          try {
+            await FileSystem.deleteAsync(userData.profilePic, {
+              idempotent: true,
+            });
+          } catch (deleteError) {
+            console.warn("Failed to delete old profile picture:", deleteError);
+          }
+        }
+
+        // Update context
+        await setUserData({ profilePic: persistentUri });
+        Alert.alert("Success", "Profile picture updated.");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setError(`Failed to pick image: ${errorMessage}`);
+      Alert.alert("Error", `Failed to pick image: ${errorMessage}`);
+      console.error("Pick image error:", error);
     }
+  };
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
+  const clearProfilePic = async () => {
+    try {
+      if (
+        userData.profilePic &&
+        userData.profilePic.startsWith(FileSystem.documentDirectory)
+      ) {
+        try {
+          await FileSystem.deleteAsync(userData.profilePic, {
+            idempotent: true,
+          });
+        } catch (deleteError) {
+          console.warn("Failed to delete profile picture:", deleteError);
+        }
+      }
+      await setUserData({ profilePic: undefined });
+      Alert.alert("Success", "Profile picture cleared.");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setError(`Failed to clear profile picture: ${errorMessage}`);
+      Alert.alert("Error", `Failed to clear profile picture: ${errorMessage}`);
+      console.error("Clear profile pic error:", error);
+    }
+  };
 
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setProfilePic(uri);
+  const handleDobChange = (event: any, selected: Date | undefined) => {
+    if (Platform.OS === "android") {
+      setShowDobPicker(false);
+    }
+    if (selected && !isNaN(selected.getTime())) {
+      setUserData({ dob: selected.toISOString() });
     }
   };
 
   const handleSave = async () => {
-    const newUserData = {
-      firstName: firstName.trim() || undefined,
-      lastName: lastName.trim() || undefined,
-      email: email.trim() || undefined,
-      university: university.trim() || undefined,
-      bio: bio.trim() || undefined,
-      dob: dob.toISOString(),
-      gender: gender.trim() || undefined,
-      profilePic,
-      course: course.trim() || undefined,
-      level: level || undefined,
-      themeMode: localThemeMode,
-      allowNotifications,
-      allowAlarms,
-    };
-
     try {
-      await setUserData(newUserData);
-      setThemeMode(localThemeMode as "system" | "light" | "dark");
-      Alert.alert("Success", "Settings saved!");
+      setError(null);
+      // Validate email
+      if (
+        userData.email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)
+      ) {
+        throw new Error("Invalid email address");
+      }
+      // Validate dob
+      if (userData.dob && isNaN(new Date(userData.dob).getTime())) {
+        throw new Error("Invalid date of birth");
+      }
+
+      // Save to AsyncStorage (already handled in setUserData)
+      await setUserData({
+        firstName: userData.firstName?.trim() || undefined,
+        lastName: userData.lastName?.trim() || undefined,
+        email: userData.email?.trim() || undefined,
+        university: userData.university?.trim() || undefined,
+        bio: userData.bio?.trim() || undefined,
+        dob: userData.dob,
+        gender: userData.gender?.trim() || undefined,
+        profilePic: userData.profilePic,
+        course: userData.course?.trim() || undefined,
+        level: userData.level || undefined,
+        themeMode: userData.themeMode || "system",
+        allowNotifications: userData.allowNotifications ?? true,
+        allowAlarms: userData.allowAlarms ?? true,
+        privacy: userData.privacy || {
+          showOnlineStatus: true,
+          showProfileToGroups: true,
+          allowFriendRequests: true,
+          dataCollection: true,
+        },
+      });
+      setThemeMode(userData.themeMode || "system");
+      Alert.alert("Success", "Settings saved successfully!");
     } catch (error) {
-      Alert.alert("Error", "Failed to save settings.");
-      console.error("Save error:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setError(`Failed to save settings: ${errorMessage}`);
+      Alert.alert("Error", `Failed to save settings: ${errorMessage}`);
+      console.error("Save settings error:", error);
     }
   };
 
-  /////////////////////////////////////////////////////////////
-  const deviceTheme = useColorScheme() ?? "light";
-  const colorSet = Colors[deviceTheme];
-  type ThemeSetting = "light" | "dark" | "system";
-  const [themeSetting, setThemeSetting] = useState<ThemeSetting>("system");
-  const effectiveTheme =
-    themeSetting === "system" ? deviceTheme ?? "light" : themeSetting;
-
-  console.log(effectiveTheme);
-
-  const dynamicStyles = StyleSheet.create({
-    tabBarContainer: {
-      shadowColor:
-        theme.shadow || (effectiveTheme === "light" ? "#000" : "#FFF"),
-    },
-  });
-
-  const { screenHeight, screenWidth } = useResponsiveDimensions();
-  const globalStyles = useGlobalStyles();
-
-  // PROFILE
-  const [profileData, setProfileData] = useState({
-    name: "",
-    email: "",
-    university: "",
-    department: "",
-    level: "",
-    bio: "",
-  });
-
-  const handleProfileChange = (field: string, value: string) => {
-    setProfileData((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const saveProfileChanges = () => {
-    alert("Profile updated successfully!");
-  };
-
-  // NOTIFICATIONS
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    pushNotifications: true,
-    taskReminders: true,
-    eventAlerts: true,
-    groupMessages: true,
-    achievementAlerts: true,
-  });
-
-  const toggleNotification = (key: keyof typeof notificationSettings) => {
-    setNotificationSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const saveNotification = () => {
-    alert("Notification preferences saved.");
-  };
-
-  // APPEARANCE
-  const [language, setLanguage] = useState("english");
-
-  const toggleTheme = () => {
-    const newTheme = effectiveTheme === "light" ? "dark" : "light";
-    setThemeSetting(newTheme);
-    alert(
-      `${newTheme.charAt(0).toUpperCase() + newTheme.slice(1)} mode activated`
-    );
-  };
-
-  const saveAppearance = () => {
-    alert("Appearance preferences saved.");
-  };
-
-  // PRIVACY
-  const [privacy, setPrivacy] = useState({
-    showOnlineStatus: true,
-    showProfileToGroups: true,
-    allowFriendRequests: true,
-    dataCollection: true,
-  });
-
-  const togglePrivacy = (key: keyof typeof privacy) => {
-    setPrivacy((prev) => ({ ...prev, [key]: !prev[key] }));
+  const togglePrivacy = (key: keyof NonNullable<typeof userData.privacy>) => {
+    setUserData({
+      privacy: {
+        ...userData.privacy,
+        [key]: !userData.privacy![key],
+      },
+    });
   };
 
   const exportData = () => {
     Alert.alert("Data Export", "Your data export has been initiated.");
   };
 
-  const savePrivacy = () => {
-    alert("Privacy settings saved.");
-  };
+  const [showDobPicker, setShowDobPicker] = useState(false);
 
   const responsiveStyles = StyleSheet.create({
-    input: {
-      width: screenWidth - 20 - 10 - 20,
-    },
-    row: {
-      width: screenWidth - 20 - 10 - 20,
+    container: {
+      flexGrow: 1,
+      alignItems: "center",
+      paddingVertical: 20,
+      backgroundColor: theme.background,
     },
     card: {
-      width: screenWidth - 20 - 3,
-      gap: 10,
+      width: screenWidth - 20,
+      padding: 15,
       borderRadius: 8,
-      paddingHorizontal: 15,
-      paddingVertical: 20,
-
-      // iOS shadow
-      shadowColor: theme.shadow || "#000",
+      backgroundColor: theme.background,
+      shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.1,
       shadowRadius: 3,
-
-      // Android shadow
       elevation: 4,
+      marginBottom: 20,
+    },
+    input: {
+      width: screenWidth - 50,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: Platform.OS === "ios" ? 12 : 10,
+      marginBottom: 12,
+      backgroundColor: theme.background,
+      color: theme.text,
+      fontFamily: "Montserrat-Regular",
+    },
+    row: {
+      width: screenWidth - 50,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginVertical: 10,
+    },
+    profilePicContainer: {
+      alignItems: "center",
+      marginBottom: 20,
+      backgroundColor: theme.background,
+    },
+    picker: {
+      width: screenWidth - 50,
+      height: 50,
+      marginBottom: 12,
+      color: theme.text,
+      backgroundColor: theme.background,
+    },
+    pickerSelect: {
+      inputIOS: {
+        ...globalStyles.baseText,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderWidth: 0.5,
+        borderColor: theme.border,
+        borderRadius: 6,
+        color: theme.text,
+        backgroundColor: theme.background,
+        marginBottom: 12,
+      },
+      inputAndroid: {
+        ...globalStyles.baseText,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        borderWidth: 0.5,
+        borderColor: theme.border,
+        borderRadius: 6,
+        color: theme.text,
+        backgroundColor: theme.background,
+        marginBottom: 12,
+      },
     },
   });
 
-  return (
-    <ThemedView style={{ flex: 1, gap: 10, backgroundColor: theme.background }}>
-      <NavigationHeader title="Settings" />
-      <ParallaxScrollView
-        style={{ backgroundColor: theme.background }}
-        contentContainerStyle={{ backgroundColor: theme.background }}
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
       >
-        <ThemedView
-          style={{
-            gap: 20,
-            paddingVertical: 10,
-            backgroundColor: theme.background,
-          }}
-        >
-          <View
-            style={[
-              styles.profilePicContainer,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            <Image
-              source={{ uri: profilePic || "https://via.placeholder.com/100" }}
-              style={[styles.profilePic, { borderColor: theme.border }]}
-            />
-            <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={pickImage}>
-                <ThemedText style={globalStyles.actionText2}>
-                  Choose Profile Image
-                </ThemedText>
-              </Pressable>
-            </ThemedView>
-          </View>
-          {/* PROFILE */}
-          <ThemedView
-            style={[
-              responsiveStyles.card,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            <ThemedText
-              style={[
-                styles.title,
-                globalStyles.semiLargeText,
-                { color: theme.text },
-              ]}
-            >
-              Profile Information
-            </ThemedText>
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="First Name"
-              placeholderTextColor={theme.border}
-              value={firstName}
-              onChangeText={setFirstName}
-            />
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="Last Name"
-              placeholderTextColor={theme.border}
-              value={lastName}
-              onChangeText={setLastName}
-            />
-
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              keyboardType="email-address"
-              placeholder="Email Address"
-              placeholderTextColor={theme.border}
-              value={email}
-              onChangeText={setEmail}
-            />
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="University/Institution"
-              placeholderTextColor={theme.border}
-              value={university}
-              onChangeText={setUniversity}
-            />
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="Department"
-              placeholderTextColor={theme.border}
-              value={course}
-              onChangeText={setCourse}
-            />
-
-            <Picker
-              selectedValue={level}
-              onValueChange={setLevel}
-              style={[
-                styles.picker,
-                { color: theme.text, backgroundColor: theme.background },
-              ]}
-              dropdownIconColor={theme.text}
-            >
-              {["100", "200", "300", "400", "500", "Postgraduate"].map(
-                (lvl) => (
-                  <Picker.Item key={lvl} label={`${lvl} Level`} value={lvl} />
-                )
-              )}
-            </Picker>
-
-            <TextInput
-              style={[
-                styles.input,
-                responsiveStyles.input,
-                globalStyles.baseText,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="Bio"
-              placeholderTextColor={theme.border}
-              value={bio}
-              onChangeText={setBio}
-              multiline
-            />
-            <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={handleSave}>
-                <ThemedText style={globalStyles.actionText2}>
-                  Save Changes
-                </ThemedText>
-              </Pressable>
-            </ThemedView>
-          </ThemedView>
-
-          {/* NOTIFICATIONS */}
-          <ThemedView
-            style={[
-              responsiveStyles.card,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            <ThemedText
-              style={[
-                styles.sectionTitle,
-                globalStyles.semiLargeText,
-                { color: theme.text },
-              ]}
-            >
-              Notification Preferences
-            </ThemedText>
-            <View
-              style={[
-                styles.switchContainer,
-                { backgroundColor: theme.background },
-              ]}
-            >
-              <Text style={[styles.label, { color: theme.text }]}>
-                Enable Notifications
-              </Text>
-              <Switch
-                value={allowNotifications}
-                onValueChange={setAllowNotifications}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={theme.background}
-              />
-            </View>
-          </ThemedView>
-
-          {/* APPEARANCE */}
-          <ThemedView
-            style={[
-              responsiveStyles.card,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            <ThemedText
-              style={[
-                styles.sectionTitle,
-                globalStyles.semiLargeText,
-                { color: theme.text },
-              ]}
-            >
-              Appearance Settings
-            </ThemedText>
-            <Picker
-              selectedValue={localThemeMode}
-              onValueChange={(value) =>
-                setLocalThemeMode(value as "system" | "light" | "dark")
-              }
-              style={[
-                styles.picker,
-                { color: theme.text, backgroundColor: theme.background },
-              ]}
-              dropdownIconColor={theme.text}
-            >
-              <Picker.Item label="System Default" value="system" />
-              <Picker.Item label="Light Mode" value="light" />
-              <Picker.Item label="Dark Mode" value="dark" />
-            </Picker>
-
-            <ThemedText
-              style={[styles.label, { marginTop: 20, color: theme.text }]}
-            >
-              Language
-            </ThemedText>
-            <RNPickerSelect
-              onValueChange={(value) => setLanguage(value)}
-              value={language}
-              placeholder={{ label: "Select language", value: null }}
-              items={[
-                { label: "English", value: "english" },
-                { label: "Yoruba", value: "yoruba" },
-                { label: "Hausa", value: "hausa" },
-                { label: "Igbo", value: "igbo" },
-              ]}
-              style={{
-                inputIOS: {
-                  fontSize: 16,
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderWidth: 1,
-                  borderColor: theme.border,
-                  borderRadius: 6,
-                  color: theme.text,
-                  paddingRight: 30,
-                  marginBottom: 12,
-                  backgroundColor: theme.background,
-                },
-                inputAndroid: {
-                  fontSize: 16,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderWidth: 1,
-                  borderColor: theme.border,
-                  borderRadius: 6,
-                  color: theme.text,
-                  paddingRight: 30,
-                  marginBottom: 12,
-                  backgroundColor: theme.background,
-                },
-              }}
-            />
-            <ThemedView style={globalStyles.button1}>
-              <Pressable onPress={handleSave}>
-                <ThemedText style={globalStyles.actionText2}>
-                  Save Preferences
-                </ThemedText>
-              </Pressable>
-            </ThemedView>
-          </ThemedView>
-
-          {/* PRIVACY */}
-          <ThemedView
-            style={[
-              responsiveStyles.card,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            <ThemedText
-              style={[
-                styles.sectionTitle,
-                globalStyles.semiLargeText,
-                { color: theme.text },
-              ]}
-            >
-              Privacy Settings
-            </ThemedText>
-            {[
-              ["Show Online Status", "showOnlineStatus"],
-              ["Profile Visible to Groups", "showProfileToGroups"],
-              ["Allow Friend Requests", "allowFriendRequests"],
-              ["Allow Data Collection", "dataCollection"],
-            ].map(([label, key]) => (
-              <ThemedView
-                key={key}
-                style={[
-                  styles.row,
-                  responsiveStyles.row,
-                  { backgroundColor: theme.background },
-                ]}
-              >
-                <ThemedText style={[styles.label, { color: theme.text }]}>
-                  {label}
-                </ThemedText>
-                <Switch
-                  value={privacy[key as keyof typeof privacy]}
-                  onValueChange={() => togglePrivacy(key as any)}
-                  trackColor={{ false: theme.border, true: theme.primary }}
-                  thumbColor={theme.background}
-                />
-              </ThemedView>
-            ))}
-          </ThemedView>
-
+  return (
+    <ThemedView style={{ flex: 1, backgroundColor: theme.background }}>
+      <NavigationHeader title="Settings" />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.background }}
+        contentContainerStyle={responsiveStyles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ThemedView style={responsiveStyles.profilePicContainer}>
+          <ProfileImage uri={imageUri} borderColor={theme.border} />
           <ThemedView style={globalStyles.button1}>
-            <Pressable onPress={exportData}>
-              <ThemedText style={globalStyles.actionText2}>
-                Download Your Data
-              </ThemedText>
+            <Pressable onPress={pickImage}>
+              <ThemedText type="action">Choose Profile Image</ThemedText>
             </Pressable>
           </ThemedView>
+          {userData.profilePic && (
+            <ThemedView style={globalStyles.button1}>
+              <Pressable onPress={clearProfilePic}>
+                <ThemedText type="action">Clear Profile Image</ThemedText>
+              </Pressable>
+            </ThemedView>
+          )}
+        </ThemedView>
+
+        <ThemedView style={responsiveStyles.card}>
+          <ThemedText type="semiLarge">Profile Information</ThemedText>
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            placeholder="First Name"
+            placeholderTextColor={theme.placeholder}
+            value={userData.firstName || ""}
+            onChangeText={(text) => setUserData({ firstName: text })}
+          />
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            placeholder="Last Name"
+            placeholderTextColor={theme.placeholder}
+            value={userData.lastName || ""}
+            onChangeText={(text) => setUserData({ lastName: text })}
+          />
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            keyboardType="email-address"
+            placeholder="Email Address"
+            placeholderTextColor={theme.placeholder}
+            value={userData.email || ""}
+            onChangeText={(text) => setUserData({ email: text })}
+          />
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            placeholder="University/Institution"
+            placeholderTextColor={theme.placeholder}
+            value={userData.university || ""}
+            onChangeText={(text) => setUserData({ university: text })}
+          />
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            placeholder="Department"
+            placeholderTextColor={theme.placeholder}
+            value={userData.course || ""}
+            onChangeText={(text) => setUserData({ course: text })}
+          />
+          <Picker
+            selectedValue={userData.level || "100"}
+            onValueChange={(value) => setUserData({ level: value })}
+            style={responsiveStyles.picker}
+            dropdownIconColor={theme.text}
+          >
+            {["100", "200", "300", "400", "500", "Postgraduate"].map((lvl) => (
+              <Picker.Item key={lvl} label={`${lvl} Level`} value={lvl} />
+            ))}
+          </Picker>
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            placeholder="Bio"
+            placeholderTextColor={theme.placeholder}
+            value={userData.bio || ""}
+            onChangeText={(text) => setUserData({ bio: text })}
+            multiline
+          />
+          <TouchableOpacity onPress={() => setShowDobPicker(true)}>
+            <ThemedText style={[responsiveStyles.input, globalStyles.baseText]}>
+              Date of Birth:{" "}
+              {userData.dob
+                ? new Date(userData.dob).toLocaleDateString()
+                : "Select Date"}
+            </ThemedText>
+          </TouchableOpacity>
+          {showDobPicker && (
+            <DateTimePicker
+              value={userData.dob ? new Date(userData.dob) : new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "calendar"}
+              onChange={handleDobChange}
+              maximumDate={new Date()}
+              onTouchCancel={() => setShowDobPicker(false)}
+            />
+          )}
+          {Platform.OS === "ios" && showDobPicker && (
+            <ThemedView style={globalStyles.button1}>
+              <Pressable onPress={() => setShowDobPicker(false)}>
+                <ThemedText type="action">Confirm</ThemedText>
+              </Pressable>
+            </ThemedView>
+          )}
           <ThemedView style={globalStyles.button1}>
-            <TouchableOpacity onPress={handleSave}>
-              <ThemedText style={globalStyles.actionText2}>
-                Save Privacy Settings
-              </ThemedText>
-            </TouchableOpacity>
+            <Pressable onPress={handleSave}>
+              <ThemedText type="action">Save Changes</ThemedText>
+            </Pressable>
           </ThemedView>
         </ThemedView>
-      </ParallaxScrollView>
+
+        <ThemedView style={responsiveStyles.card}>
+          <ThemedText type="semiLarge">Notification Preferences</ThemedText>
+          <ThemedView style={responsiveStyles.row}>
+            <ThemedText type="base">Enable Notifications</ThemedText>
+            <Switch
+              value={userData.allowNotifications ?? true}
+              onValueChange={(value) =>
+                setUserData({ allowNotifications: value })
+              }
+              trackColor={{ false: theme.border, true: theme.primary }}
+              thumbColor={theme.text}
+            />
+          </ThemedView>
+          <ThemedView style={responsiveStyles.row}>
+            <ThemedText type="base">Enable Alarms</ThemedText>
+            <Switch
+              value={userData.allowAlarms ?? true}
+              onValueChange={(value) => setUserData({ allowAlarms: value })}
+              trackColor={{ false: theme.border, true: theme.primary }}
+              thumbColor={theme.text}
+            />
+          </ThemedView>
+          <ThemedView style={globalStyles.button1}>
+            <Pressable onPress={handleSave}>
+              <ThemedText type="action">Save Preferences</ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={responsiveStyles.card}>
+          <ThemedText type="semiLarge">Appearance Settings</ThemedText>
+          <Picker
+            selectedValue={userData.themeMode || "system"}
+            onValueChange={(value) => {
+              setUserData({ themeMode: value });
+              setThemeMode(value);
+            }}
+            style={responsiveStyles.picker}
+            dropdownIconColor={theme.text}
+          >
+            <Picker.Item label="System Default" value="system" />
+            <Picker.Item label="Light Mode" value="light" />
+            <Picker.Item label="Dark Mode" value="dark" />
+          </Picker>
+          <ThemedText type="base">Language</ThemedText>
+          <RNPickerSelect
+            onValueChange={(value) => setUserData({ language: value })}
+            value={userData.language || "english"}
+            placeholder={{ label: "Select language", value: null }}
+            items={[
+              { label: "English", value: "english" },
+              { label: "Yoruba", value: "yoruba" },
+              { label: "Hausa", value: "hausa" },
+              { label: "Igbo", value: "igbo" },
+            ]}
+            style={responsiveStyles.pickerSelect}
+          />
+          <ThemedView style={globalStyles.button1}>
+            <Pressable onPress={handleSave}>
+              <ThemedText type="action">Save Preferences</ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={responsiveStyles.card}>
+          <ThemedText type="semiLarge">Privacy Settings</ThemedText>
+          {[
+            ["Show Online Status", "showOnlineStatus"],
+            ["Profile Visible to Groups", "showProfileToGroups"],
+            ["Allow Friend Requests", "allowFriendRequests"],
+            ["Allow Data Collection", "dataCollection"],
+          ].map(([label, key]) => (
+            <ThemedView key={key} style={responsiveStyles.row}>
+              <ThemedText type="base">{label}</ThemedText>
+              <Switch
+                value={
+                  userData.privacy?.[
+                    key as keyof NonNullable<typeof userData.privacy>
+                  ] ?? true
+                }
+                onValueChange={() =>
+                  togglePrivacy(
+                    key as keyof NonNullable<typeof userData.privacy>
+                  )
+                }
+                trackColor={{ false: theme.border, true: theme.primary }}
+                thumbColor={theme.text}
+              />
+            </ThemedView>
+          ))}
+          <ThemedView style={globalStyles.button1}>
+            <Pressable onPress={handleSave}>
+              <ThemedText type="action">Save Privacy Settings</ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+
+        <ThemedView style={globalStyles.button1}>
+          <Pressable onPress={exportData}>
+            <ThemedText type="action">Download Your Data</ThemedText>
+          </Pressable>
+        </ThemedView>
+      </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { marginBottom: 16, marginTop: 8 },
-  sectionTitle: { fontSize: 18, fontWeight: "600", marginVertical: 20 },
-  input: {
-    borderWidth: 0.5,
-    borderColor: "rgba(17, 17, 17, 0.2)",
-    borderStyle: "solid",
-    borderRadius: 6,
-    padding: Platform.OS === "ios" ? 12 : 10,
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  label: {
-    fontSize: 16,
-  },
-
-  scrollContainer: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 20,
-  },
-  container: {
-    padding: 20,
-  },
-  input1: {
-    borderWidth: 1,
-    padding: 10,
-    marginBottom: 10,
-    borderRadius: 5,
-  },
-  profilePicContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
   profilePic: {
     width: 100,
     height: 100,
     borderRadius: 50,
     marginBottom: 10,
-  },
-  picker: {
-    height: 50,
-    width: "100%",
-  },
-  label1: {
-    fontSize: 16,
-    marginVertical: 10,
-    textAlign: "center",
-  },
-  switchContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 10,
+    borderWidth: 0.5,
   },
 });
-
-const pickerStyles = {
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: "gray",
-    borderRadius: 6,
-    color: "black",
-    paddingRight: 30,
-    marginBottom: 12,
-  },
-  inputAndroid: {
-    fontSize: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: "gray",
-    borderRadius: 6,
-    color: "black",
-    paddingRight: 30,
-    marginBottom: 12,
-  },
-};

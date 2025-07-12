@@ -1,65 +1,28 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
-
-import { useThemeColor } from '@/hooks/useThemeColor';
+import { useTheme } from "@/components/Header";
+import { useGlobalStyles } from "@/styles/globalStyles";
+import { Text, type TextProps } from "react-native";
 
 export type ThemedTextProps = TextProps & {
-  lightColor?: string;
-  darkColor?: string;
-  type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link' | 'action';
+  type?: "base" | "medium" | "semiLarge" | "action";
 };
 
-export function ThemedText({
-  style,
-  lightColor,
-  darkColor,
-  type = 'default',
-  ...rest
-}: ThemedTextProps) {
-  const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
+export function ThemedText({ style, type = "base", ...rest }: ThemedTextProps) {
+  const { theme } = useTheme();
+  const globalStyles = useGlobalStyles();
 
   return (
     <Text
       style={[
-        { color },
-        type === 'default' ? styles.default : undefined,
-        type === 'title' ? styles.title : undefined,
-        type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-        type === 'subtitle' ? styles.subtitle : undefined,
-        type === 'link' ? styles.link : undefined,
+        { color: theme.text },
+        type === "base" ? globalStyles.baseText : undefined,
+        type === "medium" ? globalStyles.mediumText : undefined,
+        type === "semiLarge" ? globalStyles.semiLargeText : undefined,
+        type === "action"
+          ? [globalStyles.actionText2, { color: theme.text }]
+          : undefined,
         style,
       ]}
       {...rest}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  default: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 16,
-    lineHeight: 24,
-  },
-  defaultSemiBold: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '600',
-  },
-  title: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 32,
-  },
-  subtitle: {
-    fontFamily: 'Montserrat-Regular',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  link: {
-    fontFamily: 'Montserrat-Regular',
-    lineHeight: 30,
-    fontSize: 16,
-    color: '#0a7ea4',
-  },
-});
