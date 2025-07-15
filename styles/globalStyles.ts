@@ -58,7 +58,7 @@ export const useGlobalStyles = () => {
       color: theme.primary,
     },
     actionText2: {
-      color: theme.text,
+      color: "#FAFBFD",
     },
     button1: {
       backgroundColor: theme.primary,
