@@ -326,12 +326,12 @@ export default function HomeScreen() {
               placeholder="Task Title *"
               value={title}
               onChangeText={setTitle}
+              placeholderTextColor={theme.border}
               style={[
                 styles.input,
                 {
                   borderColor: theme.border,
                   color: theme.text,
-                  placeholderTextColor: theme.border,
                 },
               ]}
             />
@@ -339,12 +339,12 @@ export default function HomeScreen() {
               placeholder="Description *"
               value={description}
               onChangeText={setDescription}
+              placeholderTextColor={theme.border}
               style={[
                 styles.input,
                 {
                   borderColor: theme.border,
                   color: theme.text,
-                  placeholderTextColor: theme.border,
                 },
               ]}
               multiline
@@ -364,12 +364,12 @@ export default function HomeScreen() {
               placeholder="Location *"
               value={location}
               onChangeText={setLocation}
+              placeholderTextColor={theme.border}
               style={[
                 styles.input,
                 {
                   borderColor: theme.border,
                   color: theme.text,
-                  placeholderTextColor: theme.border,
                 },
               ]}
             />

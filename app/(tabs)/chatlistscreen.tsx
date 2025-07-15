@@ -14,7 +14,8 @@ import { SearchBar } from '@/global/components';
 import {
     ChatListCardTemplate,
     ProjectCardTemplate,
-    StudyCardTemplate,
+    ProjectItem,
+    StudyCardTemplate
 } from '@/global/templates';
 
 export default function ChatScreen() {
@@ -37,18 +38,6 @@ export default function ChatScreen() {
         title: string;
         description: string;
         type: 'Study';
-        imageLink: string;
-        members: string[];
-    }
-
-    interface ProjectItem {
-        id: string;
-        title: string;
-        description: string;
-        dueDate: string;
-        priority: string;
-        tasks: [];
-        type: 'Projects';
         imageLink: string;
         members: string[];
     }

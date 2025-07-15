@@ -15,6 +15,7 @@ export const lightTheme = {
   tabIconDefault: "#687076",
   tabIconSelected: "#0a7ea4",
   tint: "#0a7ea4",
+  modalBackdrop: "rgba(0, 0, 0, 0.5)"
 };
 
 export const darkTheme = {

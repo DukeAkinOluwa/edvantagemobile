@@ -44,9 +44,15 @@ export default function SettingsPage() {
   useEffect(() => {
     const validateProfilePic = async () => {
       try {
+        const documentDirectory = FileSystem.documentDirectory;
+        if (!documentDirectory) {
+          console.warn("Document directory not available.");
+          return;
+        }
+
         if (
           userData.profilePic &&
-          userData.profilePic.startsWith(FileSystem.documentDirectory)
+          userData.profilePic.startsWith(documentDirectory)
         ) {
           const fileInfo = await FileSystem.getInfoAsync(userData.profilePic);
           if (!fileInfo.exists) {
@@ -65,8 +71,7 @@ export default function SettingsPage() {
 
   const pickImage = async () => {
     try {
-      const { status } =
-        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
           "Permission Denied",
@@ -79,41 +84,42 @@ export default function SettingsPage() {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.3, // Reduced quality for smaller file size
+        quality: 0.3,
       });
 
       if (!result.canceled) {
         const uri = result.assets[0].uri;
         const fileName = `profile_${Date.now()}.jpg`;
-        const persistentUri = `${FileSystem.documentDirectory}${fileName}`;
 
-        // Ensure document directory exists
-        await FileSystem.makeDirectoryAsync(FileSystem.documentDirectory, {
+        const documentDirectory = FileSystem.documentDirectory;
+        if (!documentDirectory) {
+          throw new Error("Document directory is not available.");
+        }
+
+        const persistentUri = `${documentDirectory}${fileName}`;
+
+        await FileSystem.makeDirectoryAsync(documentDirectory, {
           intermediates: true,
         });
 
-        // Verify source file
         const sourceInfo = await FileSystem.getInfoAsync(uri);
         if (!sourceInfo.exists) {
           throw new Error("Selected image URI is invalid");
         }
 
-        // Move image to persistent storage
         await FileSystem.moveAsync({
           from: uri,
           to: persistentUri,
         });
 
-        // Verify the file exists
         const fileInfo = await FileSystem.getInfoAsync(persistentUri);
         if (!fileInfo.exists) {
           throw new Error("Failed to save profile picture");
         }
 
-        // Delete old profile picture
         if (
           userData.profilePic &&
-          userData.profilePic.startsWith(FileSystem.documentDirectory)
+          userData.profilePic.startsWith(documentDirectory)
         ) {
           try {
             await FileSystem.deleteAsync(userData.profilePic, {
@@ -124,7 +130,6 @@ export default function SettingsPage() {
           }
         }
 
-        // Update context
         await setUserData({ profilePic: persistentUri });
         Alert.alert("Success", "Profile picture updated.");
       }
@@ -139,9 +144,11 @@ export default function SettingsPage() {
 
   const clearProfilePic = async () => {
     try {
+      const documentDirectory = FileSystem.documentDirectory;
       if (
+        documentDirectory &&
         userData.profilePic &&
-        userData.profilePic.startsWith(FileSystem.documentDirectory)
+        userData.profilePic.startsWith(documentDirectory)
       ) {
         try {
           await FileSystem.deleteAsync(userData.profilePic, {
@@ -151,6 +158,7 @@ export default function SettingsPage() {
           console.warn("Failed to delete profile picture:", deleteError);
         }
       }
+
       await setUserData({ profilePic: undefined });
       Alert.alert("Success", "Profile picture cleared.");
     } catch (error) {
@@ -208,7 +216,12 @@ export default function SettingsPage() {
           dataCollection: true,
         },
       });
-      setThemeMode(userData.themeMode || "system");
+      const allowedThemeModes = ["system", "light", "dark"] as const;
+      const themeMode = allowedThemeModes.includes(userData.themeMode as any)
+        ? (userData.themeMode as "system" | "light" | "dark")
+        : "system";
+
+      setThemeMode(themeMode);
       Alert.alert("Success", "Settings saved successfully!");
     } catch (error) {
       const errorMessage =
@@ -473,7 +486,7 @@ export default function SettingsPage() {
             selectedValue={userData.themeMode || "system"}
             onValueChange={(value) => {
               setUserData({ themeMode: value });
-              setThemeMode(value);
+              setThemeMode(value as "system" | "light" | "dark");
             }}
             style={responsiveStyles.picker}
             dropdownIconColor={theme.text}
