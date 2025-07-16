@@ -101,10 +101,7 @@ export default function ScheduleScreen() {
       ]}
     >
       <NavigationHeader title="Resources" />
-      <ParallaxScrollView
-        style={{ backgroundColor: theme.background }}
-        contentContainerStyle={{ backgroundColor: theme.background }}
-      >
+      <ParallaxScrollView>
         <SearchBar
           value={searchQuery}
           onChangeText={setSearchQuery}

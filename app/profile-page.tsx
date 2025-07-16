@@ -65,10 +65,7 @@ export default function ProfilePage() {
   return (
     <ThemedView style={{ flex: 1, backgroundColor: theme.background }}>
       <NavigationHeader title="Profile" />
-      <ParallaxScrollView
-        style={{ flex: 1, backgroundColor: theme.background }}
-        contentContainerStyle={{ alignItems: "center", paddingBottom: 20 }}
-      >
+      <ParallaxScrollView>
         <ThemedView style={dynamicStyles.summaryCard}>
           <ProfileImage uri={imageUri} borderColor={theme.border} />
           <ThemedText style={globalStyles.semiLargeText}>

@@ -11,10 +11,7 @@ export default function ScheduleScreen() {
   return (
     <>
       <NavigationHeader title="Schedule" />
-      <ParallaxScrollView
-        style={{ backgroundColor: theme.background }}
-        contentContainerStyle={{ backgroundColor: theme.background }}
-      >
+      <ParallaxScrollView>
         <ThemedView
           style={[styles.container, { backgroundColor: theme.background }]}
         >
