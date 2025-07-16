@@ -162,7 +162,6 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
       >
         <TouchableOpacity
           onPress={() => router.push("/notifications-page")}
-          style={styles.button}
           activeOpacity={0.7}
         >
           <View style={styles.notificationButton}>
@@ -178,7 +177,6 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push("/gamificationPage")}
-          style={styles.button}
           activeOpacity={0.7}
         >
           <MaskedView
@@ -197,7 +195,6 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => router.push("/profile-page")}
-          style={styles.profileButton}
           activeOpacity={0.7}
         >
           <ProfileImage uri={imageUri} borderColor={theme.border} />
@@ -221,13 +218,7 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 15,
-  },
-  button: {
-    padding: 10,
-  },
-  profileButton: {
-    padding: 10,
+    gap: 17,
   },
   profilePic: {
     width: 40,
