@@ -23,13 +23,15 @@ export interface Task {
 }
 
 interface Props {
-    onDayPress?: (date: Date) => void;
+  onDayPress?: (date: Date) => void;
+  setModalVisible?: (visible: boolean) => void;
+  modalVisible?: boolean;
 }
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const Calendar: React.FC<Props> = ({ onDayPress }) => {
+const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }) => {
     const { theme } = useTheme();
     const { screenWidth } = useResponsiveDimensions();
     const [calendarDate, setCalendarDate] = useState(new Date());
@@ -49,7 +51,7 @@ const Calendar: React.FC<Props> = ({ onDayPress }) => {
             setTasks(saved || []);
         };
         loadTasks();
-        }, [])
+        }, [modalVisible])
     );
 
     const filteredTasks = useMemo(() => {
@@ -160,6 +162,17 @@ const Calendar: React.FC<Props> = ({ onDayPress }) => {
                 <ThemedText style={[styles.taskHeader, globalStyles.mediumText, { color: theme.text }]}>
                     {selectedDate.toDateString()}
                 </ThemedText>
+                <Pressable onPress={() => setModalVisible?.(true)}>
+                    <ThemedText
+                    style={[
+                        globalStyles.mediumText,
+                        globalStyles.actionText,
+                        { color: theme.primary },
+                    ]}
+                    >
+                    New Event
+                    </ThemedText>
+                </Pressable>
                 {filteredTasks.length === 0 ? (
                     <ThemedText style={[globalStyles.semiMediumLightText, { color: theme.text }]}>
                     No tasks created yet.
