@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Button, Modal, Pressable, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 import { NavigationHeader } from '@/components/Header';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -17,11 +17,19 @@ import {
     ProjectItem,
     StudyCardTemplate
 } from '@/global/templates';
+import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 
 export default function ChatScreen() {
     const router = useRouter();
     const globalStyles = useGlobalStyles();
-    const { screenWidth } = useResponsiveDimensions();
+    const { screenWidth, screenHeight } = useResponsiveDimensions();
+    const [showFormModal, setShowFormModal] = useState(false);
+    const [name, setName] = useState('');
+    const [message, setMessage] = useState('');
+    const [description, setDescription] = useState('');
+    const [generalChatType, setGeneralChatType] = useState<'Personal' | 'Group'>('Personal');
+
 
     // --- Types ---
     interface PersonalOrGroupChat {
@@ -119,8 +127,54 @@ export default function ChatScreen() {
     const responsiveStyles = StyleSheet.create({
         categorySelector: {
             width: screenWidth,
+        },
+        listContainer: {
+            height: screenHeight - 200,
         }
     })
+
+    const handleAddCommunication = () => {
+        if (selectedCategory === 'General') {
+            const newChat: PersonalOrGroupChat = {
+            id: Date.now().toString(),
+            name,
+            message,
+            type: generalChatType,
+            time: new Date().toLocaleTimeString(),
+            imageLink: 'https://i.pravatar.cc/150?img=7',
+            };
+            personalChats.unshift(newChat); // You may want to use a setState
+        } else if (selectedCategory === 'Study') {
+            const newStudy: StudyGroup = {
+            id: Date.now().toString(),
+            title: name,
+            description,
+            type: 'Study',
+            imageLink: 'https://i.pravatar.cc/150?img=8',
+            members: [],
+            };
+            studyGroups.unshift(newStudy);
+        } else if (selectedCategory === 'Projects') {
+            const newProject: ProjectItem = {
+            id: Date.now().toString(),
+            title: name,
+            description,
+            dueDate: '',
+            priority: 'low',
+            tasks: [],
+            type: 'Projects',
+            imageLink: 'https://i.pravatar.cc/150?img=9',
+            members: [],
+            };
+            projects.unshift(newProject);
+        }
+
+        // Clear and close
+        setName('');
+        setMessage('');
+        setDescription('');
+        setShowFormModal(false);
+    };
 
     // --- Render ---
     return (
@@ -151,8 +205,7 @@ export default function ChatScreen() {
                     </Pressable>
                 ))}
                 </ThemedView>
-
-                <ThemedView style={styles.listContainer}>
+                <ThemedView style={[ styles.listContainer ]}>
                     {selectedCategory === 'General' &&
                         (filteredList as PersonalOrGroupChat[]).map(chat => (
                             <ChatListCardTemplate
@@ -181,7 +234,79 @@ export default function ChatScreen() {
                         ))
                     }
                 </ThemedView>
+                <Modal visible={showFormModal} animationType="slide" transparent>
+                    <ThemedView style={styles.modalOverlay}>
+                        <ThemedView style={styles.modalContent}>
+                        <ThemedText style={styles.modalTitle}>
+                            Add {selectedCategory === 'General' ? 'Chat' : selectedCategory}
+                        </ThemedText>
+
+                        {selectedCategory === 'General' && (
+                            <>
+                            <Picker
+                                selectedValue={generalChatType}
+                                onValueChange={(val) => setGeneralChatType(val)}
+                            >
+                                <Picker.Item label="Personal" value="Personal" />
+                                <Picker.Item label="Group" value="Group" />
+                            </Picker>
+                            <TextInput
+                                placeholder="Name"
+                                style={styles.input}
+                                onChangeText={setName}
+                            />
+                            <TextInput
+                                placeholder="Message"
+                                style={styles.input}
+                                onChangeText={setMessage}
+                            />
+                            </>
+                        )}
+
+                        {selectedCategory === 'Study' && (
+                            <>
+                            <TextInput
+                                placeholder="Study Group Title"
+                                style={styles.input}
+                                onChangeText={setName}
+                            />
+                            <TextInput
+                                placeholder="Description"
+                                style={styles.input}
+                                onChangeText={setDescription}
+                            />
+                            </>
+                        )}
+
+                        {selectedCategory === 'Projects' && (
+                            <>
+                            <TextInput
+                                placeholder="Project Title"
+                                style={styles.input}
+                                onChangeText={setName}
+                            />
+                            <TextInput
+                                placeholder="Description"
+                                style={styles.input}
+                                onChangeText={setDescription}
+                            />
+                            </>
+                        )}
+
+                        <ThemedView style={styles.modalButtonRow}>
+                            <Button title="Cancel" color="grey" onPress={() => setShowFormModal(false)} />
+                            <Button title="Save" onPress={handleAddCommunication} />
+                        </ThemedView>
+                        </ThemedView>
+                    </ThemedView>
+                    </Modal>
             </ParallaxScrollView>
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={() => setShowFormModal(true)}
+                >
+                    <Ionicons name="add" size={28} color="#fff" />
+                </TouchableOpacity>
         </ThemedView>
   );
 }
@@ -219,5 +344,48 @@ const styles = StyleSheet.create({
     },
     categoryButtonText: {
         fontWeight: '500',
+    },
+    addButton: {
+        margin: 10,
+        backgroundColor: '#2A52BE',
+        padding: 10,
+        borderRadius: 8,
+        alignItems: 'center',
+        position: 'absolute',
+        right: 15,
+        bottom: 80,
+        width: 40
+    },
+    addButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        backgroundColor: 'white',
+        padding: 20,
+        borderRadius: 10,
+        width: '90%',
+    },
+    modalTitle: {
+        fontSize: 18,
+        marginBottom: 10,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: '#ccc',
+        padding: 10,
+        marginBottom: 10,
+        borderRadius: 5,
+    },
+    modalButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
     },
 });
