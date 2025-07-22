@@ -2,6 +2,7 @@ import { darkTheme, lightTheme } from "@/assets/colors";
 import { ThemeContext, UserDataContext } from "@/components/Header";
 import { getData, saveData } from "@/utils/storage";
 import * as FileSystem from "expo-file-system";
+import * as Font from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
@@ -64,27 +65,26 @@ export default function RootLayout() {
     const initialize = async () => {
       try {
         await SplashScreen.preventAutoHideAsync();
-        // await Font.loadAsync({
-
-        //   "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
-        //   "Montserrat-ExtraLight": require("@/assets/fonts/static/Montserrat-ExtraLight.ttf"),
-        //   "Montserrat-Light": require("@/assets/fonts/static/Montserrat-Light.ttf"),
-        //   "Montserrat-Regular": require("@/assets/fonts/static/Montserrat-Regular.ttf"),
-        //   "Montserrat-Medium": require("@/assets/fonts/static/Montserrat-Medium.ttf"),
-        //   "Montserrat-SemiBold": require("@/assets/fonts/static/Montserrat-SemiBold.ttf"),
-        //   "Montserrat-Bold": require("@/assets/fonts/static/Montserrat-Bold.ttf"),
-        //   "Montserrat-ExtraBold": require("@/assets/fonts/static/Montserrat-ExtraBold.ttf"),
-        //   "Montserrat-Black": require("@/assets/fonts/static/Montserrat-Black.ttf"),
-        //   "Montserrat-ThinItalic": require("@/assets/fonts/static/Montserrat-ThinItalic.ttf"),
-        //   "Montserrat-ExtraLightItalic": require("@/assets/fonts/static/Montserrat-ExtraLightItalic.ttf"),
-        //   "Montserrat-LightItalic": require("@/assets/fonts/static/Montserrat-LightItalic.ttf"),
-        //   "Montserrat-Italic": require("@/assets/fonts/static/Montserrat-Italic.ttf"),
-        //   "Montserrat-MediumItalic": require("@/assets/fonts/static/Montserrat-MediumItalic.ttf"),
-        //   "Montserrat-SemiBoldItalic": require("@/assets/fonts/static/Montserrat-SemiBoldItalic.ttf"),
-        //   "Montserrat-BoldItalic": require("@/assets/fonts/static/Montserrat-BoldItalic.ttf"),
-        //   "Montserrat-ExtraBoldItalic": require("@/assets/fonts/static/Montserrat-ExtraBoldItalic.ttf"),
-        //   "Montserrat-BlackItalic": require("@/assets/fonts/static/Montserrat-BlackItalic.ttf"),
-        // });
+        await Font.loadAsync({
+          "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
+          "Montserrat-ExtraLight": require("@/assets/fonts/static/Montserrat-ExtraLight.ttf"),
+          "Montserrat-Light": require("@/assets/fonts/static/Montserrat-Light.ttf"),
+          "Montserrat-Regular": require("@/assets/fonts/static/Montserrat-Regular.ttf"),
+          "Montserrat-Medium": require("@/assets/fonts/static/Montserrat-Medium.ttf"),
+          "Montserrat-SemiBold": require("@/assets/fonts/static/Montserrat-SemiBold.ttf"),
+          "Montserrat-Bold": require("@/assets/fonts/static/Montserrat-Bold.ttf"),
+          "Montserrat-ExtraBold": require("@/assets/fonts/static/Montserrat-ExtraBold.ttf"),
+          "Montserrat-Black": require("@/assets/fonts/static/Montserrat-Black.ttf"),
+          "Montserrat-ThinItalic": require("@/assets/fonts/static/Montserrat-ThinItalic.ttf"),
+          "Montserrat-ExtraLightItalic": require("@/assets/fonts/static/Montserrat-ExtraLightItalic.ttf"),
+          "Montserrat-LightItalic": require("@/assets/fonts/static/Montserrat-LightItalic.ttf"),
+          "Montserrat-Italic": require("@/assets/fonts/static/Montserrat-Italic.ttf"),
+          "Montserrat-MediumItalic": require("@/assets/fonts/static/Montserrat-MediumItalic.ttf"),
+          "Montserrat-SemiBoldItalic": require("@/assets/fonts/static/Montserrat-SemiBoldItalic.ttf"),
+          "Montserrat-BoldItalic": require("@/assets/fonts/static/Montserrat-BoldItalic.ttf"),
+          "Montserrat-ExtraBoldItalic": require("@/assets/fonts/static/Montserrat-ExtraBoldItalic.ttf"),
+          "Montserrat-BlackItalic": require("@/assets/fonts/static/Montserrat-BlackItalic.ttf"),
+        });
 
         const savedUserData = await getData("userData");
         if (savedUserData) {
