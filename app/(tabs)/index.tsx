@@ -208,20 +208,36 @@ export default function HomeScreen() {
         },
       ]}
     >
-        <ThemedView style={{ flexDirection: "column" }}>
-          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Event</ThemedText>
-          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>{item.title}</ThemedText>
-        </ThemedView>
-        <ThemedView style={{ flexDirection: "column" }}>
-          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Time</ThemedText>
-          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>
-            {item.startTimeAMPM} - {item.endTimeAMPM}
-          </ThemedText>
-        </ThemedView>
-        <ThemedView style={{ flexDirection: "column" }}>
-          <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>Location</ThemedText>
-          <ThemedText style={[globalStyles.semiMediumText, { color: theme.text }]}>{item.location}</ThemedText>
-        </ThemedView>
+      <ThemedView style={{ flexDirection: "column" }}>
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Event
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {item.title}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={{ flexDirection: "column" }}>
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Time
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {item.startTimeAMPM} - {item.endTimeAMPM}
+        </ThemedText>
+      </ThemedView>
+      <ThemedView style={{ flexDirection: "column" }}>
+        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
+          Location
+        </ThemedText>
+        <ThemedText
+          style={[globalStyles.semiMediumText, { color: theme.text }]}
+        >
+          {item.location}
+        </ThemedText>
+      </ThemedView>
       {/* <Button
         title="Delete"
         color={theme.primary}
@@ -281,7 +297,9 @@ export default function HomeScreen() {
                 renderItem={renderTask}
                 keyExtractor={(item) => item.id}
                 style={styles.taskList}
-                ItemSeparatorComponent={() => <ThemedView style={{ height: 10 }} />}
+                ItemSeparatorComponent={() => (
+                  <ThemedView style={{ height: 10 }} />
+                )}
               />
             )}
             <Pressable
@@ -289,10 +307,7 @@ export default function HomeScreen() {
               onPress={() => router.push("/schedule")}
             >
               <ThemedText
-                style={[
-                  globalStyles.mediumText,
-                  globalStyles.actionText2,
-                ]}
+                style={[globalStyles.mediumText, globalStyles.actionText2]}
               >
                 See All
               </ThemedText>
@@ -531,20 +546,20 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 20
+    padding: 20,
   },
   taskList: {
-    marginTop: 20
+    marginTop: 20,
   },
   taskItem: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: .5,
-    borderColor: 'rgba(17, 17, 17, 0.2)',
-    borderStyle: 'solid',
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 0.5,
+    borderColor: "rgba(17, 17, 17, 0.2)",
+    borderStyle: "solid",
     padding: 10,
     borderRadius: 8,
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   noTasks: {
     fontSize: 16,

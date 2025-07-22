@@ -31,6 +31,7 @@ export default function SignUpPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [university, setUniversity] = useState("");
   const [department, setDepartment] = useState("");
   const [faculty, setFaculty] = useState("");
@@ -251,44 +252,37 @@ export default function SignUpPage() {
       >
         <ThemedView style={responsiveStyles.card}>
           <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
-            LET'S GET YOU STARTED
+            Welcome Back
           </ThemedText>
 
           <ThemedText style={[globalStyles.semiLargeText, { marginBottom: 5 }]}>
-            Create an Account
-          </ThemedText>
-          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
-            First Name
+            Log In to your account
           </ThemedText>
 
-          <TextInput
-            style={[responsiveStyles.input, globalStyles.baseText]}
-            placeholder="First Name *"
-            placeholderTextColor={theme.placeholder}
-            value={firstName}
-            onChangeText={setFirstName}
-          />
-          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
-            Last Name
-          </ThemedText>
-          <TextInput
-            style={[responsiveStyles.input, globalStyles.baseText]}
-            placeholder="Last Name *"
-            placeholderTextColor={theme.placeholder}
-            value={lastName}
-            onChangeText={setLastName}
-          />
           <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
             Email
           </ThemedText>
           <TextInput
             style={[responsiveStyles.input, globalStyles.baseText]}
             keyboardType="email-address"
-            placeholder="Email Address *"
+            placeholder="Type in your Email *"
             placeholderTextColor={theme.placeholder}
             value={email}
             onChangeText={setEmail}
           />
+
+          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+            Password
+          </ThemedText>
+          <TextInput
+            style={[responsiveStyles.input, globalStyles.baseText]}
+            keyboardType="visible-password"
+            placeholder="Type in your Password *"
+            placeholderTextColor={theme.placeholder}
+            value={password}
+            onChangeText={setPassword}
+          />
+
           {/* <TextInput
             style={[responsiveStyles.input, globalStyles.baseText]}
             placeholder="University/Institution *"
@@ -380,13 +374,9 @@ export default function SignUpPage() {
             <Picker.Item label="Light Mode" value="light" />
             <Picker.Item label="Dark Mode" value="dark" />
           </Picker> */}
-          <TouchableOpacity onPress={() => router.push("/signup2")}>
+          <TouchableOpacity onPress={() => router.push("/signUpPage")}>
             <ThemedView style={[globalStyles.button1, { marginBottom: 10 }]}>
-              <Pressable>
-                <ThemedText style={globalStyles.actionText2}>
-                  Continue
-                </ThemedText>
-              </Pressable>
+              <ThemedText style={globalStyles.actionText2}>Continue</ThemedText>
             </ThemedView>
           </TouchableOpacity>
 
@@ -409,6 +399,23 @@ export default function SignUpPage() {
             <ThemedView style={{ borderWidth: 0.3, flex: 1 }}></ThemedView>
           </ThemedView>
 
+          <ThemedView
+            style={[
+              globalStyles.button1,
+              ,
+              {
+                marginBottom: 10,
+                backgroundColor: globalStyles.smallText.color,
+              },
+            ]}
+          >
+            <Pressable>
+              <ThemedText style={globalStyles.actionText2}>
+                Login with GitHub
+              </ThemedText>
+            </Pressable>
+          </ThemedView>
+
           <ThemedText
             style={[
               globalStyles.smallText,
@@ -417,15 +424,15 @@ export default function SignUpPage() {
               },
             ]}
           >
-            Already have an account?{" "}
+            New User?{" "}
             <ThemedText
               style={[
                 globalStyles.actionText,
                 { fontFamily: "Montserrat-Bold" },
               ]}
-              onPress={() => router.push("/login")}
+              onPress={() => router.push("/signUpPage")}
             >
-              LOGIN HERE
+              SIGNUP HERE
             </ThemedText>
           </ThemedText>
         </ThemedView>

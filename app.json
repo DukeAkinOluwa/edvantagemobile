@@ -8,6 +8,7 @@
     "scheme": "edvantagemobile",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "assetBundlePatterns": ["assets/**/*"],
     "notification": {
       "icon": "./assets/notification-icon.png",
       "color": "#007AFF"
@@ -83,9 +84,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3100679a-6ab4-40ee-8d0a-2961097a0972"
+        "projectId": "4cf1f793-a004-4afa-81bc-88ac2263abc4"
       }
     },
-    "owner": "akinoluwa"
+    "owner": "mikeyyy"
   }
 }
