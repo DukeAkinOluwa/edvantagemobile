@@ -19,6 +19,7 @@ import {
 } from '@/global/templates';
 import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import * as ImagePicker from "expo-image-picker";
 
 export default function ChatScreen() {
     const router = useRouter();
@@ -29,6 +30,14 @@ export default function ChatScreen() {
     const [message, setMessage] = useState('');
     const [description, setDescription] = useState('');
     const [generalChatType, setGeneralChatType] = useState<'Personal' | 'Group'>('Personal');
+    const [dueDate, setDueDate] = useState('');
+    const [imageLink, setImageLink] = useState('');
+    const [members, setMembers] = useState<string[]>([]);
+
+    const [showMemberSlide, setShowMemberSlide] = useState(false);
+    const [searchUsername, setSearchUsername] = useState('');
+    const [foundUsers, setFoundUsers] = useState<string[]>([]); // mock usernames for now
+
 
 
     // --- Types ---
@@ -134,47 +143,65 @@ export default function ChatScreen() {
     })
 
     const handleAddCommunication = () => {
+        const id = Date.now().toString();
+
         if (selectedCategory === 'General') {
             const newChat: PersonalOrGroupChat = {
-            id: Date.now().toString(),
+            id,
             name,
             message,
             type: generalChatType,
             time: new Date().toLocaleTimeString(),
-            imageLink: 'https://i.pravatar.cc/150?img=7',
+            imageLink: imageLink || 'https://i.pravatar.cc/150?img=7',
             };
-            personalChats.unshift(newChat); // You may want to use a setState
+            personalChats.unshift(newChat);
         } else if (selectedCategory === 'Study') {
             const newStudy: StudyGroup = {
-            id: Date.now().toString(),
+            id,
             title: name,
             description,
             type: 'Study',
-            imageLink: 'https://i.pravatar.cc/150?img=8',
-            members: [],
+            imageLink: imageLink || 'https://i.pravatar.cc/150?img=8',
+            members,
             };
             studyGroups.unshift(newStudy);
         } else if (selectedCategory === 'Projects') {
             const newProject: ProjectItem = {
-            id: Date.now().toString(),
+            id,
             title: name,
             description,
-            dueDate: '',
+            dueDate,
             priority: 'low',
             tasks: [],
             type: 'Projects',
-            imageLink: 'https://i.pravatar.cc/150?img=9',
-            members: [],
+            imageLink: imageLink || 'https://i.pravatar.cc/150?img=9',
+            members,
             };
             projects.unshift(newProject);
         }
 
-        // Clear and close
+        // Clear form
         setName('');
-        setMessage('');
         setDescription('');
+        setDueDate('');
+        setMessage('');
+        setImageLink('');
+        setMembers([]);
         setShowFormModal(false);
     };
+
+    const handleImagePick = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 1,
+        });
+
+        if (!result.canceled) {
+            setImageLink(result.assets[0].uri);
+        }
+    };
+
 
     // --- Render ---
     return (
@@ -250,46 +277,27 @@ export default function ChatScreen() {
                                 <Picker.Item label="Personal" value="Personal" />
                                 <Picker.Item label="Group" value="Group" />
                             </Picker>
-                            <TextInput
-                                placeholder="Name"
-                                style={styles.input}
-                                onChangeText={setName}
-                            />
-                            <TextInput
-                                placeholder="Message"
-                                style={styles.input}
-                                onChangeText={setMessage}
-                            />
+                            <TextInput placeholder="Name" style={styles.input} onChangeText={setName} />
+                            <TextInput placeholder="Message" style={styles.input} onChangeText={setMessage} />
                             </>
                         )}
 
                         {selectedCategory === 'Study' && (
                             <>
-                            <TextInput
-                                placeholder="Study Group Title"
-                                style={styles.input}
-                                onChangeText={setName}
-                            />
-                            <TextInput
-                                placeholder="Description"
-                                style={styles.input}
-                                onChangeText={setDescription}
-                            />
+                            <TextInput placeholder="Title" style={styles.input} onChangeText={setName} />
+                            <TextInput placeholder="Description" style={styles.input} onChangeText={setDescription} />
+                            <Button title="Upload Image" onPress={handleImagePick} />
+                            <Button title="Add Members" onPress={() => setShowMemberSlide(true)} />
                             </>
                         )}
 
                         {selectedCategory === 'Projects' && (
                             <>
-                            <TextInput
-                                placeholder="Project Title"
-                                style={styles.input}
-                                onChangeText={setName}
-                            />
-                            <TextInput
-                                placeholder="Description"
-                                style={styles.input}
-                                onChangeText={setDescription}
-                            />
+                            <TextInput placeholder="Title" style={styles.input} onChangeText={setName} />
+                            <TextInput placeholder="Description" style={styles.input} onChangeText={setDescription} />
+                            <TextInput placeholder="Due Date" style={styles.input} onChangeText={setDueDate} />
+                            <Button title="Upload Image" onPress={handleImagePick} />
+                            <Button title="Add Members" onPress={() => setShowMemberSlide(true)} />
                             </>
                         )}
 
@@ -299,7 +307,32 @@ export default function ChatScreen() {
                         </ThemedView>
                         </ThemedView>
                     </ThemedView>
-                    </Modal>
+                </Modal>
+                <Modal visible={showMemberSlide} animationType="slide">
+                    <ThemedView style={styles.modalContent}>
+                        <ThemedText style={styles.modalTitle}>Add Members by Username</ThemedText>
+                        <TextInput
+                        placeholder="Search by username"
+                        style={styles.input}
+                        value={searchUsername}
+                        onChangeText={(text) => {
+                            setSearchUsername(text);
+                            // Mock search logic (replace with backend/API)
+                            setFoundUsers(['john_doe', 'susan123', 'timmy'].filter(user => user.includes(text)));
+                        }}
+                        />
+                        {foundUsers.map((user) => (
+                        <Pressable key={user} onPress={() => {
+                            if (!members.includes(user)) setMembers([...members, user]);
+                        }}>
+                            <ThemedText>{user}</ThemedText>
+                        </Pressable>
+                        ))}
+
+                        <ThemedText>Selected Members: {members.join(', ')}</ThemedText>
+                        <Button title="Done" onPress={() => setShowMemberSlide(false)} />
+                    </ThemedView>
+                </Modal>
             </ParallaxScrollView>
                 <TouchableOpacity
                     style={styles.addButton}
