@@ -219,7 +219,7 @@ export default function RootLayout() {
             }}
           >
             {isFirstLaunch ? (
-              <Stack.Screen name="signUpPage" />
+              <Stack.Screen name="login" />
             ) : (
               <>
                 <Stack.Screen name="(tabs)" />
