@@ -1,3 +1,4 @@
+import Calendar from "@/components/DashboardCalendar";
 import { NavigationHeader, useTheme } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
@@ -5,8 +6,7 @@ import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import {
-  cancelNotification,
-  scheduleEventNotification,
+  scheduleEventNotification
 } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -14,14 +14,13 @@ import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
   Button,
-  FlatList,
   Modal,
   Platform,
   Pressable,
   StyleSheet,
   Switch,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity
 } from "react-native";
 
 interface Task {
@@ -189,14 +188,6 @@ export default function HomeScreen() {
     }, [fetchTasks])
   );
 
-  const deleteTask = async (taskId: string) => {
-    const tasks = (await getData("tasks")) || [];
-    const updatedTasks = tasks.filter((task: Task) => task.id !== taskId);
-    await saveData("tasks", updatedTasks);
-    await cancelNotification(taskId);
-    setTasks(updatedTasks);
-  };
-
   const renderTask = ({ item }: { item: Task }) => (
     <ThemedView
       style={[
@@ -261,44 +252,8 @@ export default function HomeScreen() {
               </ThemedText>
             </Pressable>
           </ThemedView>
-          <ThemedView
-            style={[
-              styles.todaysTasksContent,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            {tasks.length === 0 ? (
-              <ThemedText style={[styles.noTasks, { color: theme.text }]}>
-                No tasks created yet.
-              </ThemedText>
-            ) : (
-              <FlatList
-                data={tasks.sort(
-                  (a, b) =>
-                    new Date(a.startTime).getTime() -
-                    new Date(b.startTime).getTime()
-                )}
-                renderItem={renderTask}
-                keyExtractor={(item) => item.id}
-                style={styles.taskList}
-                ItemSeparatorComponent={() => <ThemedView style={{ height: 10 }} />}
-              />
-            )}
-            <Pressable
-              style={[globalStyles.button1, { backgroundColor: theme.primary }]}
-              onPress={() => router.push("/schedule")}
-            >
-              <ThemedText
-                style={[
-                  globalStyles.mediumText,
-                  globalStyles.actionText2,
-                ]}
-              >
-                See All
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
         </ThemedView>
+        <Calendar onDayPress={(date) => {}} />
       </ParallaxScrollView>
       <Modal
         transparent
