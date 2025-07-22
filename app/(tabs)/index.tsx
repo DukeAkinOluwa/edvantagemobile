@@ -13,7 +13,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  Button,
   FlatList,
   Modal,
   Platform,
@@ -23,6 +22,7 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import Picker from "react-native-picker-select";
 
 interface Task {
   id: string;
@@ -47,14 +47,16 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [isGroupEvent, setIsGroupEvent] = useState(false);
   const [location, setLocation] = useState("");
+  const [level, setLevel] = useState("100");
+  const [isGroupEvent, setIsGroupEvent] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const formatTimeToAMPM = (date: Date): string => {
     let hours = date.getHours();
@@ -112,15 +114,18 @@ export default function HomeScreen() {
   };
 
   const handleSave = async () => {
-    if (!title || !description || !startTime || !endTime) {
+    if (
+      !title.trim() ||
+      !description.trim() ||
+      !location.trim() ||
+      !level ||
+      !startTime ||
+      !endTime
+    ) {
       alert("All fields are required.");
       return;
     }
-    if (isGroupEvent && !location) {
-      alert("Group ID is required for group events.");
-      return;
-    }
-    if (startTime >= endTime) {
+    if (endTime <= startTime) {
       alert("End time must be after start time.");
       return;
     }
@@ -133,7 +138,7 @@ export default function HomeScreen() {
       title,
       description,
       location,
-      level: "100", // Default level as per task-form.tsx
+      level,
       isGroupEvent,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
@@ -150,33 +155,12 @@ export default function HomeScreen() {
     setModalVisible(false);
     setTitle("");
     setDescription("");
+    setLocation("");
+    setLevel("100");
+    setIsGroupEvent(false);
     setStartTime(null);
     setEndTime(null);
-    setLocation("");
-    setIsGroupEvent(false);
   };
-
-  const dynamicStyles = StyleSheet.create({
-    page: {
-      flex: 1,
-      paddingBottom: 70,
-      backgroundColor: theme.background,
-    },
-    gamificationContainer: {
-      width: adjustedWidth,
-      backgroundColor: theme.primary,
-    },
-    todaysTasks: {
-      width: adjustedWidth,
-      backgroundColor: theme.background,
-    },
-    parallaxScrollView: {
-      flex: 1,
-      backgroundColor: theme.background,
-    },
-  });
-
-  const [tasks, setTasks] = useState<Task[]>([]);
 
   const fetchTasks = useCallback(async () => {
     const savedTasks = await getData("tasks");
@@ -203,7 +187,6 @@ export default function HomeScreen() {
         styles.taskItem,
         {
           backgroundColor: theme.background,
-          // borderColor: theme.border,
           gap: 10,
         },
       ]}
@@ -238,6 +221,7 @@ export default function HomeScreen() {
           {item.location}
         </ThemedText>
       </ThemedView>
+      {/* Preserving commented-out code */}
       {/* <Button
         title="Delete"
         color={theme.primary}
@@ -245,6 +229,26 @@ export default function HomeScreen() {
       /> */}
     </ThemedView>
   );
+
+  const dynamicStyles = StyleSheet.create({
+    page: {
+      flex: 1,
+      paddingBottom: 70,
+      backgroundColor: theme.background,
+    },
+    gamificationContainer: {
+      width: adjustedWidth,
+      backgroundColor: theme.primary,
+    },
+    todaysTasks: {
+      width: adjustedWidth,
+      backgroundColor: theme.background,
+    },
+    parallaxScrollView: {
+      flex: 1,
+      backgroundColor: theme.background,
+    },
+  });
 
   return (
     <ThemedView style={[styles.page, dynamicStyles.page]}>
@@ -265,7 +269,7 @@ export default function HomeScreen() {
             >
               Today's Schedule
             </ThemedText>
-            <Pressable onPress={() => router.push("/task-form")}>
+            <Pressable onPress={() => setModalVisible(true)}>
               <ThemedText
                 style={[
                   globalStyles.mediumText,
@@ -338,7 +342,7 @@ export default function HomeScreen() {
             ]}
           >
             <TextInput
-              placeholder="Task Title *"
+              placeholder="Title *"
               value={title}
               onChangeText={setTitle}
               placeholderTextColor={theme.border}
@@ -388,10 +392,32 @@ export default function HomeScreen() {
                 },
               ]}
             />
+            <Picker
+              value={level}
+              onValueChange={setLevel}
+              items={[
+                { label: "100 Level", value: "100" },
+                { label: "200 Level", value: "200" },
+                { label: "300 Level", value: "300" },
+                { label: "400 Level", value: "400" },
+                { label: "500 Level", value: "500" },
+                { label: "Postgraduate Level", value: "Postgraduate" },
+              ]}
+              style={{
+                inputIOS: [
+                  styles.input,
+                  { borderColor: theme.border, color: theme.text },
+                ],
+                inputAndroid: [
+                  styles.input,
+                  { borderColor: theme.border, color: theme.text },
+                ],
+              }}
+              placeholder={{ label: "Select Academic Level *", value: null }}
+            />
             <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-              <ThemedText style={[styles.input, { color: theme.text }]}>
-                Start Time:{" "}
-                {startTime ? startTime.toLocaleString() : "Select Start Time *"}
+              <ThemedText style={[styles.dateText, { color: theme.text }]}>
+                Start Time: {startTime ? startTime.toLocaleString() : ""}
               </ThemedText>
             </TouchableOpacity>
             {showStartDatePicker && (
@@ -414,9 +440,8 @@ export default function HomeScreen() {
               />
             )}
             <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-              <ThemedText style={[styles.input, { color: theme.text }]}>
-                End Time:{" "}
-                {endTime ? endTime.toLocaleString() : "Select End Time *"}
+              <ThemedText style={[styles.dateText, { color: theme.text }]}>
+                End Time: {endTime ? endTime.toLocaleString() : ""}
               </ThemedText>
             </TouchableOpacity>
             {showEndDatePicker && (
@@ -443,16 +468,28 @@ export default function HomeScreen() {
                 showStartTimePicker ||
                 showEndDatePicker ||
                 showEndTimePicker) && (
-                <Button
-                  title="Confirm"
+                <Pressable
+                  style={[
+                    styles.customButton,
+                    { backgroundColor: theme.primary },
+                  ]}
                   onPress={() => {
                     setShowStartDatePicker(false);
                     setShowStartTimePicker(false);
                     setShowEndDatePicker(false);
                     setShowEndTimePicker(false);
                   }}
-                  color={theme.primary}
-                />
+                >
+                  <ThemedText
+                    style={[
+                      globalStyles.semiLargeText,
+                      styles.customButtonText,
+                      { color: theme.text },
+                    ]}
+                  >
+                    Confirm
+                  </ThemedText>
+                </Pressable>
               )}
             <Pressable
               style={[styles.customButton, { backgroundColor: theme.primary }]}
@@ -531,6 +568,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+  dateText: {
+    fontSize: 16,
+    padding: 10,
+    marginBottom: 10,
+  },
   customButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -543,10 +585,6 @@ const styles = StyleSheet.create({
   },
   backdropTouchableArea: {
     ...StyleSheet.absoluteFillObject,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
   },
   taskList: {
     marginTop: 20,
