@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { getData } from "@/utils/storage";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { Picker } from "@react-native-picker/picker";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  TextInput,
-  Button,
-  StyleSheet,
-  Text,
-  Image,
-  Switch,
   Alert,
+  Button,
+  Image,
   Platform,
   ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import * as ImagePicker from "expo-image-picker";
 import { useTheme, useUserData } from "./_layout";
-import { getData } from "@/utils/storage";
 
 export default function SettingsScreen() {
   const { theme, setThemeMode } = useTheme();

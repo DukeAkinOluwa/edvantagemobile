@@ -58,10 +58,17 @@ export const useGlobalStyles = () => {
       color: theme.primary,
     },
     actionText2: {
-      color: "#FAFBFD",
+      color: theme.secondary,
     },
     button1: {
       backgroundColor: theme.primary,
+      padding: spacing.sm,
+      borderRadius: borderRadius.sm,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    button2: {
+      backgroundColor: theme.background,
       padding: spacing.sm,
       borderRadius: borderRadius.sm,
       alignItems: "center",

@@ -1,3 +1,4 @@
+import Calendar from "@/components/DashboardCalendar";
 import { NavigationHeader, useTheme } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
@@ -5,22 +6,20 @@ import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import {
-  cancelNotification,
-  scheduleEventNotification,
+  scheduleEventNotification
 } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  FlatList,
   Modal,
   Platform,
   Pressable,
   StyleSheet,
   Switch,
   TextInput,
-  TouchableOpacity,
+  TouchableOpacity
 } from "react-native";
 import Picker from "react-native-picker-select";
 
@@ -173,63 +172,6 @@ export default function HomeScreen() {
     }, [fetchTasks])
   );
 
-  const deleteTask = async (taskId: string) => {
-    const tasks = (await getData("tasks")) || [];
-    const updatedTasks = tasks.filter((task: Task) => task.id !== taskId);
-    await saveData("tasks", updatedTasks);
-    await cancelNotification(taskId);
-    setTasks(updatedTasks);
-  };
-
-  const renderTask = ({ item }: { item: Task }) => (
-    <ThemedView
-      style={[
-        styles.taskItem,
-        {
-          backgroundColor: theme.background,
-          gap: 10,
-        },
-      ]}
-    >
-      <ThemedView style={{ flexDirection: "column" }}>
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Event
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {item.title}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={{ flexDirection: "column" }}>
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Time
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {item.startTimeAMPM} - {item.endTimeAMPM}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={{ flexDirection: "column" }}>
-        <ThemedText style={[globalStyles.smallText, { color: theme.text }]}>
-          Location
-        </ThemedText>
-        <ThemedText
-          style={[globalStyles.semiMediumText, { color: theme.text }]}
-        >
-          {item.location}
-        </ThemedText>
-      </ThemedView>
-      {/* Preserving commented-out code */}
-      {/* <Button
-        title="Delete"
-        color={theme.primary}
-        onPress={() => deleteTask(item.id)}
-      /> */}
-    </ThemedView>
-  );
-
   const dynamicStyles = StyleSheet.create({
     page: {
       flex: 1,
@@ -260,64 +202,7 @@ export default function HomeScreen() {
             dynamicStyles.gamificationContainer,
           ]}
         />
-        <ThemedView style={[styles.todaysTasks, dynamicStyles.todaysTasks]}>
-          <ThemedView
-            style={[styles.cardHeading, { backgroundColor: theme.background }]}
-          >
-            <ThemedText
-              style={[globalStyles.semiLargeText, { color: theme.text }]}
-            >
-              Today's Schedule
-            </ThemedText>
-            <Pressable onPress={() => setModalVisible(true)}>
-              <ThemedText
-                style={[
-                  globalStyles.mediumText,
-                  globalStyles.actionText,
-                  { color: theme.primary },
-                ]}
-              >
-                New Event
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
-          <ThemedView
-            style={[
-              styles.todaysTasksContent,
-              { backgroundColor: theme.background },
-            ]}
-          >
-            {tasks.length === 0 ? (
-              <ThemedText style={[styles.noTasks, { color: theme.text }]}>
-                No tasks created yet.
-              </ThemedText>
-            ) : (
-              <FlatList
-                data={tasks.sort(
-                  (a, b) =>
-                    new Date(a.startTime).getTime() -
-                    new Date(b.startTime).getTime()
-                )}
-                renderItem={renderTask}
-                keyExtractor={(item) => item.id}
-                style={styles.taskList}
-                ItemSeparatorComponent={() => (
-                  <ThemedView style={{ height: 10 }} />
-                )}
-              />
-            )}
-            <Pressable
-              style={[globalStyles.button1, { backgroundColor: theme.primary }]}
-              onPress={() => router.push("/schedule")}
-            >
-              <ThemedText
-                style={[globalStyles.mediumText, globalStyles.actionText2]}
-              >
-                See All
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
-        </ThemedView>
+        <Calendar onDayPress={(date) => {}} setModalVisible={setModalVisible} modalVisible={modalVisible} />
       </ParallaxScrollView>
       <Modal
         transparent
