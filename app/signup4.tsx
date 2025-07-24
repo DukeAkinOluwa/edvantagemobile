@@ -3,9 +3,10 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   StyleSheet,
   TextInput,
@@ -13,15 +14,34 @@ import {
   View,
 } from "react-native";
 
-// Component named to match the route (Signup4 for /signup4)
 export default function Signup4() {
   const { theme } = useTheme();
+  const params = useLocalSearchParams();
+  const [formData, setFormData] = useState({
+    firstName: (params.firstName as string) || "",
+    lastName: (params.lastName as string) || "",
+    email: (params.email as string) || "",
+    university: (params.university as string) || "",
+    major: (params.major as string) || "",
+    bio: (params.bio as string) || "",
+  });
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // State for objective, not university
-  const [objective, setObjective] = useState("");
+  const handleNext = () => {
+    setIsLoading(true);
+    if (!formData.bio.trim()) {
+      setError("Please enter your main objective");
+      alert("Please enter your main objective");
+      setIsLoading(false);
+      return;
+    }
+    router.push({ pathname: "/signup5", params: formData });
+    setIsLoading(false);
+  };
 
   const responsiveStyles = StyleSheet.create({
     input: {
@@ -55,14 +75,20 @@ export default function Signup4() {
     },
   });
 
-  // Validation before navigation
-  const handleNext = () => {
-    if (!objective.trim()) {
-      alert("Please enter your main objective");
-      return;
-    }
-    router.push("/signup5");
-  };
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView
@@ -79,19 +105,17 @@ export default function Signup4() {
         What's your main objective in Edvantage? Your choice here won't limit
         what you can do.
       </ThemedText>
-
       <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
         What's your main objective?
       </ThemedText>
-
       <TextInput
         style={[responsiveStyles.input, globalStyles.baseText]}
         placeholder="Enter your main objective *"
         placeholderTextColor={theme.placeholder}
-        value={objective}
-        onChangeText={setObjective}
+        value={formData.bio}
+        onChangeText={(text) => setFormData((prev) => ({ ...prev, bio: text }))}
+        editable={!isLoading}
       />
-
       <View
         style={{
           flexDirection: "row",
@@ -101,14 +125,27 @@ export default function Signup4() {
         }}
       >
         <TouchableOpacity
-          onPress={handleNext} // Use handler for validation
-          style={{ backgroundColor: "white", padding: 12, borderRadius: 7 }}
+          onPress={handleNext}
+          style={{
+            backgroundColor: "white",
+            padding: 12,
+            borderRadius: 7,
+            opacity: isLoading ? 0.5 : 1,
+          }}
+          disabled={isLoading}
         >
-          <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          )}
         </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/signup3")}>
-          <ThemedText style={[{ color: "white" }]}>Previous</ThemedText>
+        <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
+          <ThemedText
+            style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
+          >
+            Previous
+          </ThemedText>
         </TouchableOpacity>
       </View>
     </ThemedView>
