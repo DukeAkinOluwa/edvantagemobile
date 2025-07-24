@@ -3,9 +3,10 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Platform,
   StyleSheet,
   TextInput,
@@ -13,15 +14,32 @@ import {
   View,
 } from "react-native";
 
-// Component should be PascalCase
 export default function Signup2() {
   const { theme } = useTheme();
+  const params = useLocalSearchParams();
+  const [formData, setFormData] = useState({
+    firstName: (params.firstName as string) || "",
+    lastName: (params.lastName as string) || "",
+    email: (params.email as string) || "",
+    university: (params.university as string) || "",
+  });
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Move state inside the component
-  const [university, setUniversity] = useState("");
+  const handleNext = () => {
+    setIsLoading(true);
+    if (!formData.university.trim()) {
+      setError("Please enter your institution name");
+      alert("Please enter your institution name");
+      setIsLoading(false);
+      return;
+    }
+    router.push({ pathname: "/signup3", params: formData });
+    setIsLoading(false);
+  };
 
   const responsiveStyles = StyleSheet.create({
     input: {
@@ -55,14 +73,20 @@ export default function Signup2() {
     },
   });
 
-  // Optional: Add validation before navigation
-  const handleNext = () => {
-    if (!university.trim()) {
-      alert("Please enter your institution name");
-      return;
-    }
-    router.push("/signup3");
-  };
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView
@@ -78,19 +102,19 @@ export default function Signup2() {
       >
         Knowing your educational institution helps us tailor your academic needs
       </ThemedText>
-
       <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
         What is your institution name?
       </ThemedText>
-
       <TextInput
         style={[responsiveStyles.input, globalStyles.baseText]}
         placeholder="University/Institution *"
         placeholderTextColor={theme.placeholder}
-        value={university}
-        onChangeText={setUniversity}
+        value={formData.university}
+        onChangeText={(text) =>
+          setFormData((prev) => ({ ...prev, university: text }))
+        }
+        editable={!isLoading}
       />
-
       <View
         style={{
           flexDirection: "row",
@@ -100,14 +124,27 @@ export default function Signup2() {
         }}
       >
         <TouchableOpacity
-          onPress={handleNext} // Use handler for validation
-          style={{ backgroundColor: "white", padding: 12, borderRadius: 7 }}
+          onPress={handleNext}
+          style={{
+            backgroundColor: "white",
+            padding: 12,
+            borderRadius: 7,
+            opacity: isLoading ? 0.5 : 1,
+          }}
+          disabled={isLoading}
         >
-          <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          )}
         </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/signUpPage")}>
-          <ThemedText style={[{ color: "white" }]}>Previous</ThemedText>
+        <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
+          <ThemedText
+            style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
+          >
+            Previous
+          </ThemedText>
         </TouchableOpacity>
       </View>
     </ThemedView>

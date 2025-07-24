@@ -390,13 +390,25 @@ export default function SignUpPage() {
               },
             ]}
           >
-            <ThemedView style={{ borderWidth: 0.3, flex: 1 }}></ThemedView>
+            <ThemedView
+              style={{
+                borderWidth: 0.3,
+                flex: 1,
+                backgroundColor: globalStyles.smallText.color,
+              }}
+            ></ThemedView>
             <ThemedText
               style={[globalStyles.smallText, { marginHorizontal: 5 }]}
             >
               Or
             </ThemedText>
-            <ThemedView style={{ borderWidth: 0.3, flex: 1 }}></ThemedView>
+            <ThemedView
+              style={{
+                borderWidth: 0.3,
+                flex: 1,
+                backgroundColor: globalStyles.smallText.color,
+              }}
+            ></ThemedView>
           </ThemedView>
 
           <ThemedView
@@ -405,7 +417,7 @@ export default function SignUpPage() {
               ,
               {
                 marginBottom: 10,
-                backgroundColor: globalStyles.smallText.color,
+                backgroundColor: "black",
               },
             ]}
           >

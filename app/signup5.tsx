@@ -1,22 +1,98 @@
-import { useTheme } from "@/components/Header";
+import { useTheme, useUserData } from "@/components/Header";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Platform,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import Picker from "react-native-picker-select";
+import { saveData } from "../utils/storage";
 
-// Component named to match the route (Signup5 for /signup5)
 export default function Signup5() {
   const { theme } = useTheme();
+  const { setUserData } = useUserData();
+  const params = useLocalSearchParams();
+  const [formData, setFormData] = useState({
+    firstName: (params.firstName as string) || "",
+    lastName: (params.lastName as string) || "",
+    email: (params.email as string) || "",
+    university: (params.university as string) || "",
+    major: (params.major as string) || "",
+    bio: (params.bio as string) || "",
+    level: (params.level as string) || "100",
+  });
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // State for academic level
-  const [level, setLevel] = useState("100");
+  const handleNext = async () => {
+    setIsLoading(true);
+    try {
+      if (!formData.level) {
+        throw new Error("Please select your academic level");
+      }
+      if (
+        !formData.firstName.trim() ||
+        !formData.lastName.trim() ||
+        !formData.email.trim() ||
+        !formData.university.trim() ||
+        !formData.major.trim() ||
+        !formData.bio.trim()
+      ) {
+        throw new Error("Please fill in all required fields.");
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        throw new Error("Invalid email address.");
+      }
+
+      const newUserData = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        university: formData.university.trim(),
+        department: formData.university.trim(),
+        faculty: undefined,
+        course: formData.university.trim(),
+        level: formData.level,
+        gender: undefined,
+        dob: undefined,
+        profilePic: undefined,
+        themeMode: "system" as "system" | "light" | "dark",
+        major: formData.major.trim(),
+        bio: formData.bio.trim(),
+        allowNotifications: true,
+        allowAlarms: true,
+        privacy: {
+          showOnlineStatus: true,
+          showProfileToGroups: true,
+          allowFriendRequests: true,
+          dataCollection: true,
+        },
+      };
+
+      await setUserData(newUserData);
+      await saveData("firstLaunch", "false");
+      router.push("/signup6");
+      Alert.alert("Success", "Sign-up completed!");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to sign up";
+      setError(errorMessage);
+      Alert.alert("Error", errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const responsiveStyles = StyleSheet.create({
     input: {
@@ -41,14 +117,20 @@ export default function Signup5() {
     },
   });
 
-  // Validation before navigation
-  const handleNext = () => {
-    if (!level) {
-      alert("Please select your academic level");
-      return;
-    }
-    router.push("/signup6");
-  };
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView
@@ -64,14 +146,14 @@ export default function Signup5() {
       >
         Stating your academic level helps provide relevant resources.
       </ThemedText>
-
       <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
         What is your academic level?
       </ThemedText>
-
       <Picker
-        value={level}
-        onValueChange={setLevel}
+        value={formData.level}
+        onValueChange={(value) =>
+          setFormData((prev) => ({ ...prev, level: value }))
+        }
         items={[
           { label: "100 Level", value: "100" },
           { label: "200 Level", value: "200" },
@@ -84,8 +166,8 @@ export default function Signup5() {
           inputIOS: responsiveStyles.input1,
           inputAndroid: responsiveStyles.input1,
         }}
+        disabled={isLoading}
       />
-
       <View
         style={{
           flexDirection: "row",
@@ -95,14 +177,27 @@ export default function Signup5() {
         }}
       >
         <TouchableOpacity
-          onPress={handleNext} // Use handler for validation
-          style={{ backgroundColor: "white", padding: 12, borderRadius: 7 }}
+          onPress={handleNext}
+          style={{
+            backgroundColor: "white",
+            padding: 12,
+            borderRadius: 7,
+            opacity: isLoading ? 0.5 : 1,
+          }}
+          disabled={isLoading}
         >
-          <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          {isLoading ? (
+            <ActivityIndicator size="small" color={theme.primary} />
+          ) : (
+            <ThemedText style={[{ color: theme.primary }]}>Next</ThemedText>
+          )}
         </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/signup4")}>
-          <ThemedText style={[{ color: "white" }]}>Previous</ThemedText>
+        <TouchableOpacity onPress={() => router.back()} disabled={isLoading}>
+          <ThemedText
+            style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
+          >
+            Previous
+          </ThemedText>
         </TouchableOpacity>
       </View>
     </ThemedView>
