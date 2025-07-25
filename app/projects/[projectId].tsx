@@ -2,9 +2,11 @@ import { NavigationHeader, useTheme } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
+import { filesDummyData } from "@/dummydata/filesData";
+import { ResourceListCard } from "@/global/templates";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 export default function ProjectScreen(){
@@ -150,6 +152,124 @@ export default function ProjectScreen(){
         },
     ];
 
+    const events = [
+        {
+            id: 'event001',
+            title: 'Project Kick-off Meeting',
+            date: '26/02/2026',
+            startTime: '10:00 AM',
+            endTime: '11:30 AM',
+            location: 'Zoom',
+            status: 'completed',
+        },
+        {
+            id: 'event002',
+            title: 'Midterm Presentation',
+            date: '01/03/2026',
+            startTime: '02:00 PM',
+            endTime: '03:30 PM',
+            location: 'Main Auditorium',
+            status: 'pending',
+        },
+        {
+            id: 'event003',
+            title: 'Data Analysis Workshop',
+            date: '28/02/2026',
+            startTime: '09:00 AM',
+            endTime: '12:00 PM',
+            location: 'Lab 2B',
+            status: 'moderate',
+        },
+        {
+            id: 'event004',
+            title: 'Draft Submission Deadline',
+            date: '05/03/2026',
+            startTime: '11:59 PM',
+            endTime: '11:59 PM',
+            location: 'Online Portal',
+            status: 'close',
+        },
+        {
+            id: 'event005',
+            title: 'Final Project Defense',
+            date: '10/03/2026',
+            startTime: '10:00 AM',
+            endTime: '01:00 PM',
+            location: 'Engineering Conference Room',
+            status: 'pending',
+        },
+    ];
+    
+    
+    
+    type ResourceFileTypeCategory = "Video" | "Image" | "Document" | "Audio" | "Other";
+    
+    const files = filesDummyData;
+    
+    type Props = {
+        file: (typeof filesDummyData)[number];
+    };
+    
+    const extensionCategories: { [key: string]: string[] } = {
+        Video: ["mp4", "m4a", "avi", "mov", "wmv", "flv", "mkv", "webm"],
+        Image: ["png", "jpg", "jpeg", "gif", "bmp", "svg", "webp"],
+        Document: [
+        "pdf",
+        "doc",
+        "docx",
+        "ppt",
+        "pptx",
+        "xls",
+        "xlsx",
+        "txt",
+        "odt",
+        ],
+        Audio: ["mp3", "wav", "aac", "flac", "ogg"],
+    };
+    
+    const getCategoryFromExtension = (ext: string): string => {
+        const cleanedExt = ext.toLowerCase().replace(".", "");
+        for (const category in extensionCategories) {
+            if (extensionCategories[category].includes(cleanedExt)) {
+                return category;
+            }
+        }
+        return "Other";
+    };
+    
+    const [selectedResourceCategory, setSelectedResourceCategory] = useState<
+        ResourceFileTypeCategory | "All"
+    >("All");
+    const [currentPage, setCurrentPage] = useState(1);
+    const filesPerPage = 10;
+    
+    const allCategories: (ResourceFileTypeCategory | "All")[] = [
+        "All",
+        "Video",
+        "Image",
+        "Document",
+        "Audio",
+        "Other",
+    ];
+    
+    const categoryFilteredFiles =
+        selectedResourceCategory === "All"
+        ? files
+        : files.filter((file) => {
+            const ext = file.filepath.split(".").pop() || "";
+            return getCategoryFromExtension(ext) === selectedResourceCategory;
+            });
+    
+    //   const filteredFiles = categoryFilteredFiles.filter(
+    //     (file) =>
+    //       file.filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    //       file.uploadedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    //       file.summary.toLowerCase().includes(searchQuery.toLowerCase())
+    //   );
+    
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedResourceCategory]);
 
     return(
         <ThemedView style={styles.page}>
@@ -239,6 +359,25 @@ export default function ProjectScreen(){
                                 </Pressable>
                             </View>
                         </ThemedView>
+                    )}
+                    {selectedCategory === 'Events' && (events.map(event => (
+                        <ThemedView key={event.id} style={[styles.taskCard, responsiveStyles.taskCard, ]}>
+                            <ThemedView style={[ { width: 7, height: 50, borderBottomLeftRadius: 5, borderTopLeftRadius: 5, backgroundColor: '#2A52BE' }]}>
+                                
+                            </ThemedView>
+                            <View style={styles.taskCardRight}>
+                                <ThemedText style={[styles.taskTitle, globalStyles.semiMediumText, { color: theme.text }]}>{event.title}</ThemedText>
+                                <ThemedText style={globalStyles.semiMediumLightText} >{event.startTime} - {event.endTime}</ThemedText>
+                            </View>
+                            {/* <Pressable onPress={() => deleteEvent(event.id)} style={styles.trashIconContainer} hitSlop={10}>
+                                <FontAwesome6 name="trash" size={16} color={theme.icon} />
+                            </Pressable> */}
+                        </ThemedView>
+                    )))}
+                    {selectedCategory === 'Resources' && (
+                        categoryFilteredFiles.map((resource, index) => (
+                            <ResourceListCard key={index} file={resource} />
+                        ))
                     )}
                 </ThemedView>
             </ParallaxScrollView>
