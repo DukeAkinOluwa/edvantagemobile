@@ -5,9 +5,7 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import {
-  scheduleEventNotification
-} from "@/utils/notifications";
+import { scheduleEventNotification } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
@@ -19,16 +17,14 @@ import {
   StyleSheet,
   Switch,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
 } from "react-native";
-import Picker from "react-native-picker-select";
 
 interface Task {
   id: string;
   title: string;
   description: string;
   location: string;
-  level: string;
   isGroupEvent: boolean;
   startTime: string;
   endTime: string;
@@ -47,7 +43,6 @@ export default function HomeScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
-  const [level, setLevel] = useState("100");
   const [isGroupEvent, setIsGroupEvent] = useState(false);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
@@ -117,7 +112,6 @@ export default function HomeScreen() {
       !title.trim() ||
       !description.trim() ||
       !location.trim() ||
-      !level ||
       !startTime ||
       !endTime
     ) {
@@ -137,7 +131,6 @@ export default function HomeScreen() {
       title,
       description,
       location,
-      level,
       isGroupEvent,
       startTime: startTime.toISOString(),
       endTime: endTime.toISOString(),
@@ -155,7 +148,6 @@ export default function HomeScreen() {
     setTitle("");
     setDescription("");
     setLocation("");
-    setLevel("100");
     setIsGroupEvent(false);
     setStartTime(null);
     setEndTime(null);
@@ -202,7 +194,11 @@ export default function HomeScreen() {
             dynamicStyles.gamificationContainer,
           ]}
         />
-        <Calendar onDayPress={(date) => {}} setModalVisible={setModalVisible} modalVisible={modalVisible} />
+        <Calendar
+          onDayPress={(date) => {}}
+          setModalVisible={setModalVisible}
+          modalVisible={modalVisible}
+        />
       </ParallaxScrollView>
       <Modal
         transparent
@@ -276,29 +272,6 @@ export default function HomeScreen() {
                   color: theme.text,
                 },
               ]}
-            />
-            <Picker
-              value={level}
-              onValueChange={setLevel}
-              items={[
-                { label: "100 Level", value: "100" },
-                { label: "200 Level", value: "200" },
-                { label: "300 Level", value: "300" },
-                { label: "400 Level", value: "400" },
-                { label: "500 Level", value: "500" },
-                { label: "Postgraduate Level", value: "Postgraduate" },
-              ]}
-              style={{
-                inputIOS: [
-                  styles.input,
-                  { borderColor: theme.border, color: theme.text },
-                ],
-                inputAndroid: [
-                  styles.input,
-                  { borderColor: theme.border, color: theme.text },
-                ],
-              }}
-              placeholder={{ label: "Select Academic Level *", value: null }}
             />
             <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
               <ThemedText style={[styles.dateText, { color: theme.text }]}>
