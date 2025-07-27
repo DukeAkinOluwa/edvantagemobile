@@ -170,11 +170,13 @@ export default function ScheduleScreen() {
                 { backgroundColor: theme.primary || "#2A52BE" },
                 currentPage === 1 && [
                   styles.paginationButtonDisabled,
-                  { backgroundColor: theme.border || "#aaa" },
+                  { backgroundColor: "rgba(1, 119, 251, 0.1)" },
                 ],
               ]}
             >
-              <ThemedText style={{ color: theme.text }}>Previous</ThemedText>
+              <ThemedText style={[{ color: theme.secondary },
+                currentPage === 1 && {color: theme.primary}
+              ]}>Previous</ThemedText>
             </Pressable>
 
             <ThemedText
@@ -191,11 +193,13 @@ export default function ScheduleScreen() {
                 { backgroundColor: theme.primary || "#2A52BE" },
                 currentPage === totalPages && [
                   styles.paginationButtonDisabled,
-                  { backgroundColor: theme.border || "#aaa" },
+                  { backgroundColor: 'rgba(1, 119, 251, 0.1)' },
                 ],
               ]}
             >
-              <ThemedText style={{ color: theme.text }}>Next</ThemedText>
+              <ThemedText style={[{ color: theme.secondary },
+                currentPage === totalPages && {color: theme.primary}
+              ]}>Next</ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>
@@ -239,7 +243,7 @@ const styles = StyleSheet.create({
   resourceList: {
     paddingHorizontal: 10,
     paddingVertical: 10,
-    gap: 7,
+    gap: 3,
   },
   paginationContainer: {
     flexDirection: "row",

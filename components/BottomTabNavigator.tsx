@@ -1,13 +1,21 @@
 import { useTheme } from "@/components/Header";
-import { FontAwesome6 } from "@expo/vector-icons";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import React from "react";
 import {
+  BookOpen,
+  CalendarDots,
+  Chats,
+  GlobeHemisphereEast,
+  House,
+} from "phosphor-react-native";
+import React, { useEffect, useRef } from "react";
+import {
+  Animated,
   Dimensions,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
+  View,
 } from "react-native";
 import { ThemedView } from "./ThemedView";
 
@@ -18,71 +26,97 @@ import ResourcesScreen from "@/app/(tabs)/resources";
 import ScheduleScreen from "@/app/(tabs)/schedule";
 
 const Tab = createBottomTabNavigator();
+const { width } = Dimensions.get("window");
+const TAB_COUNT = 5;
+const TAB_WIDTH = width / TAB_COUNT;
 
 const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const { theme } = useTheme();
 
-  const dynamicStyles = StyleSheet.create({
-    tabBarContainer: {
-      shadowColor: theme.text,
-      backgroundColor: theme.background,
-    },
-  });
+  const translateX = useRef(new Animated.Value(state.index * TAB_WIDTH)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(translateX, {
+      toValue: state.index * TAB_WIDTH,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.sequence([
+      Animated.timing(translateY, {
+        toValue: 0,
+        // toValue: -10,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [state.index]);
+
+  const iconMap: Record<
+    string,
+    React.ComponentType<any>
+  > = {
+    index: House,
+    schedule: CalendarDots,
+    chatlistscreen: Chats,
+    resources: BookOpen,
+    explore: GlobeHemisphereEast,
+  };
 
   return (
-    <ThemedView style={[styles.tabBarContainer, dynamicStyles.tabBarContainer]}>
-      {state.routes.map((route: any, index: number) => {
-        const { options } = descriptors[route.key];
-        const label = options.title ?? route.name;
+    <View>
+      <Animated.View
+        style={[
+          styles.semiCircle,
+          {
+            backgroundColor: theme.background,
+            elevation: 5,
+            borderWidth: 1,
+            borderColor: theme.primary,
+            transform: [{ translateX }, { translateY }],
+          },
+        ]}
+      />
+      <ThemedView style={[styles.tabBarContainer, { backgroundColor: theme.background }]}>
+        {state.routes.map((route: any, index: number) => {
+          const Icon = iconMap[route.name];
+          const label = descriptors[route.key].options.title ?? route.name;
+          const isFocused = state.index === index;
 
-        const isFocused = state.index === index;
+          const onPress = () => {
+            if (!isFocused) navigation.navigate(route.name);
+          };
 
-        type RouteName =
-          | "index"
-          | "schedule"
-          | "chatlistscreen"
-          | "resources"
-          | "explore";
-
-        const iconMap: Record<RouteName, keyof typeof FontAwesome6.glyphMap> = {
-          index: "house",
-          schedule: "calendar",
-          chatlistscreen: "comment",
-          resources: "book",
-          explore: "plane",
-        };
-
-        const iconName = iconMap[route.name as RouteName];
-
-        const onPress = () => {
-          if (!isFocused) navigation.navigate(route.name);
-        };
-
-        return (
-          <TouchableOpacity
-            key={route.key}
-            accessibilityRole="button"
-            onPress={onPress}
-            style={styles.tabButton}
-          >
-            <FontAwesome6
-              name={iconName}
-              size={isFocused ? 28 : 22}
-              color={isFocused ? theme.primary : theme.border}
-              style={{ marginBottom: 4 }}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                { color: isFocused ? theme.primary : theme.border },
-              ]}
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={onPress}
+              style={styles.tabButton}
             >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ThemedView>
+              <Icon
+                size={isFocused ? 28 : 22}
+                color={isFocused ? theme.primary : theme.border}
+                weight={isFocused ? "fill" : "regular"}
+                style={{ marginBottom: 4 }}
+              />
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isFocused ? theme.primary : theme.border },
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ThemedView>
+    </View>
   );
 };
 
@@ -94,42 +128,18 @@ export default function BottomTabNavigator() {
       initialRouteName="index"
       screenOptions={{
         headerShown: false,
-        tabBarBackground: () => (
-          <ThemedView style={{ flex: 1, backgroundColor: theme.background }} />
-        ),
+        tabBarStyle: { display: "none" },
       }}
       tabBar={(props) => <CustomTabBar {...props} />}
     >
-      <Tab.Screen
-        name="index"
-        component={HomeScreen}
-        options={{ title: "Home" }}
-      />
-      <Tab.Screen
-        name="schedule"
-        component={ScheduleScreen}
-        options={{ title: "Schedule" }}
-      />
-      <Tab.Screen
-        name="chatlistscreen"
-        component={ChatListScreen}
-        options={{ title: "Chats" }}
-      />
-      <Tab.Screen
-        name="resources"
-        component={ResourcesScreen}
-        options={{ title: "Resources" }}
-      />
-      <Tab.Screen
-        name="explore"
-        component={ExploreScreen}
-        options={{ title: "Explore" }}
-      />
+      <Tab.Screen name="index" component={HomeScreen} options={{ title: "Home" }} />
+      <Tab.Screen name="schedule" component={ScheduleScreen} options={{ title: "Schedule" }} />
+      <Tab.Screen name="chatlistscreen" component={ChatListScreen} options={{ title: "Chats" }} />
+      <Tab.Screen name="resources" component={ResourcesScreen} options={{ title: "Resources" }} />
+      <Tab.Screen name="explore" component={ExploreScreen} options={{ title: "Explore" }} />
     </Tab.Navigator>
   );
 }
-
-const { width } = Dimensions.get("window");
 
 const styles = StyleSheet.create({
   tabBarContainer: {
@@ -140,9 +150,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     elevation: 10,
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
     width,
     justifyContent: "space-around",
     position: "absolute",
@@ -156,5 +163,12 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 12,
     fontFamily: "Montserrat-SemiBold",
+  },
+  semiCircle: {
+    position: "absolute",
+    bottom: 70 - 50,
+    width: 80,
+    height: 60,
+    borderRadius: 20,
   },
 });
