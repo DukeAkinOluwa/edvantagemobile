@@ -17,9 +17,10 @@ import {
     ProjectCardTemplate,
     StudyCardTemplate
 } from '@/global/templates';
-import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from "expo-image-picker";
+
+import { PlusIcon } from "phosphor-react-native";
 
 export default function ChatScreen() {
     const router = useRouter();
@@ -338,7 +339,7 @@ export default function ChatScreen() {
                     style={styles.addButton}
                     onPress={() => setShowFormModal(true)}
                 >
-                    <Ionicons name="add" size={28} color="#fff" />
+                    <PlusIcon size={28} color="#fff" />
                 </TouchableOpacity>
         </ThemedView>
   );
@@ -383,11 +384,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#2A52BE',
         padding: 10,
         borderRadius: 8,
+        justifyContent: 'center',
         alignItems: 'center',
         position: 'absolute',
         right: 15,
         bottom: 80,
-        width: 40
     },
     addButtonText: {
         color: 'white',
