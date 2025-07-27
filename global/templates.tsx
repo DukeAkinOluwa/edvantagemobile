@@ -1,5 +1,4 @@
 import { useTheme } from "@/components/Header";
-import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { StyleSheet, TouchableOpacity } from "react-native";
@@ -10,7 +9,19 @@ import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { Image } from "react-native";
 
-import { DownloadSimpleIcon, FileAudioIcon, FileDocIcon, FileImageIcon, FilePdfIcon, FileTextIcon, FileVideoIcon, HeartIcon } from "phosphor-react-native";
+import {
+  CalendarBlankIcon,
+  DownloadSimpleIcon,
+  FileAudioIcon,
+  FileDocIcon,
+  FileIcon,
+  FileImageIcon,
+  FilePdfIcon,
+  FileTextIcon,
+  FileVideoIcon,
+  HeartIcon,
+  HourglassIcon
+} from "phosphor-react-native";
 
 
 // ===== Types =====
@@ -273,15 +284,15 @@ export function ProjectCardTemplate({ project, onPress }: { project: ProjectItem
           <ThemedText style={[globalStyles.semiMediumLightText]}>{project.description}</ThemedText>
           <ThemedView style={projectCardStyles.relevantSummary}>
             <ThemedView style={projectCardStyles.relevantSummaryMember}>
-              <FontAwesome6 name={"calendar"} size={18} color={theme.text} />
+              <CalendarBlankIcon size={18} color={theme.text} />
               <ThemedText style={globalStyles.semiMediumText}>{project.dueDate}</ThemedText>
             </ThemedView>
             <ThemedView style={projectCardStyles.relevantSummaryMember}>
-              <FontAwesome6 name={"file"} size={18} color={theme.text} />
+              <FileIcon size={18} color={theme.text} />
               <ThemedText style={globalStyles.semiMediumText}>{project.tasks.length} tasks</ThemedText>
             </ThemedView>
             <ThemedView style={projectCardStyles.relevantSummaryMember}>
-              <FontAwesome6 name={"clock"} size={18} color={project.priority === 'high' ? '#E63946' : '#2A9D8F'} />
+              <HourglassIcon size={18} color={project.priority === 'high' ? '#E63946' : '#2A9D8F'} />
               <ThemedText style={[globalStyles.semiMediumText, { color: project.priority === 'high' ? '#E63946' : '#2A9D8F' }]}>
                 {project.priority.toUpperCase()}
               </ThemedText>
