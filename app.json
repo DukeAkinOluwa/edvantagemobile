@@ -17,7 +17,8 @@
       "NSPhotoLibraryUsageDescription": "Allow access to select a profile picture.",
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": ["audio", "fetch", "remote-notification"],
+        "NSPhotoLibraryUsageDescription": "Allow access to select a profile picture."
       }
     },
     "android": {
@@ -43,7 +44,10 @@
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
-        "android.permission.WAKE_LOCK"
+        "android.permission.WAKE_LOCK",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "android.permission.FOREGROUND_SERVICE"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -63,7 +67,25 @@
         {
           "icon": "./assets/notification-icon.png",
           "color": "#007AFF",
-          "sounds": []
+          "sounds": [],
+          "iosDisplayInForeground": true,
+          "androidMode": "default",
+          "androidChannels": [
+            {
+              "id": "alarms",
+              "name": "Alarms",
+              "importance": "max",
+              "sound": true,
+              "vibrate": [0, 250, 250, 250]
+            },
+            {
+              "id": "notifications",
+              "name": "Notifications",
+              "importance": "default",
+              "sound": true,
+              "vibrate": [0, 250]
+            }
+          ]
         }
       ],
       "expo-router",

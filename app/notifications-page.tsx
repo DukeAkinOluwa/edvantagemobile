@@ -1,164 +1,114 @@
 import { NavigationHeader, useTheme } from "@/components/Header";
+import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
-import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Button, FlatList, StyleSheet, Text } from "react-native";
-import { cancelNotification } from "../utils/notifications";
-import { getData, saveData } from "../utils/storage";
+import { FontAwesome6 } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system";
+import { useFocusEffect } from "expo-router";
+import React, { useCallback, useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
 
-interface NotificationRecord {
-  id: string;
-  taskId?: string;
-  title: string;
-  body: string;
-  timestamp: number;
-  isNew: boolean;
-}
+const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
-export default function NotificationsScreen() {
+export default function NotificationsPage() {
   const { theme } = useTheme();
-  const [notifications, setNotifications] = useState<NotificationRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
-  const fetchNotifications = useCallback(async () => {
-    setLoading(true);
-    const savedNotifications = (await getData("notificationHistory")) || [];
-    console.log("Fetched notifications:", savedNotifications);
-    setNotifications(savedNotifications);
-    await saveData("notificationsVisited", true); // Mark as visited
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    fetchNotifications();
-    return () => {
-      const markAllAsOld = async () => {
-        const updatedNotifications = notifications.map((n) => ({
-          ...n,
-          isNew: false,
-        }));
-        await saveData("notificationHistory", updatedNotifications);
-        console.log("Marked all notifications as old");
-      };
-      markAllAsOld();
-    };
-  }, [fetchNotifications]);
-
-  const deleteAllNotifications = async () => {
-    Alert.alert(
-      "Confirm",
-      "Are you sure you want to delete all notifications?",
-      [
-        { text: "Cancel" },
-        {
-          text: "Delete",
-          onPress: async () => {
-            const notificationRecords =
-              (await getData("notificationHistory")) || [];
-            for (const notification of notificationRecords) {
-              if (notification.taskId) {
-                await cancelNotification(notification.taskId);
-              }
-            }
-            await saveData("notificationHistory", []);
-            await saveData("notifications", []);
-            setNotifications([]);
-            Alert.alert("Success", "All notifications deleted.");
-          },
-        },
-      ]
-    );
+  const loadNotifications = async () => {
+    try {
+      const content = await FileSystem.readAsStringAsync(NOTIFICATIONS_FILE);
+      const notifications = JSON.parse(content) || [];
+      setNotifications(notifications);
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+    }
   };
 
-  const renderNotification = ({ item }: { item: NotificationRecord }) => (
+  useFocusEffect(
+    useCallback(() => {
+      const markAllAsRead = async () => {
+        try {
+          const content = await FileSystem.readAsStringAsync(
+            NOTIFICATIONS_FILE
+          );
+          let notifications = JSON.parse(content) || [];
+          notifications = notifications.map((n: any) => ({ ...n, read: true }));
+          await FileSystem.writeAsStringAsync(
+            NOTIFICATIONS_FILE,
+            JSON.stringify(notifications)
+          );
+          setNotifications(notifications);
+        } catch (error) {
+          console.error("Error marking notifications as read:", error);
+        }
+      };
+      markAllAsRead();
+      loadNotifications();
+    }, [])
+  );
+
+  const renderNotification = ({ item }: { item: any }) => (
     <ThemedView
       style={[
         styles.notificationItem,
         { backgroundColor: theme.background, borderColor: theme.border },
       ]}
     >
-      <Text
-        style={[
-          styles.notificationTitle,
-          { color: item.isNew ? theme.accent : theme.text },
-        ]}
-      >
-        {item.title}
-      </Text>
-      <Text
-        style={[
-          styles.notificationBody,
-          { color: item.isNew ? theme.accent : theme.text },
-        ]}
-      >
-        {item.body}
-      </Text>
-      <Text style={[styles.notificationTimestamp, { color: theme.text }]}>
-        {new Date(item.timestamp).toLocaleString()}
-      </Text>
+      <View style={styles.iconContainer}>
+        <FontAwesome6 name="bell" size={20} color={theme.primary} />
+      </View>
+      <View style={styles.textContainer}>
+        <ThemedText style={{ color: theme.text }}>
+          {item.content.title}
+        </ThemedText>
+        <ThemedText style={{ color: theme.text }}>
+          {item.content.body}
+        </ThemedText>
+        <ThemedText style={{ color: theme.text, fontSize: 12 }}>
+          {new Date(item.date).toLocaleString()}
+        </ThemedText>
+      </View>
     </ThemedView>
   );
 
-  if (loading) {
-    return (
-      <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
-        <Text style={{ color: theme.text, textAlign: "center" }}>
-          Loading notifications...
-        </Text>
-      </ThemedView>
-    );
-  }
-
   return (
-    <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
+    <ThemedView
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
       <NavigationHeader title="Notifications" />
-      {notifications.length === 0 ? (
-        <Text style={[styles.noNotifications, { color: theme.text }]}>
-          No notifications yet.
-        </Text>
-      ) : (
-        <>
-          <Button
-            title="Delete All Notifications"
-            onPress={deleteAllNotifications}
-            color={theme.primary}
-          />
-          <FlatList
-            data={notifications.sort((a, b) => b.timestamp - a.timestamp)}
-            renderItem={renderNotification}
-            keyExtractor={(item) => item.id}
-            style={styles.notificationList}
-          />
-        </>
-      )}
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={(item, index) => index.toString()}
+        ListEmptyComponent={
+          <ThemedText
+            style={{ color: theme.text, textAlign: "center", marginTop: 20 }}
+          >
+            No notifications available.
+          </ThemedText>
+        }
+      />
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  notificationList: { marginTop: 20 },
+  container: {
+    flex: 1,
+    paddingBottom: 70,
+  },
   notificationItem: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
-    marginBottom: 10,
-    borderRadius: 5,
     borderWidth: 1,
+    borderRadius: 8,
+    marginVertical: 5,
+    marginHorizontal: 15,
   },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginBottom: 5,
+  iconContainer: {
+    marginRight: 10,
   },
-  notificationBody: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  notificationTimestamp: {
-    fontSize: 12,
-    color: "#888",
-  },
-  noNotifications: {
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
+  textContainer: {
+    flex: 1,
   },
 });

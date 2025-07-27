@@ -142,6 +142,17 @@ export default function HomeScreen() {
     tasks.push(newTask);
     await saveData("tasks", tasks);
     await scheduleEventNotification(newTask);
+
+    // Save scheduled notification details
+    const scheduledNotifications =
+      (await getData("scheduled_notifications")) || [];
+    const triggerTime = new Date(newTask.startTime).getTime() - 5 * 60 * 1000;
+    scheduledNotifications.push({
+      taskId: newTask.id,
+      triggerTime,
+    });
+    await saveData("scheduled_notifications", scheduledNotifications);
+
     setTasks(tasks);
 
     setModalVisible(false);
@@ -286,6 +297,8 @@ export default function HomeScreen() {
                 onChange={handleStartDateChange}
                 minimumDate={new Date()}
                 onTouchCancel={() => setShowStartDatePicker(false)}
+                textColor={theme.text} // Android only
+                accentColor={theme.primary} // Android only
               />
             )}
             {showStartTimePicker && (
@@ -295,6 +308,8 @@ export default function HomeScreen() {
                 display={Platform.OS === "ios" ? "spinner" : "clock"}
                 onChange={handleStartTimeChange}
                 onTouchCancel={() => setShowStartTimePicker(false)}
+                textColor={theme.text} // Android only
+                accentColor={theme.primary} // Android only
               />
             )}
             <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
@@ -310,6 +325,8 @@ export default function HomeScreen() {
                 onChange={handleEndDateChange}
                 minimumDate={startTime || new Date()}
                 onTouchCancel={() => setShowEndDatePicker(false)}
+                textColor={theme.text} // Android only
+                accentColor={theme.primary} // Android only
               />
             )}
             {showEndTimePicker && (
@@ -319,6 +336,8 @@ export default function HomeScreen() {
                 display={Platform.OS === "ios" ? "spinner" : "clock"}
                 onChange={handleEndTimeChange}
                 onTouchCancel={() => setShowEndTimePicker(false)}
+                textColor={theme.text} // Android only
+                accentColor={theme.primary} // Android only
               />
             )}
             {Platform.OS === "ios" &&

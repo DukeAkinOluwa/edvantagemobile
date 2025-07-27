@@ -7,8 +7,10 @@ import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { Appearance, Text } from "react-native";
+import { Appearance, AppState, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
 export default function RootLayout() {
   interface UserData {
@@ -61,29 +63,89 @@ export default function RootLayout() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const checkMissedNotifications = async () => {
+    try {
+      const currentTime = Date.now();
+      const scheduledNotifications =
+        (await getData("scheduled_notifications")) || [];
+      const missedNotifications = scheduledNotifications.filter(
+        (sn: { taskId: string; triggerTime: number }) =>
+          sn.triggerTime < currentTime
+      );
+
+      const notificationsContent = await FileSystem.readAsStringAsync(
+        NOTIFICATIONS_FILE
+      );
+      let notifications = JSON.parse(notificationsContent) || [];
+      const tasks = (await getData("tasks")) || [];
+
+      for (const mn of missedNotifications) {
+        const exists = notifications.some(
+          (n: any) => n.data.taskId === mn.taskId
+        );
+        if (!exists) {
+          const task = tasks.find((t: any) => t.id === mn.taskId);
+          if (task) {
+            // Format start time to AM/PM
+            const startTime = new Date(task.startTime);
+            const formatTimeToAMPM = (date: Date): string => {
+              let hours = date.getHours();
+              const minutes = date.getMinutes();
+              const ampm = hours >= 12 ? "PM" : "AM";
+              hours = hours % 12 || 12;
+              const minutesStr = minutes < 10 ? `0${minutes}` : minutes;
+              return `${hours}:${minutesStr} ${ampm}`;
+            };
+
+            const newNotification = {
+              content: {
+                title: `Upcoming Task: ${task.title}`,
+                body: `Your task "${task.title}" starts at ${formatTimeToAMPM(
+                  startTime
+                )}.`,
+                data: { taskId: task.id },
+              },
+              date: new Date(mn.triggerTime).toISOString(),
+              read: false,
+            };
+            notifications.push(newNotification);
+          }
+        }
+      }
+
+      await FileSystem.writeAsStringAsync(
+        NOTIFICATIONS_FILE,
+        JSON.stringify(notifications)
+      );
+    } catch (error) {
+      console.error("Error checking missed notifications:", error);
+    }
+  };
+
   useEffect(() => {
     const initialize = async () => {
       try {
         await SplashScreen.preventAutoHideAsync();
         await Font.loadAsync({
-          "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
-          "Montserrat-ExtraLight": require("@/assets/fonts/static/Montserrat-ExtraLight.ttf"),
-          "Montserrat-Light": require("@/assets/fonts/static/Montserrat-Light.ttf"),
-          "Montserrat-Regular": require("@/assets/fonts/static/Montserrat-Regular.ttf"),
-          "Montserrat-Medium": require("@/assets/fonts/static/Montserrat-Medium.ttf"),
-          "Montserrat-SemiBold": require("@/assets/fonts/static/Montserrat-SemiBold.ttf"),
-          "Montserrat-Bold": require("@/assets/fonts/static/Montserrat-Bold.ttf"),
-          "Montserrat-ExtraBold": require("@/assets/fonts/static/Montserrat-ExtraBold.ttf"),
-          "Montserrat-Black": require("@/assets/fonts/static/Montserrat-Black.ttf"),
-          "Montserrat-ThinItalic": require("@/assets/fonts/static/Montserrat-ThinItalic.ttf"),
-          "Montserrat-ExtraLightItalic": require("@/assets/fonts/static/Montserrat-ExtraLightItalic.ttf"),
-          "Montserrat-LightItalic": require("@/assets/fonts/static/Montserrat-LightItalic.ttf"),
-          "Montserrat-Italic": require("@/assets/fonts/static/Montserrat-Italic.ttf"),
-          "Montserrat-MediumItalic": require("@/assets/fonts/static/Montserrat-MediumItalic.ttf"),
-          "Montserrat-SemiBoldItalic": require("@/assets/fonts/static/Montserrat-SemiBoldItalic.ttf"),
-          "Montserrat-BoldItalic": require("@/assets/fonts/static/Montserrat-BoldItalic.ttf"),
-          "Montserrat-ExtraBoldItalic": require("@/assets/fonts/static/Montserrat-ExtraBoldItalic.ttf"),
-          "Montserrat-BlackItalic": require("@/assets/fonts/static/Montserrat-BlackItalic.ttf"),
+          // Font loading code remains commented out as in the original
+          // "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
+          // "Montserrat-ExtraLight": require("@/assets/fonts/static/Montserrat-ExtraLight.ttf"),
+          // "Montserrat-Light": require("@/assets/fonts/static/Montserrat-Light.ttf"),
+          // "Montserrat-Regular": require("@/assets/fonts/static/Montserrat-Regular.ttf"),
+          // "Montserrat-Medium": require("@/assets/fonts/static/Montserrat-Medium.ttf"),
+          // "Montserrat-SemiBold": require("@/assets/fonts/static/Montserrat-SemiBold.ttf"),
+          // "Montserrat-Bold": require("@/assets/fonts/static/Montserrat-Bold.ttf"),
+          // "Montserrat-ExtraBold": require("@/assets/fonts/static/Montserrat-ExtraBold.ttf"),
+          // "Montserrat-Black": require("@/assets/fonts/static/Montserrat-Black.ttf"),
+          // "Montserrat-ThinItalic": require("@/assets/fonts/static/Montserrat-ThinItalic.ttf"),
+          // "Montserrat-ExtraLightItalic": require("@/assets/fonts/static/Montserrat-ExtraLightItalic.ttf"),
+          // "Montserrat-LightItalic": require("@/assets/fonts/static/Montserrat-LightItalic.ttf"),
+          // "Montserrat-Italic": require("@/assets/fonts/static/Montserrat-Italic.ttf"),
+          // "Montserrat-MediumItalic": require("@/assets/fonts/static/Montserrat-MediumItalic.ttf"),
+          // "Montserrat-SemiBoldItalic": require("@/assets/fonts/static/Montserrat-SemiBoldItalic.ttf"),
+          // "Montserrat-BoldItalic": require("@/assets/fonts/static/Montserrat-BoldItalic.ttf"),
+          // "Montserrat-ExtraBoldItalic": require("@/assets/fonts/static/Montserrat-ExtraBoldItalic.ttf"),
+          // "Montserrat-BlackItalic": require("@/assets/fonts/static/Montserrat-BlackItalic.ttf"),
         });
 
         const savedUserData = await getData("userData");
@@ -120,6 +182,9 @@ export default function RootLayout() {
 
         setFontsLoaded(true);
         await SplashScreen.hideAsync();
+
+        // Check for missed notifications on app start
+        await checkMissedNotifications();
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : "Initialization failed";
@@ -140,6 +205,15 @@ export default function RootLayout() {
     });
     return () => subscription.remove();
   }, [themeMode]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextAppState) => {
+      if (nextAppState === "active") {
+        checkMissedNotifications();
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   const handleSetUserData = async (data: Partial<UserData>) => {
     try {

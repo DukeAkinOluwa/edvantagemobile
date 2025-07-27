@@ -1,7 +1,7 @@
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { getData, saveData } from "@/utils/storage";
 import { FontAwesome6 } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
+import * as FileSystem from "expo-file-system";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
@@ -76,9 +76,7 @@ export const useUserData = () => {
   return context;
 };
 
-interface NavigationHeaderProps {
-  title: string;
-}
+const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
 // Memoized Image component to prevent unnecessary re-renders
 const ProfileImage = memo(
@@ -87,7 +85,7 @@ const ProfileImage = memo(
   )
 );
 
-export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
+export const NavigationHeader = ({ title }: { title: string }) => {
   const router = useRouter();
   const globalStyles = useGlobalStyles();
   const { theme } = useTheme();
@@ -101,13 +99,20 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
 
   const updateNotificationCount = async () => {
     try {
-      const notificationHistory = (await getData("notificationHistory")) || [];
-      const newCount = notificationHistory.filter(
-        (n: { isNew: boolean }) => n.isNew
-      ).length;
+      const fileExists = await FileSystem.getInfoAsync(NOTIFICATIONS_FILE);
+      if (!fileExists.exists) {
+        setNewNotificationCount(0);
+        console.log("Header: Badge count updated to: 0 (file not found)");
+        return;
+      }
+
+      const content = await FileSystem.readAsStringAsync(NOTIFICATIONS_FILE);
+      const notifications = JSON.parse(content) || [];
+      const newCount = notifications.filter((n: any) => !n.read).length;
       setNewNotificationCount(newCount);
+      console.log("Header: Badge count updated to:", newCount);
     } catch (error) {
-      // Silently handle errors to avoid UI disruption
+      console.error("Header: Error updating notification count:", error);
     }
   };
 
@@ -117,33 +122,34 @@ export const NavigationHeader = ({ title }: NavigationHeaderProps) => {
         await requestNotificationPermissions();
         await updateNotificationCount();
       } catch (error) {
-        // Silently handle initialization errors
+        console.error("Header: Error during initialization:", error);
       }
     };
     initialize();
 
+    // Set up notification listener
     const subscription = Notifications.addNotificationReceivedListener(
       async (notification) => {
         try {
-          const notificationHistory =
-            (await getData("notificationHistory")) || [];
-          const newNotification = {
-            id: notification.request.identifier,
-            title: notification.request.content.title,
-            body: notification.request.content.body,
-            timestamp: Date.now(),
-            isNew: true,
-          };
-          notificationHistory.push(newNotification);
-          await saveData("notificationHistory", notificationHistory);
+          const content = await FileSystem.readAsStringAsync(
+            NOTIFICATIONS_FILE
+          );
+          let notifications = JSON.parse(content) || [];
+          notifications.push({ ...notification, read: false });
+          await FileSystem.writeAsStringAsync(
+            NOTIFICATIONS_FILE,
+            JSON.stringify(notifications)
+          );
           await updateNotificationCount();
         } catch (error) {
-          // Silently handle notification save errors
+          console.error("Error handling notification:", error);
         }
       }
     );
 
+    // Poll for notification count updates
     const interval = setInterval(updateNotificationCount, 5000);
+
     return () => {
       clearInterval(interval);
       subscription.remove();
