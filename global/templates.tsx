@@ -1,5 +1,5 @@
 import { useTheme } from "@/components/Header";
-import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
+import { FontAwesome6 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { StyleSheet, TouchableOpacity } from "react-native";
@@ -9,6 +9,9 @@ import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { Image } from "react-native";
+
+import { DownloadSimpleIcon, FileAudioIcon, FileDocIcon, FileImageIcon, FilePdfIcon, FileTextIcon, FileVideoIcon, HeartIcon } from "phosphor-react-native";
+
 
 // ===== Types =====
 type ChatListCardProps = {
@@ -70,12 +73,14 @@ export interface ProjectItem {
 }
 
 // ===== Utility Maps & Functions =====
-const resourceCategoryIconMap: Record<string, string> = {
-  video: "video-camera",
-  image: "image",
-  document: "file-text",
-  audio: "music",
-  other: "file",
+const resourceCategoryIconMap: Record<string, React.ComponentType<any>> = {
+  pdf: FilePdfIcon,
+  document: FileDocIcon,
+  txt: FileTextIcon,
+  image: FileImageIcon,
+  video: FileVideoIcon,
+  audio: FileAudioIcon, // Placeholder, can be replaced with a specific audio icon
+  // Add more categories as needed
 };
 
 const resourceCategoryIconColor: Record<string, string> = {
@@ -116,31 +121,85 @@ export const ResourceListCard: React.FC<ResourceCardProps> = ({ file }) => {
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
 
-  const extension = file.filepath.split('.').pop() || '';
+  const extension = file.filepath.split(".").pop() || "";
   const category = getResourceCategoryFromExtension(extension).toLowerCase();
 
+  const IconComponent = resourceCategoryIconMap[category] || FileTextIcon;
+
   return (
-    <ThemedView style={[resourceCardStyles.fileCard, { maxWidth: screenWidth - 40 }]}>
+    <ThemedView
+      style={[
+        resourceCardStyles.fileCard,
+        { width: screenWidth - 30 },
+      ]}
+    >
+      {/* Header */}
       <ThemedView style={resourceCardStyles.fileCardHeading}>
-        <ThemedView style={[resourceCardStyles.fileCardHeadingIcon, { backgroundColor: resourceCategoryIconBackgroundColor[category] }]}>
-          <FontAwesome6 name={resourceCategoryIconMap[category]} size={22} color={resourceCategoryIconColor[category]} />
+        <ThemedView
+          style={[
+            resourceCardStyles.fileCardHeadingIcon,
+            {
+              backgroundColor:
+                resourceCategoryIconBackgroundColor[category],
+            },
+          ]}
+        >
+          <IconComponent
+            size={22}
+            color={resourceCategoryIconColor[category]}
+            weight="fill"
+          />
         </ThemedView>
+
         <ThemedView style={resourceCardStyles.fileCardHeadingTexts}>
-          <ThemedText style={[globalStyles.mediumText, { fontWeight: '500' }]}>{file.filename}</ThemedText>
-          <ThemedText style={globalStyles.smallText}>Uploaded by {file.uploadedBy}</ThemedText>
+          <ThemedText
+            style={[globalStyles.mediumText, { fontWeight: "500" }]}
+          >
+            {file.filename}
+          </ThemedText>
+          <ThemedText style={globalStyles.smallText}>
+            Uploaded by {file.uploadedBy}
+          </ThemedText>
         </ThemedView>
       </ThemedView>
 
-      <ThemedText style={globalStyles.baseText}>{file.summary}</ThemedText>
+      {/* Summary */}
+      <ThemedText style={globalStyles.baseText}>
+        {file.summary}
+      </ThemedText>
 
-      <ThemedView style={{ gap: 15, alignItems: 'center', flexDirection: 'row' }}>
-        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <FontAwesome name='heart' size={17} color={'red'} />
-          <ThemedText style={globalStyles.baseText}>{file.likes}</ThemedText>
+      {/* Actions */}
+      <ThemedView
+        style={{
+          gap: 15,
+          alignItems: "center",
+          flexDirection: "row",
+        }}
+      >
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <HeartIcon  size={17} color="red" weight="fill" />
+          <ThemedText style={globalStyles.baseText}>
+            {file.likes}
+          </ThemedText>
         </ThemedView>
-        <ThemedView style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <FontAwesome6 name='download' size={17} color={'#2A52BE'} />
-          <ThemedText style={globalStyles.baseText}>{file.downloads}</ThemedText>
+
+        <ThemedView
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 5,
+          }}
+        >
+          <DownloadSimpleIcon size={17} color="#2A52BE" weight="bold" />
+          <ThemedText style={globalStyles.baseText}>
+            {file.downloads}
+          </ThemedText>
         </ThemedView>
       </ThemedView>
     </ThemedView>
@@ -271,13 +330,12 @@ const resourceCardStyles = StyleSheet.create({
   fileCard: {
     marginBottom: 8,
     padding: 10,
-    borderRadius: 6,
+    borderRadius: 15,
     gap: 10,
-    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
+    shadowRadius: 1,
+    elevation: 2,
   },
   fileCardHeading: {
     gap: 15,

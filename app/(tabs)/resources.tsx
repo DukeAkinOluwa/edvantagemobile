@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   resourceList: {
     paddingHorizontal: 10,
     paddingVertical: 10,
-    gap: 7,
+    gap: 3,
   },
   paginationContainer: {
     flexDirection: "row",

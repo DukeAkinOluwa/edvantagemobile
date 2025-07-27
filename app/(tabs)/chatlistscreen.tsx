@@ -11,10 +11,10 @@ import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
 import { useGlobalStyles } from '@/styles/globalStyles';
 
 import { SearchBar } from '@/global/components';
+import { ProjectItem } from "@/global/ProjectItem";
 import {
     ChatListCardTemplate,
     ProjectCardTemplate,
-    ProjectItem,
     StudyCardTemplate
 } from '@/global/templates';
 import { Ionicons } from '@expo/vector-icons';
