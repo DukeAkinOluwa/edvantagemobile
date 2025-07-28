@@ -66,25 +66,73 @@ export default function RootLayout() {
   const checkMissedNotifications = async () => {
     try {
       const currentTime = Date.now();
-      const scheduledNotifications =
+      let scheduledNotifications =
         (await getData("scheduled_notifications")) || [];
-      const missedNotifications = scheduledNotifications.filter(
-        (sn: { taskId: string; triggerTime: number }) =>
-          sn.triggerTime < currentTime
+
+      // Log raw scheduledNotifications for debugging
+      console.log("Raw scheduledNotifications:", scheduledNotifications);
+
+      // Filter out invalid entries with detailed logging
+      const validNotifications = scheduledNotifications.filter(
+        (sn: any, index: number) => {
+          if (!sn || typeof sn !== "object") {
+            console.warn(`Invalid notification entry at index ${index}:`, sn);
+            return false;
+          }
+          if (!("taskId" in sn) || !("triggerTime" in sn)) {
+            console.warn(
+              `Missing taskId or triggerTime at index ${index}:`,
+              sn
+            );
+            return false;
+          }
+          if (
+            typeof sn.taskId !== "string" ||
+            typeof sn.triggerTime !== "number"
+          ) {
+            console.warn(
+              `Invalid taskId or triggerTime type at index ${index}:`,
+              sn
+            );
+            return false;
+          }
+          return true;
+        }
       );
+
+      // Identify missed notifications
+      const missedNotifications = validNotifications.filter(
+        (sn: any) => sn.triggerTime < currentTime
+      );
+
+      // Keep only future notifications
+      const futureNotifications = validNotifications.filter(
+        (sn: any) => sn.triggerTime >= currentTime
+      );
+
+      // Save cleaned scheduledNotifications (only future ones) to prevent reprocessing
+      if (
+        validNotifications.length !== scheduledNotifications.length ||
+        missedNotifications.length > 0
+      ) {
+        console.log(
+          "Cleaning up invalid or processed scheduled_notifications entries"
+        );
+        await saveData("scheduled_notifications", futureNotifications);
+      }
 
       const notificationsContent = await FileSystem.readAsStringAsync(
         NOTIFICATIONS_FILE
-      );
+      ).catch(() => "[]");
       let notifications = JSON.parse(notificationsContent) || [];
       const tasks = (await getData("tasks")) || [];
 
       for (const mn of missedNotifications) {
         const exists = notifications.some(
-          (n: any) => n.data.taskId === mn.taskId
+          (n: any) => n.data && n.data.taskId === mn.taskId
         );
         if (!exists) {
-          const task = tasks.find((t: any) => t.id === mn.taskId);
+          const task = tasks.find((t: any) => t && t.id === mn.taskId);
           if (task) {
             // Format start time to AM/PM
             const startTime = new Date(task.startTime);
@@ -109,6 +157,8 @@ export default function RootLayout() {
               read: false,
             };
             notifications.push(newNotification);
+          } else {
+            console.warn(`Task not found for taskId ${mn.taskId}`);
           }
         }
       }

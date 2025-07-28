@@ -9,7 +9,7 @@ import { scheduleEventNotification } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Modal,
   Platform,
@@ -51,6 +51,32 @@ export default function HomeScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+
+  // One-time cleanup for scheduled_notifications
+  useEffect(() => {
+    const cleanScheduledNotifications = async () => {
+      try {
+        let scheduledNotifications =
+          (await getData("scheduled_notifications")) || [];
+        const validNotifications = scheduledNotifications.filter(
+          (sn: any) =>
+            sn &&
+            typeof sn === "object" &&
+            "taskId" in sn &&
+            "triggerTime" in sn &&
+            typeof sn.taskId === "string" &&
+            typeof sn.triggerTime === "number"
+        );
+        if (validNotifications.length < scheduledNotifications.length) {
+          console.log("Cleaning up invalid scheduled_notifications on startup");
+          await saveData("scheduled_notifications", validNotifications);
+        }
+      } catch (error) {
+        console.error("Error cleaning scheduled_notifications:", error);
+      }
+    };
+    cleanScheduledNotifications();
+  }, []);
 
   const formatTimeToAMPM = (date: Date): string => {
     let hours = date.getHours();
@@ -138,22 +164,46 @@ export default function HomeScreen() {
       endTimeAMPM,
     };
 
-    const tasks = (await getData("tasks")) || [];
-    tasks.push(newTask);
-    await saveData("tasks", tasks);
-    await scheduleEventNotification(newTask);
+    try {
+      const tasks = (await getData("tasks")) || [];
+      tasks.push(newTask);
+      await saveData("tasks", tasks);
 
-    // Save scheduled notification details
-    const scheduledNotifications =
-      (await getData("scheduled_notifications")) || [];
-    const triggerTime = new Date(newTask.startTime).getTime() - 5 * 60 * 1000;
-    scheduledNotifications.push({
-      taskId: newTask.id,
-      triggerTime,
-    });
-    await saveData("scheduled_notifications", scheduledNotifications);
+      // Schedule notification and verify it was scheduled
+      const triggerTime = new Date(newTask.startTime).getTime() - 5 * 60 * 1000;
+      if (triggerTime > Date.now()) {
+        await scheduleEventNotification(newTask);
 
-    setTasks(tasks);
+        // Save scheduled notification details
+        let scheduledNotifications =
+          (await getData("scheduled_notifications")) || [];
+        // Filter out invalid entries before adding new one
+        scheduledNotifications = scheduledNotifications.filter(
+          (sn: any) =>
+            sn &&
+            typeof sn === "object" &&
+            "taskId" in sn &&
+            "triggerTime" in sn &&
+            typeof sn.taskId === "string" &&
+            typeof sn.triggerTime === "number"
+        );
+        scheduledNotifications.push({
+          taskId: newTask.id,
+          triggerTime,
+        });
+        await saveData("scheduled_notifications", scheduledNotifications);
+      } else {
+        console.log(
+          "Task start time is in the past, notification not scheduled."
+        );
+      }
+
+      setTasks(tasks);
+    } catch (error) {
+      console.error("Error saving task or notification:", error);
+      alert("Failed to save task. Please try again.");
+      return;
+    }
 
     setModalVisible(false);
     setTitle("");
@@ -165,8 +215,12 @@ export default function HomeScreen() {
   };
 
   const fetchTasks = useCallback(async () => {
-    const savedTasks = await getData("tasks");
-    setTasks(savedTasks || []);
+    try {
+      const savedTasks = await getData("tasks");
+      setTasks(savedTasks || []);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+    }
   }, []);
 
   useFocusEffect(
