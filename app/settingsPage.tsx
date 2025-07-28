@@ -71,7 +71,8 @@ export default function SettingsPage() {
 
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
           "Permission Denied",
@@ -347,14 +348,29 @@ export default function SettingsPage() {
       >
         <ThemedView style={responsiveStyles.profilePicContainer}>
           <ProfileImage uri={imageUri} borderColor={theme.border} />
-          <ThemedView style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <ThemedView
+            style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+          >
             <ThemedView style={globalStyles.button1}>
               <Pressable onPress={pickImage}>
-                <ThemedText type="action" style={[ globalStyles.baseText, globalStyles.actionText2, ]}>Choose Profile Image</ThemedText>
+                <ThemedText
+                  type="action"
+                  style={[globalStyles.baseText, globalStyles.actionText2]}
+                >
+                  Choose Profile Image
+                </ThemedText>
               </Pressable>
             </ThemedView>
             {userData.profilePic && (
-              <ThemedView style={{ backgroundColor: "#CCCCCC33",height: 24, width: 24, alignItems: "center", justifyContent: "center" }}>
+              <ThemedView
+                style={{
+                  backgroundColor: "#CCCCCC33",
+                  height: 24,
+                  width: 24,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
                 <Pressable onPress={clearProfilePic}>
                   <FontAwesome6 name="trash" size={18} color={theme.text} />
                 </Pressable>
@@ -446,7 +462,12 @@ export default function SettingsPage() {
           )}
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={handleSave}>
-              <ThemedText type="action" style={[ globalStyles.baseText, globalStyles.actionText2, ]}>Save Changes</ThemedText>
+              <ThemedText
+                type="action"
+                style={[globalStyles.baseText, globalStyles.actionText2]}
+              >
+                Save Changes
+              </ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>
@@ -475,7 +496,12 @@ export default function SettingsPage() {
           </ThemedView>
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={handleSave}>
-              <ThemedText type="action" style={[ globalStyles.baseText, globalStyles.actionText2, ]}>Save Preferences</ThemedText>
+              <ThemedText
+                type="action"
+                style={[globalStyles.baseText, globalStyles.actionText2]}
+              >
+                Save Preferences
+              </ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>
@@ -510,7 +536,12 @@ export default function SettingsPage() {
           />
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={handleSave}>
-              <ThemedText type="action" style={[ globalStyles.baseText, globalStyles.actionText2, ]}>Save Preferences</ThemedText>
+              <ThemedText
+                type="action"
+                style={[globalStyles.baseText, globalStyles.actionText2]}
+              >
+                Save Preferences
+              </ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>
@@ -543,7 +574,12 @@ export default function SettingsPage() {
           ))}
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={handleSave}>
-              <ThemedText type="action" style={[ globalStyles.baseText, globalStyles.actionText2, ]}>Save Privacy Settings</ThemedText>
+              <ThemedText
+                type="action"
+                style={[globalStyles.baseText, globalStyles.actionText2]}
+              >
+                Save Privacy Settings
+              </ThemedText>
             </Pressable>
           </ThemedView>
         </ThemedView>

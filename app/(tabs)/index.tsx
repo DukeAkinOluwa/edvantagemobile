@@ -1,5 +1,5 @@
 import Calendar from "@/components/DashboardCalendar";
-import { NavigationHeader, useTheme } from "@/components/Header";
+import { NavigationHeader, useTheme, useUserData } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
@@ -11,6 +11,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Modal,
   Platform,
   Pressable,
@@ -34,6 +35,7 @@ interface Task {
 
 export default function HomeScreen() {
   const { theme } = useTheme();
+  const { userData } = useUserData();
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
   const router = useRouter();
@@ -51,6 +53,7 @@ export default function HomeScreen() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // One-time cleanup for scheduled_notifications
   useEffect(() => {
@@ -149,6 +152,8 @@ export default function HomeScreen() {
       return;
     }
 
+    setIsLoading(true);
+
     const startTimeAMPM = formatTimeToAMPM(startTime);
     const endTimeAMPM = formatTimeToAMPM(endTime);
 
@@ -169,15 +174,11 @@ export default function HomeScreen() {
       tasks.push(newTask);
       await saveData("tasks", tasks);
 
-      // Schedule notification and verify it was scheduled
+      // Always save to scheduled_notifications and log, but only schedule pop-up if allowed
       const triggerTime = new Date(newTask.startTime).getTime() - 5 * 60 * 1000;
       if (triggerTime > Date.now()) {
-        await scheduleEventNotification(newTask);
-
-        // Save scheduled notification details
         let scheduledNotifications =
           (await getData("scheduled_notifications")) || [];
-        // Filter out invalid entries before adding new one
         scheduledNotifications = scheduledNotifications.filter(
           (sn: any) =>
             sn &&
@@ -192,9 +193,26 @@ export default function HomeScreen() {
           triggerTime,
         });
         await saveData("scheduled_notifications", scheduledNotifications);
+        console.log(
+          "Scheduled notification saved for task:",
+          newTask.title,
+          "at",
+          new Date(triggerTime).toLocaleString()
+        );
+
+        if (userData.allowNotifications !== false) {
+          await scheduleEventNotification(newTask);
+          console.log("Pop-up notification scheduled for task:", newTask.title);
+        } else {
+          console.log(
+            "Pop-up notifications disabled, notification not scheduled for task:",
+            newTask.title
+          );
+        }
       } else {
         console.log(
-          "Task start time is in the past, notification not scheduled."
+          "Task start time is in the past, notification not scheduled for task:",
+          newTask.title
         );
       }
 
@@ -202,6 +220,7 @@ export default function HomeScreen() {
     } catch (error) {
       console.error("Error saving task or notification:", error);
       alert("Failed to save task. Please try again.");
+      setIsLoading(false);
       return;
     }
 
@@ -212,6 +231,7 @@ export default function HomeScreen() {
     setIsGroupEvent(false);
     setStartTime(null);
     setEndTime(null);
+    setIsLoading(false);
   };
 
   const fetchTasks = useCallback(async () => {
@@ -423,18 +443,27 @@ export default function HomeScreen() {
                 </Pressable>
               )}
             <Pressable
-              style={[styles.customButton, { backgroundColor: theme.primary }]}
+              style={[
+                styles.customButton,
+                { backgroundColor: theme.primary },
+                isLoading && { opacity: 0.7 },
+              ]}
               onPress={handleSave}
+              disabled={isLoading}
             >
-              <ThemedText
-                style={[
-                  globalStyles.semiLargeText,
-                  styles.customButtonText,
-                  { color: theme.text },
-                ]}
-              >
-                Create Task
-              </ThemedText>
+              {isLoading ? (
+                <ActivityIndicator size="small" color={theme.text} />
+              ) : (
+                <ThemedText
+                  style={[
+                    globalStyles.semiLargeText,
+                    styles.customButtonText,
+                    { color: theme.text },
+                  ]}
+                >
+                  Create Task
+                </ThemedText>
+              )}
             </Pressable>
           </ThemedView>
         </ThemedView>

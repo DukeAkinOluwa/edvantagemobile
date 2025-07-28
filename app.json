@@ -14,7 +14,6 @@
       "color": "#007AFF"
     },
     "ios": {
-      "NSPhotoLibraryUsageDescription": "Allow access to select a profile picture.",
       "supportsTablet": true,
       "infoPlist": {
         "UIBackgroundModes": ["audio", "fetch", "remote-notification"],
@@ -22,24 +21,6 @@
       }
     },
     "android": {
-      "notification": {
-        "icon": "./assets/notification-icon.png",
-        "color": "#007AFF",
-        "channels": [
-          {
-            "id": "alarms",
-            "name": "Alarms",
-            "sound": true,
-            "priority": "max"
-          },
-          {
-            "id": "notifications",
-            "name": "Notifications",
-            "sound": true,
-            "priority": "default"
-          }
-        ]
-      },
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.RECEIVE_BOOT_COMPLETED",

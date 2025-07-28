@@ -3,7 +3,6 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import * as FileSystem from "expo-file-system";
 import { LinearGradient } from "expo-linear-gradient";
-import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import React, {
   createContext,
@@ -13,6 +12,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import * as Notifications from "expo-notifications";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { lightTheme } from "../assets/colors";
 import { requestNotificationPermissions } from "../utils/notifications";
