@@ -9,6 +9,24 @@ import React, { useCallback, useMemo, useState } from "react";
 import { SectionList, StyleSheet, Switch, View } from "react-native";
 
 const formatDateHeader = (date: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
+  // Check Today
+  if (date.getTime() === today.getTime()) {
+    return "Today";
+  }
+
+  // Check Tomorrow
+  if (date.getTime() === tomorrow.getTime()) {
+    return "Tomorrow";
+  }
+
+  // Otherwise format normally
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = [
     "Jan","Feb","Mar","Apr","May","Jun",

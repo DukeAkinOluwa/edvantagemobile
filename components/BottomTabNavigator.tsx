@@ -1,11 +1,11 @@
 import { useTheme } from "@/components/Header";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
-  BookOpen,
-  CalendarDots,
-  Chats,
-  GlobeHemisphereEast,
-  House,
+  BookOpenIcon,
+  CalendarDotsIcon,
+  ChatsIcon,
+  GlobeHemisphereEastIcon,
+  HouseIcon,
 } from "phosphor-react-native";
 import React, { useEffect, useRef } from "react";
 import {
@@ -61,11 +61,11 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
     string,
     React.ComponentType<any>
   > = {
-    index: House,
-    schedule: CalendarDots,
-    chatlistscreen: Chats,
-    resources: BookOpen,
-    explore: GlobeHemisphereEast,
+    index: HouseIcon,
+    schedule: CalendarDotsIcon,
+    chatlistscreen: ChatsIcon,
+    resources: BookOpenIcon,
+    explore: GlobeHemisphereEastIcon,
   };
 
   return (
