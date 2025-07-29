@@ -69,10 +69,8 @@ export default function RootLayout() {
       let scheduledNotifications =
         (await getData("scheduled_notifications")) || [];
 
-      // Log raw scheduledNotifications for debugging
       console.log("Raw scheduledNotifications:", scheduledNotifications);
 
-      // Filter out invalid entries with detailed logging
       const validNotifications = scheduledNotifications.filter(
         (sn: any, index: number) => {
           if (!sn || typeof sn !== "object") {
@@ -100,17 +98,14 @@ export default function RootLayout() {
         }
       );
 
-      // Identify missed notifications
       const missedNotifications = validNotifications.filter(
         (sn: any) => sn.triggerTime < currentTime
       );
 
-      // Keep only future notifications
       const futureNotifications = validNotifications.filter(
         (sn: any) => sn.triggerTime >= currentTime
       );
 
-      // Save cleaned scheduledNotifications (only future ones) to prevent reprocessing
       if (
         validNotifications.length !== scheduledNotifications.length ||
         missedNotifications.length > 0
@@ -134,7 +129,6 @@ export default function RootLayout() {
         if (!exists) {
           const task = tasks.find((t: any) => t && t.id === mn.taskId);
           if (task) {
-            // Format start time to AM/PM
             const startTime = new Date(task.startTime);
             const formatTimeToAMPM = (date: Date): string => {
               let hours = date.getHours();
@@ -179,23 +173,7 @@ export default function RootLayout() {
         await Font.loadAsync({
           // Font loading code remains commented out as in the original
           // "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
-          // "Montserrat-ExtraLight": require("@/assets/fonts/static/Montserrat-ExtraLight.ttf"),
-          // "Montserrat-Light": require("@/assets/fonts/static/Montserrat-Light.ttf"),
-          // "Montserrat-Regular": require("@/assets/fonts/static/Montserrat-Regular.ttf"),
-          // "Montserrat-Medium": require("@/assets/fonts/static/Montserrat-Medium.ttf"),
-          // "Montserrat-SemiBold": require("@/assets/fonts/static/Montserrat-SemiBold.ttf"),
-          // "Montserrat-Bold": require("@/assets/fonts/static/Montserrat-Bold.ttf"),
-          // "Montserrat-ExtraBold": require("@/assets/fonts/static/Montserrat-ExtraBold.ttf"),
-          // "Montserrat-Black": require("@/assets/fonts/static/Montserrat-Black.ttf"),
-          // "Montserrat-ThinItalic": require("@/assets/fonts/static/Montserrat-ThinItalic.ttf"),
-          // "Montserrat-ExtraLightItalic": require("@/assets/fonts/static/Montserrat-ExtraLightItalic.ttf"),
-          // "Montserrat-LightItalic": require("@/assets/fonts/static/Montserrat-LightItalic.ttf"),
-          // "Montserrat-Italic": require("@/assets/fonts/static/Montserrat-Italic.ttf"),
-          // "Montserrat-MediumItalic": require("@/assets/fonts/static/Montserrat-MediumItalic.ttf"),
-          // "Montserrat-SemiBoldItalic": require("@/assets/fonts/static/Montserrat-SemiBoldItalic.ttf"),
-          // "Montserrat-BoldItalic": require("@/assets/fonts/static/Montserrat-BoldItalic.ttf"),
-          // "Montserrat-ExtraBoldItalic": require("@/assets/fonts/static/Montserrat-ExtraBoldItalic.ttf"),
-          // "Montserrat-BlackItalic": require("@/assets/fonts/static/Montserrat-BlackItalic.ttf"),
+          // ... other fonts
         });
 
         const savedUserData = await getData("userData");
@@ -233,7 +211,6 @@ export default function RootLayout() {
         setFontsLoaded(true);
         await SplashScreen.hideAsync();
 
-        // Check for missed notifications on app start
         await checkMissedNotifications();
       } catch (err) {
         const errorMessage =
@@ -334,7 +311,7 @@ export default function RootLayout() {
         value={{ theme, setThemeMode: handleSetThemeMode }}
       >
         <UserDataContext.Provider
-          value={{ userData, setUserData: handleSetUserData }}
+          value={{ userData, setUserData: handleSetUserData, setIsFirstLaunch }}
         >
           <Stack
             screenOptions={{

@@ -8,6 +8,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -21,6 +22,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
+import { removeData, saveData } from "../utils/storage";
 
 const ProfileImage = memo(
   ({ uri, borderColor }: { uri: string; borderColor: string }) => (
@@ -28,15 +30,17 @@ const ProfileImage = memo(
   )
 );
 
+const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
+
 export default function SettingsPage() {
   const { theme, setThemeMode } = useTheme();
-  const { userData, setUserData } = useUserData();
+  const { userData, setUserData, setIsFirstLaunch } = useUserData();
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles();
 
-  // Use context directly to avoid local state desync
   const imageUri = useMemo(() => {
     return userData.profilePic || "https://via.placeholder.com/100";
   }, [userData.profilePic]);
@@ -183,19 +187,16 @@ export default function SettingsPage() {
   const handleSave = async () => {
     try {
       setError(null);
-      // Validate email
       if (
         userData.email &&
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userData.email)
       ) {
         throw new Error("Invalid email address");
       }
-      // Validate dob
       if (userData.dob && isNaN(new Date(userData.dob).getTime())) {
         throw new Error("Invalid date of birth");
       }
 
-      // Save to AsyncStorage (already handled in setUserData)
       await setUserData({
         firstName: userData.firstName?.trim() || undefined,
         lastName: userData.lastName?.trim() || undefined,
@@ -230,6 +231,45 @@ export default function SettingsPage() {
       setError(`Failed to save settings: ${errorMessage}`);
       Alert.alert("Error", `Failed to save settings: ${errorMessage}`);
       console.error("Save settings error:", error);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      setError(null);
+      // Clear AsyncStorage keys
+      await removeData("userData");
+      await removeData("firstLaunch");
+      await removeData("tasks");
+      await removeData("scheduled_notifications");
+      // Clear notifications.json file
+      try {
+        await FileSystem.deleteAsync(NOTIFICATIONS_FILE, { idempotent: true });
+      } catch (fileError) {
+        console.warn("Failed to delete notifications.json:", fileError);
+      }
+      // Reset userData to default
+      await setUserData({
+        themeMode: "system",
+        allowNotifications: true,
+        allowAlarms: true,
+        language: "english",
+        privacy: {
+          showOnlineStatus: true,
+          showProfileToGroups: true,
+          allowFriendRequests: true,
+          dataCollection: true,
+        },
+      });
+      await saveData("firstLaunch", "true");
+      setIsFirstLaunch(true);
+      router.replace("signUpPage");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to log out";
+      setError(errorMessage);
+      Alert.alert("Error", errorMessage);
+      console.error("Logout error:", error);
     }
   };
 
@@ -584,10 +624,16 @@ export default function SettingsPage() {
           </ThemedView>
         </ThemedView>
 
-        <ThemedView style={globalStyles.button1}>
+        <ThemedView style={globalStyles.button2}>
           <Pressable onPress={exportData}>
             <ThemedText type="action">Download Your Data</ThemedText>
           </Pressable>
+        </ThemedView>
+
+        <ThemedView style={globalStyles.button2}>
+          <TouchableOpacity onPress={handleLogout}>
+            <ThemedText style={globalStyles.largeText}>Log Out</ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       </ScrollView>
     </ThemedView>
