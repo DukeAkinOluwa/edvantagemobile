@@ -3,6 +3,10 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
+import { FontAwesome6 } from "@expo/vector-icons";
+import { Picker } from "@react-native-picker/picker";
+import axios from "axios";
+import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -17,7 +21,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import Picker from "react-native-picker-select";
 import { saveData } from "../utils/storage";
 
 export default function SignUpPage() {
@@ -28,6 +31,10 @@ export default function SignUpPage() {
     firstName: "",
     lastName: "",
     email: "",
+    phoneNumber: "",
+    countryCode: "+1",
+    password: "",
+    confirmPassword: "",
     university: "",
     major: "",
     bio: "",
@@ -35,10 +42,23 @@ export default function SignUpPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles();
   const router = useRouter();
+
+  // Get API URL from app.json
+  const apiUrl =
+    Constants.expoConfig?.extra?.apiUrl || "https://edvantage.com.ng/api";
+
+  const countries = [
+    { label: "United States", value: "+1", flag: "🇺🇸" },
+    { label: "United Kingdom", value: "+44", flag: "🇬🇧" },
+    { label: "Nigeria", value: "+234", flag: "🇳🇬" },
+    { label: "Canada", value: "+1", flag: "🇨🇦" },
+  ];
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -49,12 +69,24 @@ export default function SignUpPage() {
       if (
         !formData.firstName.trim() ||
         !formData.lastName.trim() ||
-        !formData.email.trim()
+        !formData.email.trim() ||
+        !formData.phoneNumber.trim() ||
+        !formData.password.trim() ||
+        !formData.confirmPassword.trim()
       ) {
         throw new Error("Please fill in all required fields.");
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         throw new Error("Invalid email address.");
+      }
+      if (!/^\d{7,12}$/.test(formData.phoneNumber)) {
+        throw new Error("Phone number must be 7-12 digits.");
+      }
+      if (formData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters long.");
+      }
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match.");
       }
     } else if (step === 2) {
       if (!formData.university.trim()) {
@@ -76,6 +108,9 @@ export default function SignUpPage() {
         !formData.firstName.trim() ||
         !formData.lastName.trim() ||
         !formData.email.trim() ||
+        !formData.phoneNumber.trim() ||
+        !formData.password.trim() ||
+        !formData.confirmPassword.trim() ||
         !formData.university.trim() ||
         !formData.major.trim() ||
         !formData.bio.trim()
@@ -84,6 +119,15 @@ export default function SignUpPage() {
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
         throw new Error("Invalid email address.");
+      }
+      if (!/^\d{7,12}$/.test(formData.phoneNumber)) {
+        throw new Error("Phone number must be 7-12 digits.");
+      }
+      if (formData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters long.");
+      }
+      if (formData.password !== formData.confirmPassword) {
+        throw new Error("Passwords do not match.");
       }
     }
   };
@@ -97,40 +141,94 @@ export default function SignUpPage() {
         setCurrentStep(currentStep + 1);
       } else if (currentStep === 5) {
         validateStep(currentStep);
-        const newUserData = {
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          email: formData.email.trim(),
+        // Map formData.level to API's expected "Undergraduate" or "Postgraduate"
+        const apiLevel =
+          formData.level === "Postgraduate" ? "Postgraduate" : "Undergraduate";
+        const requestBody = {
+          first_name: formData.firstName.trim(),
+          last_name: formData.lastName.trim(),
           university: formData.university.trim(),
-          department: formData.university.trim(),
-          faculty: undefined,
-          course: formData.university.trim(),
-          level: formData.level,
-          gender: undefined,
-          dob: undefined,
-          profilePic: undefined,
-          themeMode: "system" as "system" | "light" | "dark",
-          major: formData.major.trim(),
-          bio: formData.bio.trim(),
-          allowNotifications: true,
-          allowAlarms: true,
-          privacy: {
-            showOnlineStatus: true,
-            showProfileToGroups: true,
-            allowFriendRequests: true,
-            dataCollection: true,
-          },
+          course_of_study: formData.major.trim(),
+          level: apiLevel,
+          phone_number: `${formData.countryCode}${formData.phoneNumber.trim()}`,
+          email: formData.email.trim(),
+          password: formData.password.trim(),
+          password_confirmation: formData.confirmPassword.trim(),
         };
-        await setUserData(newUserData);
-        await saveData("firstLaunch", "false");
-        setCurrentStep(6);
+
+        console.log("Sending registration request:", requestBody);
+
+        const response = await axios.post(`${apiUrl}/register`, requestBody, {
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-TOKEN": "", // As per Swagger, set to empty
+          },
+        });
+
+        console.log("Registration response:", response.status, response.data);
+
+        if (response.status === 201) {
+          // Update userData with the registered data
+          const newUserData = {
+            firstName: formData.firstName.trim(),
+            lastName: formData.lastName.trim(),
+            email: formData.email.trim(),
+            phoneNumber: `${
+              formData.countryCode
+            }${formData.phoneNumber.trim()}`,
+            password: formData.password.trim(),
+            university: formData.university.trim(),
+            department: formData.university.trim(),
+            faculty: undefined,
+            course: formData.university.trim(),
+            level: formData.level,
+            gender: undefined,
+            dob: undefined,
+            profilePic: undefined,
+            themeMode: "system" as "system" | "light" | "dark",
+            major: formData.major.trim(),
+            bio: formData.bio.trim(),
+            allowNotifications: true,
+            allowAlarms: true,
+            privacy: {
+              showOnlineStatus: true,
+              showProfileToGroups: true,
+              allowFriendRequests: true,
+              dataCollection: true,
+            },
+          };
+          await setUserData(newUserData);
+          await saveData("firstLaunch", "false");
+          setCurrentStep(6);
+        } else {
+          throw new Error("Unexpected response status: " + response.status);
+        }
       } else {
-        // Step 6: Replace navigation stack to prevent going back to signup
         router.replace("/(tabs)");
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to proceed";
+      let errorMessage = "Failed to proceed";
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Registration error:",
+          error.response?.status,
+          error.response?.data
+        );
+        if (error.response?.status === 409) {
+          errorMessage = "Email already registered.";
+        } else if (error.response?.status === 422) {
+          errorMessage =
+            error.response.data.message ||
+            "Validation error. Please check your inputs.";
+        } else {
+          errorMessage = error.response?.data.message || error.message;
+        }
+      } else if (error instanceof Error) {
+        console.error("Validation error:", error.message);
+        errorMessage = error.message;
+      } else {
+        console.error("Unknown error:", error);
+      }
       setError(errorMessage);
       Alert.alert("Error", errorMessage);
     } finally {
@@ -185,6 +283,59 @@ export default function SignUpPage() {
       paddingVertical: 20,
       justifyContent: "center",
       backgroundColor: theme.primary,
+    },
+    phoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: screenWidth - 50,
+      marginBottom: 12,
+    },
+    countryPicker: {
+      width: 50,
+      borderWidth: 0.9,
+      borderColor: theme.border,
+      borderRadius: 6,
+      backgroundColor: theme.background,
+      color: theme.text,
+    },
+    flag: {
+      width: 30,
+      textAlign: "center",
+      fontSize: 20,
+      marginHorizontal: 5,
+    },
+    code: {
+      width: 50,
+      textAlign: "center",
+      fontSize: 16,
+      color: theme.text,
+      marginRight: 5,
+    },
+    phoneInput: {
+      flex: 1,
+      borderWidth: 0.9,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: Platform.OS === "ios" ? 12 : 10,
+      backgroundColor: theme.background,
+      color: theme.text,
+      fontFamily: "Montserrat-Regular",
+    },
+    passwordContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: screenWidth - 50,
+      marginBottom: 12,
+    },
+    passwordInput: {
+      flex: 1,
+      borderWidth: 0.9,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: Platform.OS === "ios" ? 12 : 10,
+      backgroundColor: theme.background,
+      color: theme.text,
+      fontFamily: "Montserrat-Regular",
     },
   });
 
@@ -254,6 +405,91 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("email", text)}
               editable={!isLoading}
             />
+            <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+              Phone Number
+            </ThemedText>
+            <View style={responsiveStyles.phoneRow}>
+              <Picker
+                selectedValue={formData.countryCode}
+                onValueChange={(value) => handleChange("countryCode", value)}
+                style={responsiveStyles.countryPicker}
+                dropdownIconColor={theme.text}
+                enabled={!isLoading}
+              >
+                {countries.map((country) => (
+                  <Picker.Item
+                    key={country.value}
+                    label={`${country.flag} ${country.label}`}
+                    value={country.value}
+                  />
+                ))}
+              </Picker>
+              <ThemedText style={responsiveStyles.flag}>
+                {countries.find((c) => c.value === formData.countryCode)?.flag}
+              </ThemedText>
+              <ThemedText style={responsiveStyles.code}>
+                {formData.countryCode}
+              </ThemedText>
+              <TextInput
+                style={[responsiveStyles.phoneInput, globalStyles.baseText]}
+                keyboardType="phone-pad"
+                placeholder="Phone Number *"
+                placeholderTextColor={theme.placeholder}
+                value={formData.phoneNumber}
+                onChangeText={(text) => handleChange("phoneNumber", text)}
+                editable={!isLoading}
+              />
+            </View>
+            <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+              Password
+            </ThemedText>
+            <View style={responsiveStyles.passwordContainer}>
+              <TextInput
+                style={[responsiveStyles.passwordInput, globalStyles.baseText]}
+                secureTextEntry={!showPassword}
+                placeholder="Password *"
+                placeholderTextColor={theme.placeholder}
+                value={formData.password}
+                onChangeText={(text) => handleChange("password", text)}
+                editable={!isLoading}
+              />
+              <Pressable
+                onPress={() => setShowPassword(!showPassword)}
+                style={{ padding: 10 }}
+                disabled={isLoading}
+              >
+                <FontAwesome6
+                  name={showPassword ? "eye-slash" : "eye"}
+                  size={20}
+                  color={theme.text}
+                />
+              </Pressable>
+            </View>
+            <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+              Confirm Password
+            </ThemedText>
+            <View style={responsiveStyles.passwordContainer}>
+              <TextInput
+                style={[responsiveStyles.passwordInput, globalStyles.baseText]}
+                secureTextEntry={!showConfirmPassword}
+                placeholder="Confirm Password *"
+                placeholderTextColor={theme.placeholder}
+                value={formData.confirmPassword}
+                onChangeText={(text) => handleChange("confirmPassword", text)}
+                editable={!isLoading}
+              />
+              <Pressable
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ padding: 10 }}
+                disabled={isLoading}
+              >
+                <FontAwesome6
+                  name={showConfirmPassword ? "eye-slash" : "eye"}
+                  size={20}
+                  color={theme.text}
+                />
+              </Pressable>
+            </View>
             <TouchableOpacity onPress={handleNext} disabled={isLoading}>
               <ThemedView
                 style={[
@@ -544,22 +780,27 @@ export default function SignUpPage() {
               What is your academic level?
             </ThemedText>
             <Picker
-              value={formData.level}
+              selectedValue={formData.level}
               onValueChange={(value) => handleChange("level", value)}
-              items={[
+              style={responsiveStyles.input1}
+              dropdownIconColor="white"
+              enabled={!isLoading}
+            >
+              {[
                 { label: "100 Level", value: "100" },
                 { label: "200 Level", value: "200" },
                 { label: "300 Level", value: "300" },
                 { label: "400 Level", value: "400" },
                 { label: "500 Level", value: "500" },
                 { label: "Postgraduate Level", value: "Postgraduate" },
-              ]}
-              style={{
-                inputIOS: responsiveStyles.input1,
-                inputAndroid: responsiveStyles.input1,
-              }}
-              disabled={isLoading}
-            />
+              ].map((item) => (
+                <Picker.Item
+                  key={item.value}
+                  label={item.label}
+                  value={item.value}
+                />
+              ))}
+            </Picker>
             <View
               style={{
                 flexDirection: "row",
@@ -582,7 +823,7 @@ export default function SignUpPage() {
                   <ActivityIndicator size="small" color={theme.primary} />
                 ) : (
                   <ThemedText style={[{ color: theme.primary }]}>
-                    Next
+                    Register
                   </ThemedText>
                 )}
               </TouchableOpacity>
@@ -658,10 +899,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginVertical: 20,
     textAlign: "center",
-  },
-  picker: {
-    height: 50,
-    width: "100%",
-    marginBottom: 12,
   },
 });

@@ -3,6 +3,7 @@ import { FontAwesome6 } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
 import * as FileSystem from "expo-file-system";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import React, {
   createContext,
@@ -12,7 +13,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import * as Notifications from "expo-notifications";
 import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { lightTheme } from "../assets/colors";
 import { requestNotificationPermissions } from "../utils/notifications";
@@ -37,6 +37,8 @@ interface UserDataContextType {
     faculty?: string;
     university?: string;
     email?: string;
+    phoneNumber?: string;
+    password?: string;
     themeMode?: string;
     allowNotifications?: boolean;
     allowAlarms?: boolean;
@@ -48,6 +50,7 @@ interface UserDataContextType {
     };
   };
   setUserData: (data: Partial<UserDataContextType["userData"]>) => void;
+  setIsFirstLaunch?: (value: boolean) => void;
 }
 
 export const ThemeContext = createContext<ThemeContextType>({
@@ -78,7 +81,6 @@ export const useUserData = () => {
 
 const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
-// Memoized Image component to prevent unnecessary re-renders
 const ProfileImage = memo(
   ({ uri, borderColor }: { uri: string; borderColor: string }) => (
     <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
@@ -92,7 +94,6 @@ export const NavigationHeader = ({ title }: { title: string }) => {
   const { userData } = useUserData();
   const [newNotificationCount, setNewNotificationCount] = useState(0);
 
-  // Memoize the image URI to prevent flickering
   const imageUri = useMemo(() => {
     return userData.profilePic || "https://via.placeholder.com/40";
   }, [userData.profilePic]);
@@ -127,7 +128,6 @@ export const NavigationHeader = ({ title }: { title: string }) => {
     };
     initialize();
 
-    // Set up notification listener
     const subscription = Notifications.addNotificationReceivedListener(
       async (notification) => {
         try {
@@ -147,7 +147,6 @@ export const NavigationHeader = ({ title }: { title: string }) => {
       }
     );
 
-    // Poll for notification count updates
     const interval = setInterval(updateNotificationCount, 5000);
 
     return () => {

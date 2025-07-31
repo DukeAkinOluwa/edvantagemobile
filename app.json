@@ -28,7 +28,8 @@
         "android.permission.WAKE_LOCK",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "android.permission.FOREGROUND_SERVICE"
+        "android.permission.FOREGROUND_SERVICE",
+        "INTERNET"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -85,6 +86,7 @@
       "typedRoutes": true
     },
     "extra": {
+      "apiUrl": "https://edvantage.com.ng/api",
       "router": {},
       "eas": {
         "projectId": "4cf1f793-a004-4afa-81bc-88ac2263abc4"

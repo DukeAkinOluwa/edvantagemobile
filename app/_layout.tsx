@@ -26,6 +26,8 @@ export default function RootLayout() {
     faculty?: string;
     university?: string;
     email?: string;
+    phoneNumber?: string;
+    password?: string;
     themeMode?: "system" | "light" | "dark";
     allowNotifications?: boolean;
     allowAlarms?: boolean;

@@ -20,6 +20,7 @@ import {
   Switch,
   TextInput,
   TouchableOpacity,
+  View,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
 import { removeData, saveData } from "../utils/storage";
@@ -36,10 +37,35 @@ export default function SettingsPage() {
   const { theme, setThemeMode } = useTheme();
   const { userData, setUserData, setIsFirstLaunch } = useUserData();
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [countryCode, setCountryCode] = useState("+1");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const router = useRouter();
 
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles();
+
+  const countries = [
+    { label: "United States", value: "+1", flag: "🇺🇸" },
+    { label: "United Kingdom", value: "+44", flag: "🇬🇧" },
+    { label: "Nigeria", value: "+234", flag: "🇳🇬" },
+    { label: "Canada", value: "+1", flag: "🇨🇦" },
+  ];
+
+  useEffect(() => {
+    if (userData.phoneNumber) {
+      const code = countries
+        .map((c) => c.value)
+        .sort((a, b) => b.length - a.length)
+        .find((code) => userData.phoneNumber!.startsWith(code));
+      if (code) {
+        setCountryCode(code);
+        setPhoneNumber(userData.phoneNumber.slice(code.length));
+      } else {
+        setPhoneNumber(userData.phoneNumber);
+      }
+    }
+  }, [userData.phoneNumber]);
 
   const imageUri = useMemo(() => {
     return userData.profilePic || "https://via.placeholder.com/100";
@@ -151,7 +177,6 @@ export default function SettingsPage() {
     try {
       const documentDirectory = FileSystem.documentDirectory;
       if (
-        documentDirectory &&
         userData.profilePic &&
         userData.profilePic.startsWith(documentDirectory)
       ) {
@@ -193,6 +218,12 @@ export default function SettingsPage() {
       ) {
         throw new Error("Invalid email address");
       }
+      if (phoneNumber && !/^\d{7,12}$/.test(phoneNumber)) {
+        throw new Error("Phone number must be 7-12 digits");
+      }
+      if (userData.password && userData.password.length < 6) {
+        throw new Error("Password must be at least 6 characters long");
+      }
       if (userData.dob && isNaN(new Date(userData.dob).getTime())) {
         throw new Error("Invalid date of birth");
       }
@@ -201,6 +232,10 @@ export default function SettingsPage() {
         firstName: userData.firstName?.trim() || undefined,
         lastName: userData.lastName?.trim() || undefined,
         email: userData.email?.trim() || undefined,
+        phoneNumber: phoneNumber
+          ? `${countryCode}${phoneNumber.trim()}`
+          : undefined,
+        password: userData.password?.trim() || undefined,
         university: userData.university?.trim() || undefined,
         bio: userData.bio?.trim() || undefined,
         dob: userData.dob,
@@ -237,33 +272,19 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     try {
       setError(null);
-      // Clear AsyncStorage keys
-      await removeData("userData");
-      await removeData("firstLaunch");
+      // Clear task-related data but retain userData
       await removeData("tasks");
       await removeData("scheduled_notifications");
-      // Clear notifications.json file
       try {
         await FileSystem.deleteAsync(NOTIFICATIONS_FILE, { idempotent: true });
       } catch (fileError) {
         console.warn("Failed to delete notifications.json:", fileError);
       }
-      // Reset userData to default
-      await setUserData({
-        themeMode: "system",
-        allowNotifications: true,
-        allowAlarms: true,
-        language: "english",
-        privacy: {
-          showOnlineStatus: true,
-          showProfileToGroups: true,
-          allowFriendRequests: true,
-          dataCollection: true,
-        },
-      });
+      // Set firstLaunch to true to indicate a fresh app state
       await saveData("firstLaunch", "true");
       setIsFirstLaunch(true);
-      router.replace("signUpPage");
+      // Navigate to login page
+      router.replace("/login");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to log out";
@@ -361,6 +382,59 @@ export default function SettingsPage() {
         marginBottom: 12,
       },
     },
+    phoneRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: screenWidth - 50,
+      marginBottom: 12,
+    },
+    countryPicker: {
+      width: 50,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      backgroundColor: theme.background,
+      color: theme.text,
+    },
+    flag: {
+      width: 30,
+      textAlign: "center",
+      fontSize: 20,
+      marginHorizontal: 5,
+    },
+    code: {
+      width: 50,
+      textAlign: "center",
+      fontSize: 16,
+      color: theme.text,
+      marginRight: 5,
+    },
+    phoneInput: {
+      flex: 1,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: Platform.OS === "ios" ? 12 : 10,
+      backgroundColor: theme.background,
+      color: theme.text,
+      fontFamily: "Montserrat-Regular",
+    },
+    passwordContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      width: screenWidth - 50,
+      marginBottom: 12,
+    },
+    passwordInput: {
+      flex: 1,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      padding: Platform.OS === "ios" ? 12 : 10,
+      backgroundColor: theme.background,
+      color: theme.text,
+      fontFamily: "Montserrat-Regular",
+    },
   });
 
   if (error) {
@@ -443,6 +517,60 @@ export default function SettingsPage() {
             value={userData.email || ""}
             onChangeText={(text) => setUserData({ email: text })}
           />
+          <ThemedText type="base" style={{ marginBottom: 5 }}>
+            Phone Number
+          </ThemedText>
+          <View style={responsiveStyles.phoneRow}>
+            <Picker
+              selectedValue={countryCode}
+              onValueChange={(value) => setCountryCode(value)}
+              style={responsiveStyles.countryPicker}
+              dropdownIconColor={theme.text}
+            >
+              {countries.map((country) => (
+                <Picker.Item
+                  key={country.value}
+                  label={`${country.flag} ${country.label}`}
+                  value={country.value}
+                />
+              ))}
+            </Picker>
+            <ThemedText style={responsiveStyles.flag}>
+              {countries.find((c) => c.value === countryCode)?.flag}
+            </ThemedText>
+            <ThemedText style={responsiveStyles.code}>{countryCode}</ThemedText>
+            <TextInput
+              style={[responsiveStyles.phoneInput, globalStyles.baseText]}
+              keyboardType="phone-pad"
+              placeholder="Phone Number"
+              placeholderTextColor={theme.placeholder}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+            />
+          </View>
+          <ThemedText type="base" style={{ marginBottom: 5 }}>
+            Password
+          </ThemedText>
+          <View style={responsiveStyles.passwordContainer}>
+            <TextInput
+              style={[responsiveStyles.passwordInput, globalStyles.baseText]}
+              secureTextEntry={!showPassword}
+              placeholder="Password"
+              placeholderTextColor={theme.placeholder}
+              value={userData.password || ""}
+              onChangeText={(text) => setUserData({ password: text })}
+            />
+            <Pressable
+              onPress={() => setShowPassword(!showPassword)}
+              style={{ padding: 10 }}
+            >
+              <FontAwesome6
+                name={showPassword ? "eye-slash" : "eye"}
+                size={20}
+                color={theme.text}
+              />
+            </Pressable>
+          </View>
           <TextInput
             style={[responsiveStyles.input, globalStyles.baseText]}
             placeholder="University/Institution"
