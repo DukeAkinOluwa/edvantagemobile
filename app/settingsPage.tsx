@@ -8,7 +8,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -23,15 +22,12 @@ import {
   View,
 } from "react-native";
 import RNPickerSelect from "react-native-picker-select";
-import { removeData, saveData } from "../utils/storage";
 
 const ProfileImage = memo(
   ({ uri, borderColor }: { uri: string; borderColor: string }) => (
     <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
   )
 );
-
-const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
 export default function SettingsPage() {
   const { theme, setThemeMode } = useTheme();
@@ -40,7 +36,6 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const router = useRouter();
 
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles();
@@ -266,31 +261,6 @@ export default function SettingsPage() {
       setError(`Failed to save settings: ${errorMessage}`);
       Alert.alert("Error", `Failed to save settings: ${errorMessage}`);
       console.error("Save settings error:", error);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      setError(null);
-      // Clear task-related data but retain userData
-      await removeData("tasks");
-      await removeData("scheduled_notifications");
-      try {
-        await FileSystem.deleteAsync(NOTIFICATIONS_FILE, { idempotent: true });
-      } catch (fileError) {
-        console.warn("Failed to delete notifications.json:", fileError);
-      }
-      // Set firstLaunch to true to indicate a fresh app state
-      await saveData("firstLaunch", "true");
-      setIsFirstLaunch(true);
-      // Navigate to login page
-      router.replace("/login");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Failed to log out";
-      setError(errorMessage);
-      Alert.alert("Error", errorMessage);
-      console.error("Logout error:", error);
     }
   };
 
@@ -756,12 +726,6 @@ export default function SettingsPage() {
           <Pressable onPress={exportData}>
             <ThemedText type="action">Download Your Data</ThemedText>
           </Pressable>
-        </ThemedView>
-
-        <ThemedView style={globalStyles.button2}>
-          <TouchableOpacity onPress={handleLogout}>
-            <ThemedText style={globalStyles.largeText}>Log Out</ThemedText>
-          </TouchableOpacity>
         </ThemedView>
       </ScrollView>
     </ThemedView>
