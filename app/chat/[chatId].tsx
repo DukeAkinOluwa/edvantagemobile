@@ -20,7 +20,13 @@ import { ThemedView } from '@/components/ThemedView';
 import { useGlobalStyles } from '@/styles/globalStyles';
 import { FontAwesome6 } from '@expo/vector-icons';
 
+import { CalendarBlankIcon, CalendarPlusIcon, ClipboardTextIcon, FileArrowUpIcon, ImageIcon, PaperclipIcon } from "phosphor-react-native";
+
 import { deleteChatMessages } from '@/lib/chatService';
+
+import { useTheme } from '@/components/Header';
+import { useResponsiveDimensions } from '@/hooks/useResponsiveDimensions';
+import { Modal } from 'react-native';
 
 type Message = {
   id: string;
@@ -29,21 +35,36 @@ type Message = {
   timestamp: string;
 };
 
+type AttachmentType = 'timetable' | 'event' | 'task' | 'document' | 'image';
+
+type Attachment = {
+  id: string;
+  type: AttachmentType;
+  label: string;
+};
+
 export default function ChatRoomScreen() {
-  const globalStyles = useGlobalStyles();
-  const router = useRouter();
-  const { chatId, chatName } = useLocalSearchParams<{
-    chatId?: string | string[];
-    chatName?: string;
-  }>();
+    const globalStyles = useGlobalStyles();
+    const router = useRouter();
+    const { chatId, chatName } = useLocalSearchParams<{
+        chatId?: string | string[];
+        chatName?: string;
+    }>();
 
-  const id = Array.isArray(chatId) ? chatId[0] : chatId || '';
-  const name = Array.isArray(chatName) ? chatName[0] : chatName || 'Chat';
+    const id = Array.isArray(chatId) ? chatId[0] : chatId || '';
+    const name = Array.isArray(chatName) ? chatName[0] : chatName || 'Chat';
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const flatListRef = useRef<FlatList>(null);
-  const [loading, setLoading] = useState(true);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [input, setInput] = useState('');
+    const flatListRef = useRef<FlatList>(null);
+    const [loading, setLoading] = useState(true);
+    const [showAttachments, setShowAttachments] = useState(false);
+    const [selectedAttachments, setSelectedAttachments] = useState<Attachment[]>([]);
+    const [activeModal, setActiveModal] = useState<AttachmentType | null>(null);
+
+    const { screenWidth, screenHeight } =  useResponsiveDimensions();
+    const { theme, setThemeMode } = useTheme();
+
 
   // Load cached + cloud messages
   useEffect(() => {
@@ -68,22 +89,42 @@ export default function ChatRoomScreen() {
     };
   }, [id]);
 
+    // const handleSend = async () => {
+    //     if (!input.trim() || !id) return;
+
+    //     const newMessage: Message = {
+    //     id: Date.now().toString(),
+    //     text: input.trim(),
+    //     sender: 'me',
+    //     timestamp: new Date().toISOString(),
+    //     };
+
+    //     const updatedMessages = [...messages, newMessage];
+    //     setMessages(updatedMessages);
+    //     setInput('');
+    //     cacheMessages(id, updatedMessages);
+    //     await sendMessageToCloud(id, newMessage);
+    // };
+
     const handleSend = async () => {
-        if (!input.trim() || !id) return;
+        if (!input.trim() && selectedAttachments.length === 0) return;
 
         const newMessage: Message = {
-        id: Date.now().toString(),
-        text: input.trim(),
-        sender: 'me',
-        timestamp: new Date().toISOString(),
+            id: Date.now().toString(),
+            text: input.trim() || '[Attachment]',
+            sender: 'me',
+            timestamp: new Date().toISOString(),
         };
 
         const updatedMessages = [...messages, newMessage];
         setMessages(updatedMessages);
         setInput('');
+        setSelectedAttachments([]);
+        setShowAttachments(false);
         cacheMessages(id, updatedMessages);
         await sendMessageToCloud(id, newMessage);
     };
+
 
     const handleDelete = () => {
         deleteChatMessages(id).then(() => {
@@ -92,10 +133,53 @@ export default function ChatRoomScreen() {
         });
     };
 
+    const renderModalContent = () => {
+    switch (activeModal) {
+        case 'timetable':
+            return <Text>Add multiple tasks/events for Timetable</Text>;
+        case 'event':
+            return <Text>Add a single Event</Text>;
+        case 'task':
+            return <Text>Add a single Task</Text>;
+        case 'document':
+            return <Text>Select document from device</Text>;
+        case 'image':
+            return <Text>Select image from device</Text>;
+        default:
+            return null;
+    }
+    };
+
+    const attachmentOptions: { type: AttachmentType; label: string; Icon: React.ElementType }[] = [
+        { type: 'timetable', label: 'Timetable', Icon: CalendarPlusIcon },
+        { type: 'event', label: 'Event', Icon: CalendarBlankIcon },
+        { type: 'task', label: 'Task', Icon: ClipboardTextIcon },
+        { type: 'document', label: 'Document', Icon: FileArrowUpIcon },
+        { type: 'image', label: 'Image', Icon: ImageIcon },
+    ];
+
+    const responsiveStyles = StyleSheet.create({
+        attachmentPicker: {
+            width: screenWidth - 20,
+            borderColor: theme.border,
+            bottom: 5
+        },
+        profileHeader: {
+            width: screenWidth,
+        },
+        messagesContainer: {
+            width: screenWidth,
+            height: screenHeight - 128,
+        },
+        attachmentItem: {
+            width: (screenWidth - 72) / 4
+        }
+    })
+
     return (
         <ThemedView style={styles.page}>
         {/* Header */}
-        <ThemedView style={styles.profileHeader}>
+        <ThemedView style={[styles.profileHeader, responsiveStyles.profileHeader]}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backArrowContainer}>
             <FontAwesome6 name="angle-left" size={24} color="#2A52BE" />
             </TouchableOpacity>
@@ -112,7 +196,7 @@ export default function ChatRoomScreen() {
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.messagesContainer}
+            contentContainerStyle={[styles.messagesContainer, responsiveStyles.messagesContainer]}
             renderItem={({ item }) => (
                 <ThemedView style={[styles.messageBubble, item.sender === 'me' ? styles.sent : styles.received]}>
                 <ThemedText style={globalStyles.baseText}>{item.text}</ThemedText>
@@ -130,21 +214,97 @@ export default function ChatRoomScreen() {
             <ThemedText style={globalStyles.baseText}>No messages yet. Start the conversation!</ThemedText>
             </View>
         ) : null}
+        
+        {/* {showAttachments && (
+            <View style={styles.attachmentPicker}>
+                {(['timetable', 'event', 'task', 'document', 'image'] as AttachmentType[]).map((type) => (
+                <TouchableOpacity
+                    key={type}
+                    style={styles.attachmentItem}
+                    onPress={() => {
+                    const newAttachment: Attachment = {
+                        id: `${type}-${Date.now()}`,
+                        type,
+                        label: type.charAt(0).toUpperCase() + type.slice(1),
+                    };
+                    setSelectedAttachments((prev) => [...prev, newAttachment]);
+                    }}
+                >
+                    <Text style={styles.attachmentLabel}>{type}</Text>
+                </TouchableOpacity>
+                ))}
+            </View>
+            )}
+
+            {selectedAttachments.length > 0 && (
+            <View style={styles.selectedAttachments}>
+                {selectedAttachments.map((att) => (
+                <View key={att.id} style={styles.attachmentTag}>
+                    <Text style={styles.attachmentText}>{att.label}</Text>
+                    <Pressable
+                    onPress={() =>
+                        setSelectedAttachments((prev) =>
+                        prev.filter((item) => item.id !== att.id)
+                        )
+                    }
+                    >
+                    <Text style={styles.removeAttachment}>×</Text>
+                    </Pressable>
+                </View>
+                ))}
+            </View>
+        )} */}
+
+        {showAttachments && (
+            <View style={[styles.attachmentPicker, responsiveStyles.attachmentPicker]}>
+                {attachmentOptions.map(({ type, label, Icon }) => (
+                <TouchableOpacity
+                    key={type}
+                    style={[styles.attachmentItem, responsiveStyles.attachmentItem]}
+                    onPress={() => setActiveModal(type)}
+                >
+                    <Icon size={24} color="#2A52BE" weight="bold" />
+                    <Text style={styles.attachmentLabel}>{label}</Text>
+                </TouchableOpacity>
+                ))}
+            </View>
+        )}
+
+        <Modal
+        visible={!!activeModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setActiveModal(null)}
+        >
+            <View style={styles.modalBackdrop}>
+                <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>{activeModal?.toUpperCase()}</Text>
+                {renderModalContent()}
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.closeModalBtn}>
+                    <Text style={{ color: '#fff' }}>Close</Text>
+                </TouchableOpacity>
+                </View>
+            </View>
+        </Modal>
 
         {/* Input */}
         <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             style={styles.inputContainer}
         >
+            <TouchableOpacity onPress={() => setShowAttachments((prev) => !prev)}>
+                <PaperclipIcon size={20} color="#2A52BE" />
+            </TouchableOpacity>
+
             <TextInput
-            style={styles.input}
-            placeholder="Type a message..."
-            value={input}
-            onChangeText={setInput}
-            placeholderTextColor="#999"
+                style={styles.input}
+                placeholder="Type a message..."
+                value={input}
+                onChangeText={setInput}
+                placeholderTextColor="#999"
             />
             <ThemedText style={styles.sendButton} onPress={handleSend}>
-            Send
+                Send
             </ThemedText>
         </KeyboardAvoidingView>
         </ThemedView>
@@ -155,6 +315,7 @@ const styles = StyleSheet.create({
     page: {
         flex: 1,
         paddingBottom: 10,
+        alignItems: 'center'
     },
     backArrowContainer: {
         height: 35,
@@ -233,5 +394,49 @@ const styles = StyleSheet.create({
     clearText: {
         color: 'white',
         fontWeight: 'bold',
+    },
+    attachmentPicker: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        padding: 10,
+        paddingBottom: 0,
+        borderWidth: 1,
+        borderRadius: 10,
+        justifyContent: 'space-between',
+    },
+    attachmentItem: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+    },
+    attachmentLabel: {
+        marginTop: 4,
+        fontSize: 12,
+        color: '#2A52BE',
+    },
+
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.4)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '85%',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        padding: 20,
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 10,
+    },
+    closeModalBtn: {
+        marginTop: 20,
+        padding: 10,
+        backgroundColor: '#2A52BE',
+        borderRadius: 6,
     },
 });
