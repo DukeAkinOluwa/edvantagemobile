@@ -328,10 +328,10 @@ export function EventCardTemplate({ event }: any) {
 
 export function ProfilePageNavListTemplate({ list }: { list: ProfilePageNavItem }) {
   const router = useRouter();
-
+  const globalStyles = useGlobalStyles()
   return (
     <TouchableOpacity onPress={() => router.push(list.link as any)} style={profilePageNavListTemplateStyles.option}>
-      <ThemedText>{list.name}</ThemedText>
+      <ThemedText style={globalStyles.baseText} >{list.name}</ThemedText>
     </TouchableOpacity>
   );
 }

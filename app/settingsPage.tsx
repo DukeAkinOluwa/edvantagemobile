@@ -8,7 +8,6 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { Picker } from "@react-native-picker/picker";
 import * as FileSystem from "expo-file-system";
 import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import React, { memo, useEffect, useMemo, useState } from "react";
 import {
   Alert,
@@ -37,7 +36,6 @@ export default function SettingsPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
-  const router = useRouter();
 
   const { screenWidth } = useResponsiveDimensions();
   const globalStyles = useGlobalStyles();

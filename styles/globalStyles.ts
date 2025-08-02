@@ -60,6 +60,9 @@ export const useGlobalStyles = () => {
     actionText2: {
       color: theme.secondary,
     },
+    actionTextRed: {
+      color: 'red',
+    },
     button1: {
       backgroundColor: theme.primary,
       padding: spacing.sm,
