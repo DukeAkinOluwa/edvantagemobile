@@ -11,7 +11,6 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Platform,
   Pressable,
@@ -40,7 +39,19 @@ export default function SignUpPage() {
     bio: "",
     level: "100",
   });
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phoneNumber: "",
+    password: "",
+    confirmPassword: "",
+    university: "",
+    major: "",
+    bio: "",
+    level: "",
+    general: "", // For step 5 general error
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -62,86 +73,110 @@ export default function SignUpPage() {
 
   const handleChange = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: "", general: "" }));
   };
 
   const validateStep = (step: number) => {
-    if (step === 1) {
-      if (
-        !formData.firstName.trim() ||
-        !formData.lastName.trim() ||
-        !formData.email.trim() ||
-        !formData.phoneNumber.trim() ||
-        !formData.password.trim() ||
-        !formData.confirmPassword.trim()
-      ) {
-        throw new Error("Please fill in all required fields.");
+    const newErrors = {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phoneNumber: "",
+      password: "",
+      confirmPassword: "",
+      university: "",
+      major: "",
+      bio: "",
+      level: "",
+      general: "",
+    };
+    let isValid = true;
+
+    if (step === 1 || step === 5) {
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = "First name is required.";
+        isValid = false;
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        throw new Error("Invalid email address.");
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = "Last name is required.";
+        isValid = false;
       }
-      if (!/^\d{7,12}$/.test(formData.phoneNumber)) {
-        throw new Error("Phone number must be 7-12 digits.");
+      if (!formData.email.trim()) {
+        newErrors.email = "Email is required.";
+        isValid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Invalid email address.";
+        isValid = false;
       }
-      if (formData.password.length < 6) {
-        throw new Error("Password must be at least 6 characters long.");
+      if (!formData.phoneNumber.trim()) {
+        newErrors.phoneNumber = "Phone number is required.";
+        isValid = false;
+      } else if (!/^\d{7,12}$/.test(formData.phoneNumber)) {
+        newErrors.phoneNumber = "Phone number must be 7-12 digits.";
+        isValid = false;
       }
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match.");
+      if (!formData.password.trim()) {
+        newErrors.password = "Password is required.";
+        isValid = false;
+      } else if (formData.password.length < 6) {
+        newErrors.password = "Password must be at least 6 characters long.";
+        isValid = false;
       }
-    } else if (step === 2) {
+      if (!formData.confirmPassword.trim()) {
+        newErrors.confirmPassword = "Confirm password is required.";
+        isValid = false;
+      } else if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match.";
+        isValid = false;
+      }
+    }
+    if (step === 2 || step === 5) {
       if (!formData.university.trim()) {
-        throw new Error("Please enter your institution name.");
+        newErrors.university = "Institution name is required.";
+        isValid = false;
       }
-    } else if (step === 3) {
+    }
+    if (step === 3 || step === 5) {
       if (!formData.major.trim()) {
-        throw new Error("Please enter your academic program or major.");
+        newErrors.major = "Academic program or major is required.";
+        isValid = false;
       }
-    } else if (step === 4) {
+    }
+    if (step === 4 || step === 5) {
       if (!formData.bio.trim()) {
-        throw new Error("Please enter your main objective.");
+        newErrors.bio = "Main objective is required.";
+        isValid = false;
       }
-    } else if (step === 5) {
+    }
+    if (step === 5) {
       if (!formData.level) {
-        throw new Error("Please select your academic level.");
+        newErrors.level = "Academic level is required.";
+        isValid = false;
       }
-      if (
-        !formData.firstName.trim() ||
-        !formData.lastName.trim() ||
-        !formData.email.trim() ||
-        !formData.phoneNumber.trim() ||
-        !formData.password.trim() ||
-        !formData.confirmPassword.trim() ||
-        !formData.university.trim() ||
-        !formData.major.trim() ||
-        !formData.bio.trim()
-      ) {
-        throw new Error("Please fill in all required fields.");
+    }
+
+    setErrors(newErrors);
+    if (!isValid) {
+      console.error("Validation errors:", newErrors);
+      if (step === 5) {
+        // For step 5, show the first relevant error as a general message
+        const firstError = Object.values(newErrors).find((error) => error);
+        if (firstError) {
+          newErrors.general = firstError;
+        }
       }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        throw new Error("Invalid email address.");
-      }
-      if (!/^\d{7,12}$/.test(formData.phoneNumber)) {
-        throw new Error("Phone number must be 7-12 digits.");
-      }
-      if (formData.password.length < 6) {
-        throw new Error("Password must be at least 6 characters long.");
-      }
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match.");
-      }
+      throw new Error("Validation failed. Please check the form.");
     }
   };
 
   const handleNext = async () => {
     try {
       setIsLoading(true);
-      setError(null);
       if (currentStep < 5) {
         validateStep(currentStep);
         setCurrentStep(currentStep + 1);
       } else if (currentStep === 5) {
         validateStep(currentStep);
-        // Map formData.level to API's expected "Undergraduate" or "Postgraduate"
         const apiLevel =
           formData.level === "Postgraduate" ? "Postgraduate" : "Undergraduate";
         const requestBody = {
@@ -161,33 +196,32 @@ export default function SignUpPage() {
         const response = await axios.post(`${apiUrl}/register`, requestBody, {
           headers: {
             "Content-Type": "application/json",
-            "X-CSRF-TOKEN": "", // As per Swagger, set to empty
+            "X-CSRF-TOKEN": "",
           },
         });
 
         console.log("Registration response:", response.status, response.data);
 
         if (response.status === 201) {
-          // Update userData with the registered data
-          const newUserData = {
-            firstName: formData.firstName.trim(),
-            lastName: formData.lastName.trim(),
-            email: formData.email.trim(),
-            phoneNumber: `${
-              formData.countryCode
-            }${formData.phoneNumber.trim()}`,
-            password: formData.password.trim(),
-            university: formData.university.trim(),
-            department: formData.university.trim(),
+          await setUserData({
+            firstName: formData.firstName?.trim() || undefined,
+            lastName: formData.lastName?.trim() || undefined,
+            email: formData.email?.trim() || undefined,
+            phoneNumber: formData.phoneNumber
+              ? `${formData.countryCode}${formData.phoneNumber.trim()}`
+              : undefined,
+            password: formData.password?.trim() || undefined,
+            university: formData.university?.trim() || undefined,
+            department: formData.major?.trim() || undefined,
             faculty: undefined,
-            course: formData.university.trim(),
-            level: formData.level,
+            course: formData.major?.trim() || undefined,
+            level: formData.level || undefined,
             gender: undefined,
             dob: undefined,
             profilePic: undefined,
             themeMode: "system" as "system" | "light" | "dark",
-            major: formData.major.trim(),
-            bio: formData.bio.trim(),
+            major: formData.major?.trim() || undefined,
+            bio: formData.bio?.trim() || undefined,
             allowNotifications: true,
             allowAlarms: true,
             privacy: {
@@ -196,8 +230,7 @@ export default function SignUpPage() {
               allowFriendRequests: true,
               dataCollection: true,
             },
-          };
-          await setUserData(newUserData);
+          });
           await saveData("firstLaunch", "false");
           setCurrentStep(6);
         } else {
@@ -229,8 +262,8 @@ export default function SignUpPage() {
       } else {
         console.error("Unknown error:", error);
       }
-      setError(errorMessage);
-      Alert.alert("Error", errorMessage);
+      console.error("SignUpPage error:", errorMessage);
+      setErrors((prev) => ({ ...prev, general: errorMessage }));
     } finally {
       setIsLoading(false);
     }
@@ -239,7 +272,19 @@ export default function SignUpPage() {
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      setError(null);
+      setErrors({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phoneNumber: "",
+        password: "",
+        confirmPassword: "",
+        university: "",
+        major: "",
+        bio: "",
+        level: "",
+        general: "",
+      });
     }
   };
 
@@ -337,22 +382,13 @@ export default function SignUpPage() {
       color: theme.text,
       fontFamily: "Montserrat-Regular",
     },
+    errorText: {
+      color: theme.error || "#FF0000",
+      fontSize: 12,
+      marginBottom: 10,
+      marginTop: -10,
+    },
   });
-
-  if (error) {
-    return (
-      <ThemedView
-        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-      >
-        <ThemedText type="base" style={{ color: theme.error }}>
-          Error: {error}
-        </ThemedText>
-        <ThemedText type="base">
-          Please check the console for details.
-        </ThemedText>
-      </ThemedView>
-    );
-  }
 
   return (
     <ThemedView style={{ flex: 1, backgroundColor: theme.primary }}>
@@ -382,6 +418,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("firstName", text)}
               editable={!isLoading}
             />
+            {errors.firstName && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.firstName}
+              </ThemedText>
+            )}
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
               Last Name
             </ThemedText>
@@ -393,6 +434,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("lastName", text)}
               editable={!isLoading}
             />
+            {errors.lastName && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.lastName}
+              </ThemedText>
+            )}
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
               Email
             </ThemedText>
@@ -405,6 +451,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("email", text)}
               editable={!isLoading}
             />
+            {errors.email && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.email}
+              </ThemedText>
+            )}
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
               Phone Number
             </ThemedText>
@@ -440,6 +491,11 @@ export default function SignUpPage() {
                 editable={!isLoading}
               />
             </View>
+            {errors.phoneNumber && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.phoneNumber}
+              </ThemedText>
+            )}
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
               Password
             </ThemedText>
@@ -465,6 +521,11 @@ export default function SignUpPage() {
                 />
               </Pressable>
             </View>
+            {errors.password && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.password}
+              </ThemedText>
+            )}
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
               Confirm Password
             </ThemedText>
@@ -490,6 +551,11 @@ export default function SignUpPage() {
                 />
               </Pressable>
             </View>
+            {errors.confirmPassword && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.confirmPassword}
+              </ThemedText>
+            )}
             <TouchableOpacity onPress={handleNext} disabled={isLoading}>
               <ThemedView
                 style={[
@@ -540,12 +606,7 @@ export default function SignUpPage() {
               ></ThemedView>
             </ThemedView>
             <ThemedText
-              style={[
-                globalStyles.smallText,
-                {
-                  textAlign: "center",
-                },
-              ]}
+              style={[globalStyles.smallText, { textAlign: "center" }]}
             >
               Already have an account?{" "}
               <ThemedText
@@ -590,6 +651,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("university", text)}
               editable={!isLoading}
             />
+            {errors.university && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.university}
+              </ThemedText>
+            )}
             <View
               style={{
                 flexDirection: "row",
@@ -656,6 +722,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("major", text)}
               editable={!isLoading}
             />
+            {errors.major && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.major}
+              </ThemedText>
+            )}
             <View
               style={{
                 flexDirection: "row",
@@ -722,6 +793,11 @@ export default function SignUpPage() {
               onChangeText={(text) => handleChange("bio", text)}
               editable={!isLoading}
             />
+            {errors.bio && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.bio}
+              </ThemedText>
+            )}
             <View
               style={{
                 flexDirection: "row",
@@ -801,6 +877,11 @@ export default function SignUpPage() {
                 />
               ))}
             </Picker>
+            {(errors.level || errors.general) && (
+              <ThemedText style={responsiveStyles.errorText}>
+                {errors.level || errors.general}
+              </ThemedText>
+            )}
             <View
               style={{
                 flexDirection: "row",

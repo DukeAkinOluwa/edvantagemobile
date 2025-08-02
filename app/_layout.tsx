@@ -6,11 +6,38 @@ import * as Font from "expo-font";
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useState } from "react";
+import React, { Component, useEffect, useState } from "react";
 import { Appearance, AppState, Text } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 
 const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
+
+// ErrorBoundary to catch and log errors without displaying them
+class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      // Render nothing or a fallback UI without error details
+      return null;
+    }
+    return this.props.children;
+  }
+}
 
 export default function RootLayout() {
   interface UserData {
@@ -62,7 +89,6 @@ export default function RootLayout() {
     Appearance.getColorScheme() === "dark" ? darkTheme : lightTheme
   );
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   const checkMissedNotifications = async () => {
@@ -171,14 +197,18 @@ export default function RootLayout() {
   useEffect(() => {
     const initialize = async () => {
       try {
+        console.log("Starting RootLayout initialization");
         await SplashScreen.preventAutoHideAsync();
+        console.log("Loading fonts");
         await Font.loadAsync({
           // Font loading code remains commented out as in the original
           // "Montserrat-Thin": require("@/assets/fonts/static/Montserrat-Thin.ttf"),
           // ... other fonts
         });
+        console.log("Fonts loaded");
 
         const savedUserData = await getData("userData");
+        console.log("Saved user data:", savedUserData);
         if (savedUserData) {
           if (
             savedUserData.profilePic &&
@@ -209,15 +239,15 @@ export default function RootLayout() {
 
         const firstLaunch = await getData("firstLaunch");
         setIsFirstLaunch(firstLaunch === null || firstLaunch === "true");
+        console.log("First launch:", firstLaunch);
 
         setFontsLoaded(true);
         await SplashScreen.hideAsync();
+        console.log("Splash screen hidden");
 
         await checkMissedNotifications();
+        console.log("Missed notifications checked");
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Initialization failed";
-        setError(errorMessage);
         console.error("Initialization error:", err);
         setFontsLoaded(true);
         await SplashScreen.hideAsync();
@@ -250,9 +280,7 @@ export default function RootLayout() {
       setUserDataState(newUserData);
       await saveData("userData", newUserData);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to save user data";
-      setError(errorMessage);
+      console.error("Failed to save user data:", err);
       throw err;
     }
   };
@@ -273,79 +301,85 @@ export default function RootLayout() {
       setUserDataState(newUserData);
       await saveData("userData", newUserData);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to set theme";
-      setError(errorMessage);
+      console.error("Failed to set theme:", err);
       throw err;
     }
   };
 
-  if (error) {
-    return (
-      <SafeAreaView
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <Text
-          style={{ color: lightTheme.error, fontSize: 18, marginBottom: 10 }}
-        >
-          Error: {error}
-        </Text>
-        <Text style={{ color: lightTheme.text, fontSize: 16 }}>
-          Please check the console for details.
-        </Text>
-      </SafeAreaView>
-    );
-  }
+  const setIsFirstLaunchHandler = async (value: boolean) => {
+    try {
+      setIsFirstLaunch(value);
+      await saveData("firstLaunch", value.toString());
+    } catch (err) {
+      console.error("Failed to set first launch:", err);
+    }
+  };
 
   if (!fontsLoaded || isFirstLaunch === null) {
     return (
-      <SafeAreaView
-        style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
-      >
-        <Text style={{ color: lightTheme.text }}>Loading...</Text>
-      </SafeAreaView>
+      <SafeAreaProvider>
+        <SafeAreaView
+          style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+        >
+          <Text style={{ color: lightTheme.text }}>Loading...</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
+  const isLoggedIn = !!userData.email && !!userData.password;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <ThemeContext.Provider
-        value={{ theme, setThemeMode: handleSetThemeMode }}
-      >
-        <UserDataContext.Provider
-          value={{ userData, setUserData: handleSetUserData, setIsFirstLaunch }}
-        >
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.background },
-            }}
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
+          <ThemeContext.Provider
+            value={{ theme, setThemeMode: handleSetThemeMode }}
           >
-            {isFirstLaunch ? (
-              <Stack.Screen name="signUpPage" />
-            ) : (
-              <>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="+not-found" />
-                <Stack.Screen name="chatroomscreen" />
-                <Stack.Screen name="notifications-page" />
-                <Stack.Screen name="userProfileScreen" />
-                <Stack.Screen name="gamificationPage" />
-                <Stack.Screen name="test" />
-                <Stack.Screen name="task-form" />
-                <Stack.Screen name="profile-page" />
-                <Stack.Screen name="settingsPage" />
-                <Stack.Screen name="faqsPage" />
-                <Stack.Screen name="termsAndConditions" />
-                <Stack.Screen name="chat/[chatId]" />
-                <Stack.Screen name="study/[studyId]" />
-                <Stack.Screen name="projects/[projectId]" />
-              </>
-            )}
-          </Stack>
-          <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
-        </UserDataContext.Provider>
-      </ThemeContext.Provider>
-    </SafeAreaView>
+            <UserDataContext.Provider
+              value={{
+                userData,
+                setUserData: handleSetUserData,
+                setIsFirstLaunch: setIsFirstLaunchHandler,
+              }}
+            >
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: theme.background },
+                }}
+              >
+                {isFirstLaunch ? (
+                  <Stack.Screen name="signUpPage" />
+                ) : isLoggedIn ? (
+                  <>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="login" />
+                    <Stack.Screen name="signUpPage" />
+                    <Stack.Screen name="+not-found" />
+                    <Stack.Screen name="chatroomscreen" />
+                    <Stack.Screen name="notifications-page" />
+                    <Stack.Screen name="userProfileScreen" />
+                    <Stack.Screen name="gamificationPage" />
+                    <Stack.Screen name="test" />
+                    <Stack.Screen name="task-form" />
+                    <Stack.Screen name="profile-page" />
+                    <Stack.Screen name="settingsPage" />
+                    <Stack.Screen name="faqsPage" />
+                    <Stack.Screen name="termsAndConditions" />
+                    <Stack.Screen name="chat/[chatId]" />
+                    <Stack.Screen name="study/[studyId]" />
+                    <Stack.Screen name="projects/[projectId]" />
+                  </>
+                ) : (
+                  <Stack.Screen name="login" />
+                )}
+              </Stack>
+              <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
+            </UserDataContext.Provider>
+          </ThemeContext.Provider>
+        </SafeAreaView>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }

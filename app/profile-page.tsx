@@ -5,10 +5,10 @@ import { ThemedView } from "@/components/ThemedView";
 import { ProfilePageNavListTemplate } from "@/global/templates";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import React, { memo, useMemo } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { useRouter } from "expo-router";
+import React, { memo, useMemo, useState } from "react";
+import { Alert, Image, StyleSheet, TouchableOpacity, View } from "react-native";
 
-// Memoized Image component to prevent flickering
 const ProfileImage = memo(
   ({ uri, borderColor }: { uri: string; borderColor: string }) => (
     <Image source={{ uri }} style={[styles.avatar, { borderColor }]} />
@@ -20,8 +20,9 @@ export default function ProfilePage() {
   const { userData } = useUserData();
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
 
-  // Memoize image URI to prevent flickering
   const imageUri = useMemo(() => {
     return userData.profilePic || "https://via.placeholder.com/100";
   }, [userData.profilePic]);
@@ -44,6 +45,20 @@ export default function ProfilePage() {
     },
   ];
 
+  const handleLogout = async () => {
+    try {
+      setError(null);
+      // Navigate to login screen without clearing any data
+      router.replace("/login");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to log out";
+      setError(errorMessage);
+      Alert.alert("Error", errorMessage);
+      console.error("Logout error:", error);
+    }
+  };
+
   const dynamicStyles = StyleSheet.create({
     summaryCard: {
       width: screenWidth - 20,
@@ -62,33 +77,75 @@ export default function ProfilePage() {
     },
   });
 
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={{ flex: 1, backgroundColor: theme.background }}>
       <NavigationHeader title="Profile" />
       <ParallaxScrollView>
-        <ThemedView style={dynamicStyles.summaryCard}>
-          <ProfileImage uri={imageUri} borderColor={theme.border} />
-          <ThemedText style={globalStyles.semiLargeText}>
-            {userData.firstName || ""} {userData.lastName || ""}
-          </ThemedText>
-          <ThemedText style={globalStyles.mediumText}>
-            {userData.university || "University not set"}
-          </ThemedText>
-          <View style={{ flexDirection: "row", gap: 5 }}>
-            <ThemedText style={globalStyles.smallText}>
-              {userData.course || "Course: Not set"}
-            </ThemedText>
-            <ThemedText style={globalStyles.smallText}>|</ThemedText>
-            <ThemedText style={globalStyles.smallText}>
-              {userData.level || "Level: Not set"}
-            </ThemedText>
-          </View>
-        </ThemedView>
-        <ThemedView style={dynamicStyles.profilePageNavigationContainer}>
-          {profileNavigationList.map((list) => (
-            <ProfilePageNavListTemplate key={list.id} list={list} />
-          ))}
-        </ThemedView>
+        <View
+          style={{
+            justifyContent: "space-evenly",
+            flexDirection: "column",
+          }}
+        >
+          <ThemedView style={{ flex: 1 }}>
+            <ThemedView style={dynamicStyles.summaryCard}>
+              <ProfileImage uri={imageUri} borderColor={theme.border} />
+              <ThemedText style={globalStyles.semiLargeText}>
+                {userData.firstName || ""} {userData.lastName || ""}
+              </ThemedText>
+              <ThemedText style={globalStyles.mediumText}>
+                {userData.university || "University not set"}
+              </ThemedText>
+              <View style={{ flexDirection: "row", gap: 5 }}>
+                <ThemedText style={globalStyles.smallText}>
+                  {userData.course || "Course: Not set"}
+                </ThemedText>
+                <ThemedText style={globalStyles.smallText}>|</ThemedText>
+                <ThemedText style={globalStyles.smallText}>
+                  {userData.level || "Level: Not set"}
+                </ThemedText>
+              </View>
+            </ThemedView>
+            <ThemedView style={dynamicStyles.profilePageNavigationContainer}>
+              {profileNavigationList.map((list) => (
+                <ProfilePageNavListTemplate key={list.id} list={list} />
+              ))}
+            </ThemedView>
+          </ThemedView>
+
+          <ThemedView
+            style={[globalStyles.button2, { flex: 1, marginTop: 50 }]}
+          >
+            <TouchableOpacity
+              onPress={handleLogout}
+              style={{
+                backgroundColor: "red",
+                paddingHorizontal: 20,
+                paddingVertical: 5,
+                borderRadius: 5,
+              }}
+            >
+              <ThemedText style={globalStyles.semiLargeText}>
+                Log Out
+              </ThemedText>
+            </TouchableOpacity>
+          </ThemedView>
+        </View>
       </ParallaxScrollView>
     </ThemedView>
   );

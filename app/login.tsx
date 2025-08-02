@@ -5,9 +5,10 @@ import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
-import React, { memo, useState } from "react";
+import React, { memo, useEffect, useState } from "react";
 import {
   Alert,
+  BackHandler,
   Image,
   Platform,
   Pressable,
@@ -37,6 +38,20 @@ export default function LoginPage() {
   const apiUrl =
     Constants.expoConfig?.extra?.apiUrl || "https://edvantage.com.ng";
 
+  // Handle Android back button to close the app
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          BackHandler.exitApp(); // Close the app
+          return true; // Prevent default back navigation
+        }
+      );
+      return () => backHandler.remove();
+    }
+  }, []);
+
   const handleLogin = async () => {
     try {
       setError(null);
@@ -56,13 +71,13 @@ export default function LoginPage() {
         email.trim() === userData.email &&
         password.trim() === userData.password
       ) {
-        // Update userData to ensure consistency and set firstLaunch to false
+        // Update userData to ensure consistency
         await setUserData({
           ...userData,
           email: email.trim(),
           password: password.trim(),
         });
-        await saveData("firstLaunch", "false");
+        await saveData("firstLaunch", "false"); // Mark as not first launch
         router.replace("/(tabs)");
         Alert.alert("Success", "Logged in successfully!");
         return;
@@ -96,8 +111,8 @@ export default function LoginPage() {
             dataCollection: true,
           },
         });
-        await saveData("firstLaunch", "false");
-        router.replace("(tabs)/index");
+        await saveData("firstLaunch", "false"); // Mark as not first launch
+        router.replace("/(tabs)");
         Alert.alert("Success", "Logged in successfully!");
       } else {
         const errorText = await response.text();

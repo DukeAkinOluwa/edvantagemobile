@@ -55,10 +55,11 @@ export default function HomeScreen() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // One-time cleanup for scheduled_notifications
+  // One-time cleanup and re-scheduling of notifications
   useEffect(() => {
-    const cleanScheduledNotifications = async () => {
+    const initializeNotifications = async () => {
       try {
+        // Clean up invalid scheduled_notifications
         let scheduledNotifications =
           (await getData("scheduled_notifications")) || [];
         const validNotifications = scheduledNotifications.filter(
@@ -73,13 +74,39 @@ export default function HomeScreen() {
         if (validNotifications.length < scheduledNotifications.length) {
           console.log("Cleaning up invalid scheduled_notifications on startup");
           await saveData("scheduled_notifications", validNotifications);
+          scheduledNotifications = validNotifications;
+        }
+
+        // Re-schedule valid notifications if user is logged in and notifications are allowed
+        if (userData.allowNotifications !== false) {
+          const tasks = (await getData("tasks")) || [];
+          for (const notification of scheduledNotifications) {
+            const task = tasks.find((t: Task) => t.id === notification.taskId);
+            if (task && notification.triggerTime > Date.now()) {
+              try {
+                await scheduleEventNotification(task);
+                console.log(
+                  "Re-scheduled notification for task:",
+                  task.title,
+                  "at",
+                  new Date(notification.triggerTime).toLocaleString()
+                );
+              } catch (error) {
+                console.error(
+                  "Error re-scheduling notification for task:",
+                  task.title,
+                  error
+                );
+              }
+            }
+          }
         }
       } catch (error) {
-        console.error("Error cleaning scheduled_notifications:", error);
+        console.error("Error initializing notifications:", error);
       }
     };
-    cleanScheduledNotifications();
-  }, []);
+    initializeNotifications();
+  }, [userData.allowNotifications]);
 
   const formatTimeToAMPM = (date: Date): string => {
     let hours = date.getHours();
