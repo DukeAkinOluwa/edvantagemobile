@@ -1,6 +1,8 @@
 import { Appearance } from "react-native";
 
 export const lightTheme = {
+  fixedSecondary: "#FAFBFD",
+  fixedPrimary: "#2A52BE",
   background: "#FAFBFD",
   text: "#101011ff",
   primary: "#2A52BE",
@@ -19,6 +21,8 @@ export const lightTheme = {
 };
 
 export const darkTheme = {
+  fixedSecondary: "#FAFBFD",
+  fixedPrimary: "#2A52BE",
   background: "#1C1C1E",
   text: "#FAFBFD",
   primary: "#FAFBFD",

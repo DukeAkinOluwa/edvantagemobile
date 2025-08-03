@@ -142,14 +142,20 @@ export default function LoginPage() {
     );
   }
 
+  const responsiveStyles = StyleSheet.create({
+    scrollContainer: {
+      width: screenWidth - 30,
+    }
+  });
+
   return (
-    <ThemedView style={{ flex: 1, backgroundColor: theme.primary }}>
+    <ThemedView style={{ flex: 1, backgroundColor: theme.primary, alignItems: "center", justifyContent: "center" }}>
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.primary }}
-        contentContainerStyle={responsiveStyles.scrollContainer}
+        contentContainerStyle={[styles.scrollContainer, responsiveStyles.scrollContainer]}
         keyboardShouldPersistTaps="handled"
       >
-        <ThemedView style={responsiveStyles.card}>
+        <ThemedView style={styles.card}>
           <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
             Welcome Back
           </ThemedText>
@@ -161,7 +167,7 @@ export default function LoginPage() {
             Email
           </ThemedText>
           <TextInput
-            style={[responsiveStyles.input, globalStyles.baseText]}
+            style={[styles.input, globalStyles.baseText]}
             keyboardType="email-address"
             placeholder="Type in your Email *"
             placeholderTextColor={theme.placeholder}
@@ -173,7 +179,7 @@ export default function LoginPage() {
             Password
           </ThemedText>
           <TextInput
-            style={[responsiveStyles.input, globalStyles.baseText]}
+            style={[styles.input, globalStyles.baseText]}
             secureTextEntry
             placeholder="Type in your Password *"
             placeholderTextColor={theme.placeholder}
@@ -249,33 +255,6 @@ export default function LoginPage() {
   );
 }
 
-const responsiveStyles = StyleSheet.create({
-  input: {
-    width: "100%",
-    borderWidth: 0.9,
-    borderRadius: 6,
-    padding: Platform.OS === "ios" ? 12 : 10,
-    marginBottom: 12,
-    fontFamily: "Montserrat-Regular",
-  },
-  card: {
-    width: "100%",
-    padding: 15,
-    borderRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
-    marginBottom: 20,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    alignItems: "center",
-    paddingVertical: 20,
-    justifyContent: "center",
-  },
-});
-
 const styles = StyleSheet.create({
   title: {
     fontSize: 24,
@@ -294,5 +273,29 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     marginBottom: 10,
     borderWidth: 1,
+  },
+  input: {
+    width: "100%",
+    borderWidth: 0.9,
+    borderRadius: 6,
+    padding: Platform.OS === "ios" ? 12 : 10,
+    marginBottom: 12,
+    fontFamily: "Montserrat-Regular",
+  },
+  card: {
+    width: "100%",
+    padding: 15,
+    borderRadius: 15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 4,
+    marginBottom: 20,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingVertical: 20,
+    justifyContent: "center",
   },
 });

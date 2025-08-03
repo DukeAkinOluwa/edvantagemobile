@@ -311,9 +311,9 @@ export default function SignUpPage() {
       fontFamily: "Montserrat-Regular",
     },
     card: {
-      width: screenWidth - 20,
+      width: screenWidth - 30,
       padding: 15,
-      borderRadius: 8,
+      borderRadius: 15,
       backgroundColor: theme.background,
       shadowColor: theme.shadow,
       shadowOffset: { width: 0, height: 2 },
@@ -925,7 +925,7 @@ export default function SignUpPage() {
               flex: 1,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: theme.primary,
+              backgroundColor: theme.fixedSecondary,
             }}
           >
             <ThemedText
