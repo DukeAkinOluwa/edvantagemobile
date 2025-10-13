@@ -20,6 +20,7 @@ export interface CustomDateTimePickerProps {
   onClose: () => void;
   accentColor?: string;
   textColor?: string;
+  selectedDate?: Date;
 }
 
 // ✅ Component
@@ -31,12 +32,13 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   onChange,
   accentColor = "#2A52BE",
   textColor = "#333",
+  selectedDate
 }) => {
-  const [tempDate, setTempDate] = useState<Date>(value);
+  const [tempDate, setTempDate] = useState<Date>(value || selectedDate || new Date());
 
   useEffect(() => {
-    setTempDate(value);
-  }, [value]);
+    if (selectedDate) setTempDate(selectedDate);
+  }, [selectedDate]);
 
   const handleConfirm = (): void => {
     onChange(null, tempDate);

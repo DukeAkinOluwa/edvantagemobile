@@ -4,7 +4,7 @@ import { useGlobalStyles } from "@/styles/globalStyles";
 import { cancelNotification } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
@@ -26,12 +26,13 @@ interface Props {
   onDayPress?: (date: Date) => void;
   setModalVisible?: (visible: boolean) => void;
   modalVisible?: boolean;
+  selectedDate?: Date;
 }
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }) => {
+const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible, selectedDate: externalSelectedDate }) => {
     const { theme } = useTheme();
     const { screenWidth } = useResponsiveDimensions();
     const [calendarDate, setCalendarDate] = useState(new Date());
@@ -43,6 +44,10 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
     const adjustedWidth = screenWidth - 30;
+
+    useEffect(() => {
+        if (externalSelectedDate) setSelectedDate(externalSelectedDate);
+    }, [externalSelectedDate]);
 
     useFocusEffect(
         useCallback(() => {

@@ -54,6 +54,10 @@ export default function HomeScreen() {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  console.log(selectedDate)
 
   // One-time cleanup and re-scheduling of notifications
   useEffect(() => {
@@ -117,17 +121,18 @@ export default function HomeScreen() {
     return `${hours}:${minutesStr} ${ampm}`;
   };
 
-  const handleStartDateChange = (event: any, selected: Date | undefined) => {
-    if (Platform.OS === "android") {
+  const handleDateTimeChange = (_event: unknown, newDate?: Date) => {
+    if (newDate) setSelectedDate(newDate);
+  };
+
+  const handleDayPress = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const handleStartDateChange = (_event: unknown, selected?: Date) => {
+    if (selected) {
+      setStartTime(selected);
       setShowStartDatePicker(false);
-      if (selected) {
-        setStartTime(selected);
-        setShowStartTimePicker(true);
-      }
-    } else {
-      if (selected) {
-        setStartTime(selected);
-      }
     }
   };
 
@@ -307,9 +312,10 @@ export default function HomeScreen() {
           ]}
         />
         <Calendar
-          onDayPress={(date) => {}}
+          onDayPress={handleDayPress}
           setModalVisible={setModalVisible}
           modalVisible={modalVisible}
+          selectedDate={selectedDate}
         />
       </ParallaxScrollView>
       <Modal
@@ -352,16 +358,6 @@ export default function HomeScreen() {
               </ThemedText>
             </TouchableOpacity>
             {showStartDatePicker && (
-              // <DateTimePicker
-              //   value={startTime || new Date()}
-              //   mode="date"
-              //   display={Platform.OS === "ios" ? "spinner" : "calendar"}
-              //   onChange={handleStartDateChange}
-              //   minimumDate={new Date()}
-              //   onTouchCancel={() => setShowStartDatePicker(false)}
-              //   textColor={theme.text} // Android only
-              //   accentColor={theme.primary} // Android only
-              // />
               <CustomDateTimePicker
                 mode="time"
                 visible={showStartDatePicker}
@@ -370,6 +366,7 @@ export default function HomeScreen() {
                 onClose={() => setShowStartDatePicker(false)}
                 accentColor="#2A52BE"
                 textColor="#111"
+                selectedDate={selectedDate}
               />
             )}
             <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
@@ -378,16 +375,6 @@ export default function HomeScreen() {
               </ThemedText>
             </TouchableOpacity>
             {showEndDatePicker && (
-              // <DateTimePicker
-              //   value={endTime || new Date()}
-              //   mode="date"
-              //   display={Platform.OS === "ios" ? "spinner" : "calendar"}
-              //   onChange={handleEndDateChange}
-              //   minimumDate={startTime || new Date()}
-              //   onTouchCancel={() => setShowEndDatePicker(false)}
-              //   textColor={theme.text} // Android only
-              //   accentColor={theme.primary} // Android only
-              // />
               <CustomDateTimePicker
                 mode="time"
                 visible={showEndDatePicker}
@@ -396,6 +383,7 @@ export default function HomeScreen() {
                 onClose={() => setShowEndDatePicker(false)}
                 accentColor="#2A52BE"
                 textColor="#111"
+                selectedDate={selectedDate}
               />
             )}
             <Pressable
