@@ -1,4 +1,5 @@
 import Calendar from "@/components/DashboardCalendar";
+import CustomDateTimePicker from "@/components/DateTimePicker";
 import { NavigationHeader, useTheme, useUserData } from "@/components/Header";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
@@ -7,7 +8,6 @@ import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { scheduleEventNotification } from "@/utils/notifications";
 import { getData, saveData } from "@/utils/storage";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
@@ -334,36 +334,9 @@ export default function HomeScreen() {
               { backgroundColor: theme.background, borderColor: theme.border },
             ]}
           >
-            <TextInput
-              placeholder="Title *"
-              value={title}
-              onChangeText={setTitle}
-              placeholderTextColor={theme.border}
-              style={[
-                styles.input,
-                {
-                  borderColor: theme.border,
-                  color: theme.text,
-                },
-              ]}
-            />
-            <TextInput
-              placeholder="Description *"
-              value={description}
-              onChangeText={setDescription}
-              placeholderTextColor={theme.border}
-              style={[
-                styles.input,
-                {
-                  borderColor: theme.border,
-                  color: theme.text,
-                },
-              ]}
-              multiline
-            />
-            <ThemedView
-              style={[styles.switchRow, { backgroundColor: theme.background }]}
-            >
+            <TextInput placeholder="Title *" value={title} onChangeText={setTitle} placeholderTextColor={theme.border} style={[ styles.input, { borderColor: theme.border, color: theme.text, }]}/>
+            <TextInput placeholder="Description *" value={description} onChangeText={setDescription} placeholderTextColor={theme.border} style={[ styles.input, { borderColor: theme.border, color: theme.text}]} multiline />
+            <ThemedView style={[styles.switchRow, { backgroundColor: theme.background }]} >
               <ThemedText style={{ color: theme.text }}>Group Event</ThemedText>
               <Switch
                 value={isGroupEvent}
@@ -372,45 +345,31 @@ export default function HomeScreen() {
                 thumbColor={theme.background}
               />
             </ThemedView>
-            <TextInput
-              placeholder="Location *"
-              value={location}
-              onChangeText={setLocation}
-              placeholderTextColor={theme.border}
-              style={[
-                styles.input,
-                {
-                  borderColor: theme.border,
-                  color: theme.text,
-                },
-              ]}
-            />
+            <TextInput placeholder="Location *" value={location} onChangeText={setLocation} placeholderTextColor={theme.border} style={[ styles.input, { borderColor: theme.border, color: theme.text}]}          />
             <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
               <ThemedText style={[styles.dateText, { color: theme.text }]}>
                 Start Time: {startTime ? startTime.toLocaleString() : ""}
               </ThemedText>
             </TouchableOpacity>
             {showStartDatePicker && (
-              <DateTimePicker
-                value={startTime || new Date()}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "calendar"}
-                onChange={handleStartDateChange}
-                minimumDate={new Date()}
-                onTouchCancel={() => setShowStartDatePicker(false)}
-                textColor={theme.text} // Android only
-                accentColor={theme.primary} // Android only
-              />
-            )}
-            {showStartTimePicker && (
-              <DateTimePicker
-                value={startTime || new Date()}
+              // <DateTimePicker
+              //   value={startTime || new Date()}
+              //   mode="date"
+              //   display={Platform.OS === "ios" ? "spinner" : "calendar"}
+              //   onChange={handleStartDateChange}
+              //   minimumDate={new Date()}
+              //   onTouchCancel={() => setShowStartDatePicker(false)}
+              //   textColor={theme.text} // Android only
+              //   accentColor={theme.primary} // Android only
+              // />
+              <CustomDateTimePicker
                 mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "clock"}
-                onChange={handleStartTimeChange}
-                onTouchCancel={() => setShowStartTimePicker(false)}
-                textColor={theme.text} // Android only
-                accentColor={theme.primary} // Android only
+                visible={showStartDatePicker}
+                value={startTime || new Date()}
+                onChange={handleStartDateChange}
+                onClose={() => setShowStartDatePicker(false)}
+                accentColor="#2A52BE"
+                textColor="#111"
               />
             )}
             <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
@@ -419,56 +378,26 @@ export default function HomeScreen() {
               </ThemedText>
             </TouchableOpacity>
             {showEndDatePicker && (
-              <DateTimePicker
-                value={endTime || new Date()}
-                mode="date"
-                display={Platform.OS === "ios" ? "spinner" : "calendar"}
-                onChange={handleEndDateChange}
-                minimumDate={startTime || new Date()}
-                onTouchCancel={() => setShowEndDatePicker(false)}
-                textColor={theme.text} // Android only
-                accentColor={theme.primary} // Android only
-              />
-            )}
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={endTime || new Date()}
+              // <DateTimePicker
+              //   value={endTime || new Date()}
+              //   mode="date"
+              //   display={Platform.OS === "ios" ? "spinner" : "calendar"}
+              //   onChange={handleEndDateChange}
+              //   minimumDate={startTime || new Date()}
+              //   onTouchCancel={() => setShowEndDatePicker(false)}
+              //   textColor={theme.text} // Android only
+              //   accentColor={theme.primary} // Android only
+              // />
+              <CustomDateTimePicker
                 mode="time"
-                display={Platform.OS === "ios" ? "spinner" : "clock"}
-                onChange={handleEndTimeChange}
-                onTouchCancel={() => setShowEndTimePicker(false)}
-                textColor={theme.text} // Android only
-                accentColor={theme.primary} // Android only
+                visible={showEndDatePicker}
+                value={endTime || new Date()}
+                onChange={handleEndDateChange}
+                onClose={() => setShowEndDatePicker(false)}
+                accentColor="#2A52BE"
+                textColor="#111"
               />
             )}
-            {Platform.OS === "ios" &&
-              (showStartDatePicker ||
-                showStartTimePicker ||
-                showEndDatePicker ||
-                showEndTimePicker) && (
-                <Pressable
-                  style={[
-                    styles.customButton,
-                    { backgroundColor: theme.primary },
-                  ]}
-                  onPress={() => {
-                    setShowStartDatePicker(false);
-                    setShowStartTimePicker(false);
-                    setShowEndDatePicker(false);
-                    setShowEndTimePicker(false);
-                  }}
-                >
-                  <ThemedText
-                    style={[
-                      globalStyles.semiLargeText,
-                      styles.customButtonText,
-                      { color: theme.text },
-                    ]}
-                  >
-                    Confirm
-                  </ThemedText>
-                </Pressable>
-              )}
             <Pressable
               style={[
                 styles.customButton,
