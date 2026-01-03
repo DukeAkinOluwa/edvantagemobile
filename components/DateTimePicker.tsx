@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   FlatList,
   GestureResponderEvent,
@@ -9,7 +9,6 @@ import {
   View,
 } from "react-native";
 
-// 🧩 Types
 export type PickerMode = "time" | "date";
 
 export interface CustomDateTimePickerProps {
@@ -23,7 +22,90 @@ export interface CustomDateTimePickerProps {
   selectedDate?: Date;
 }
 
-// ✅ Component
+interface ScrollPickerColumnProps {
+  data: number[];
+  selected: number;
+  onSelect: (item: number) => void;
+  accentColor: string;
+  textColor: string;
+}
+
+// ✅ Independent scrollable picker column
+const ScrollPickerColumn: React.FC<ScrollPickerColumnProps> = ({
+  data,
+  selected,
+  onSelect,
+  accentColor,
+  textColor,
+}) => {
+  const ITEM_HEIGHT = 40;
+  const listRef = useRef<FlatList<number>>(null);
+
+  // Scroll to selected item
+  useEffect(() => {
+    const index = data.indexOf(selected);
+    if (index >= 0) {
+      setTimeout(() => {
+        listRef.current?.scrollToIndex({
+          index,
+          animated: false,
+          viewPosition: 0.5,
+        });
+      }, 0);
+    }
+  }, [selected, data]);
+
+  const safeInitialIndex = data.includes(selected) ? data.indexOf(selected) : 0;
+
+  return (
+    <FlatList
+      ref={listRef}
+      data={data}
+      keyExtractor={(item) => item.toString()}
+      showsVerticalScrollIndicator={false}
+      style={{ height: ITEM_HEIGHT * 5, width: 70 }}
+      getItemLayout={(_, index) => ({
+        length: ITEM_HEIGHT,
+        offset: ITEM_HEIGHT * index,
+        index,
+      })}
+      initialScrollIndex={safeInitialIndex}
+      onScrollToIndexFailed={(info) => {
+        requestAnimationFrame(() => {
+          listRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: false,
+          });
+        });
+      }}
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          style={[
+            styles.option,
+            { height: ITEM_HEIGHT, justifyContent: "center" },
+            item === selected && { backgroundColor: accentColor },
+          ]}
+          onPress={() => onSelect(item)}
+        >
+          <Text
+            style={[
+              styles.optionText,
+              { color: textColor },
+              item === selected && { color: "#fff", fontWeight: "700" },
+            ]}
+          >
+            {item.toString().padStart(2, "0")}
+          </Text>
+        </TouchableOpacity>
+      )}
+      snapToInterval={ITEM_HEIGHT}
+      decelerationRate="fast"
+      snapToAlignment="center"
+    />
+  );
+};
+
+// 🕒 Main Picker Component
 const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   mode = "time",
   value = new Date(),
@@ -32,32 +114,37 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
   onChange,
   accentColor = "#2A52BE",
   textColor = "#333",
-  selectedDate
+  selectedDate,
 }) => {
   const [tempDate, setTempDate] = useState<Date>(value || selectedDate || new Date());
+  const [pickerMode, setPickerMode] = useState<PickerMode>(mode);
 
   useEffect(() => {
     if (selectedDate) setTempDate(selectedDate);
   }, [selectedDate]);
 
-  const handleConfirm = (): void => {
+  const handleConfirm = () => {
     onChange(null, tempDate);
     onClose();
   };
 
-  const handleCancel = (event?: GestureResponderEvent): void => {
+  const handleCancel = (event?: GestureResponderEvent) => {
     event?.stopPropagation?.();
     onClose();
   };
 
-  // ⏱ Time / 📅 Date Arrays
+  const toggleMode = () => {
+    setPickerMode((prev) => (prev === "time" ? "date" : "time"));
+  };
+
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const minutes = Array.from({ length: 60 }, (_, i) => i);
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const years = Array.from({ length: 50 }, (_, i) => 2000 + i);
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 50 }, (_, i) => currentYear - 25 + i);
 
-  const setPart = (part: "hour" | "minute" | "day" | "month" | "year", val: number): void => {
+  const setPart = (part: "hour" | "minute" | "day" | "month" | "year", val: number) => {
     const newDate = new Date(tempDate);
     switch (part) {
       case "hour":
@@ -79,60 +166,63 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
     setTempDate(newDate);
   };
 
-  // Generic Render Function
-  const renderOption = (
-    data: number[],
-    selected: number,
-    onPress: (item: number) => void
-  ) => (
-    <FlatList
-      data={data}
-      keyExtractor={(item) => item.toString()}
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          style={[
-            styles.option,
-            item === selected && { backgroundColor: accentColor },
-          ]}
-          onPress={() => onPress(item)}
-        >
-          <Text
-            style={[
-              styles.optionText,
-              { color: textColor },
-              item === selected && { color: "#fff", fontWeight: "700" },
-            ]}
-          >
-            {item.toString().padStart(2, "0")}
-          </Text>
-        </TouchableOpacity>
-      )}
-    />
-  );
-
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.overlay}>
         <View style={styles.container}>
           <Text style={[styles.title, { color: textColor }]}>
-            {mode === "time" ? "Select Time" : "Select Date"}
+            {pickerMode === "time" ? "Select Time" : "Select Date"}
           </Text>
 
-          {mode === "time" ? (
+          {pickerMode === "time" ? (
             <View style={styles.pickerRow}>
-              {renderOption(hours, tempDate.getHours(), (val) => setPart("hour", val))}
+              <ScrollPickerColumn
+                data={hours}
+                selected={tempDate.getHours()}
+                onSelect={(val) => setPart("hour", val)}
+                accentColor={accentColor}
+                textColor={textColor}
+              />
               <Text style={[styles.colon, { color: textColor }]}>:</Text>
-              {renderOption(minutes, tempDate.getMinutes(), (val) => setPart("minute", val))}
+              <ScrollPickerColumn
+                data={minutes}
+                selected={tempDate.getMinutes()}
+                onSelect={(val) => setPart("minute", val)}
+                accentColor={accentColor}
+                textColor={textColor}
+              />
             </View>
           ) : (
             <View style={styles.pickerRow}>
-              {renderOption(days, tempDate.getDate(), (val) => setPart("day", val))}
-              {renderOption(months, tempDate.getMonth() + 1, (val) => setPart("month", val))}
-              {renderOption(years, tempDate.getFullYear(), (val) => setPart("year", val))}
+              <ScrollPickerColumn
+                data={days}
+                selected={tempDate.getDate()}
+                onSelect={(val) => setPart("day", val)}
+                accentColor={accentColor}
+                textColor={textColor}
+              />
+              <ScrollPickerColumn
+                data={months}
+                selected={tempDate.getMonth() + 1}
+                onSelect={(val) => setPart("month", val)}
+                accentColor={accentColor}
+                textColor={textColor}
+              />
+              <ScrollPickerColumn
+                data={years}
+                selected={tempDate.getFullYear()}
+                onSelect={(val) => setPart("year", val)}
+                accentColor={accentColor}
+                textColor={textColor}
+              />
             </View>
           )}
+
+          <TouchableOpacity onPress={toggleMode} style={styles.toggleBtn}>
+            <Text style={{ color: accentColor, fontWeight: "600" }}>
+              Switch to {pickerMode === "time" ? "Date" : "Time"}
+            </Text>
+          </TouchableOpacity>
 
           <View style={styles.actions}>
             <TouchableOpacity onPress={handleCancel} style={styles.cancelBtn}>
@@ -153,7 +243,6 @@ const CustomDateTimePicker: React.FC<CustomDateTimePickerProps> = ({
 
 export default CustomDateTimePicker;
 
-// 🎨 Styles
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -179,17 +268,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   option: {
-    padding: 10,
-    margin: 5,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginVertical: 3,
     borderRadius: 10,
   },
   optionText: {
     fontSize: 18,
+    textAlign: "center",
   },
   colon: {
     fontSize: 22,
     fontWeight: "600",
     marginHorizontal: 5,
+  },
+  toggleBtn: {
+    alignSelf: "center",
+    marginTop: 15,
   },
   actions: {
     flexDirection: "row",
