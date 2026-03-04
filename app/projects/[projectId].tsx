@@ -243,14 +243,14 @@ export default function ProjectScreen(){
     const [currentPage, setCurrentPage] = useState(1);
     const filesPerPage = 10;
     
-    const allCategories: (ResourceFileTypeCategory | "All")[] = [
-        "All",
-        "Video",
-        "Image",
-        "Document",
-        "Audio",
-        "Other",
-    ];
+    // const allCategories: (ResourceFileTypeCategory | "All")[] = [
+    //     "All",
+    //     "Video",
+    //     "Image",
+    //     "Document",
+    //     "Audio",
+    //     "Other",
+    // ];
     
     const categoryFilteredFiles =
         selectedResourceCategory === "All"
@@ -270,6 +270,11 @@ export default function ProjectScreen(){
     useEffect(() => {
         setCurrentPage(1);
     }, [selectedResourceCategory]);
+
+    const startIndex = (currentPage - 1) * filesPerPage;
+    const endIndex = startIndex + filesPerPage;
+    const paginatedFiles = categoryFilteredFiles.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(categoryFilteredFiles.length / filesPerPage);
 
     return(
         <ThemedView style={styles.page}>
@@ -375,9 +380,57 @@ export default function ProjectScreen(){
                         </ThemedView>
                     )))}
                     {selectedCategory === 'Resources' && (
-                        categoryFilteredFiles.map((resource, index) => (
-                            <ResourceListCard key={index} file={resource} />
-                        ))
+                        <ThemedView>
+                            {paginatedFiles.map((resource, index) => (
+                                <ResourceListCard key={index} file={resource} />
+                            ))}
+                            <ThemedView
+                            style={[
+                                styles.paginationContainer,
+                                { backgroundColor: theme.background },
+                            ]}
+                            >
+                            <Pressable
+                                disabled={currentPage === 1}
+                                onPress={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                style={[
+                                styles.paginationButton,
+                                { backgroundColor: theme.primary || "#2A52BE" },
+                                currentPage === 1 && [
+                                    styles.paginationButtonDisabled,
+                                    { backgroundColor: "rgba(1, 119, 251, 0.1)" },
+                                ],
+                                ]}
+                            >
+                                <ThemedText style={[{ color: theme.secondary },
+                                currentPage === 1 && {color: theme.primary}
+                                ]}>Previous</ThemedText>
+                            </Pressable>
+                
+                            <ThemedText
+                                style={{ color: theme.text }}
+                            >{`Page ${currentPage} of ${totalPages}`}</ThemedText>
+                
+                            <Pressable
+                                disabled={currentPage === totalPages}
+                                onPress={() =>
+                                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                                }
+                                style={[
+                                styles.paginationButton,
+                                { backgroundColor: theme.primary || "#2A52BE" },
+                                currentPage === totalPages && [
+                                    styles.paginationButtonDisabled,
+                                    { backgroundColor: 'rgba(1, 119, 251, 0.1)' },
+                                ],
+                                ]}
+                            >
+                                <ThemedText style={[{ color: theme.secondary },
+                                currentPage === totalPages && {color: theme.primary}
+                                ]}>Next</ThemedText>
+                            </Pressable>
+                            </ThemedView>
+                        </ThemedView>
                     )}
                 </ThemedView>
             </ParallaxScrollView>
@@ -466,5 +519,19 @@ const styles = StyleSheet.create({
         paddingVertical: 8,
         paddingHorizontal: 15,
         borderRadius: 8,
+    },
+    paginationContainer: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 20,
+        paddingHorizontal: 10,
+    },
+    paginationButton: {
+        padding: 8,
+        borderRadius: 6,
+    },
+    paginationButtonDisabled: {
+        backgroundColor: "#aaa",
     },
 })
