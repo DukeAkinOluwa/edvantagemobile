@@ -15,9 +15,16 @@ export default function NotificationsPage() {
 
   const loadNotifications = async () => {
     try {
+      const info = await FileSystem.getInfoAsync(NOTIFICATIONS_FILE);
+      if (!info.exists) return; // Exit if file doesn't exist yet
+
       const content = await FileSystem.readAsStringAsync(NOTIFICATIONS_FILE);
-      const notifications = JSON.parse(content) || [];
-      setNotifications(notifications);
+      const parsedData = JSON.parse(content) || [];
+      
+      // FILTER: Only keep items that have the required content structure
+      const validNotifications = parsedData.filter((item: any) => item && item.content);
+      
+      setNotifications(validNotifications);
     } catch (error) {
       console.error("Error loading notifications:", error);
     }
@@ -58,13 +65,13 @@ export default function NotificationsPage() {
       </View>
       <View style={styles.textContainer}>
         <ThemedText style={{ color: theme.text }}>
-          {item.content.title}
+          {item.content?.title ?? "Notification"}
         </ThemedText>
         <ThemedText style={{ color: theme.text }}>
-          {item.content.body}
+          {item.content?.body ?? "No details provided."}
         </ThemedText>
         <ThemedText style={{ color: theme.text, fontSize: 12 }}>
-          {new Date(item.date).toLocaleString()}
+          {item.date ? new Date(item.date).toLocaleString() : "Recently"}
         </ThemedText>
       </View>
     </ThemedView>
@@ -79,9 +86,10 @@ export default function NotificationsPage() {
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item, index) => index.toString()}
+        contentContainerStyle={notifications.length === 0 && { flex: 1, justifyContent: 'center' }}
         ListEmptyComponent={
           <ThemedText
-            style={{ color: theme.text, textAlign: "center", marginTop: 20 }}
+            style={{ color: theme.text, textAlign: "center"}}
           >
             No notifications available.
           </ThemedText>
