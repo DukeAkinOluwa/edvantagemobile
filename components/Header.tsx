@@ -103,7 +103,7 @@ export const NavigationHeader = ({ title }: { title: string }) => {
       const fileExists = await FileSystem.getInfoAsync(NOTIFICATIONS_FILE);
       if (!fileExists.exists) {
         setNewNotificationCount(0);
-        console.log("Header: Badge count updated to: 0 (file not found)");
+        // console.log("Header: Badge count updated to: 0 (file not found)");
         return;
       }
 
@@ -111,7 +111,7 @@ export const NavigationHeader = ({ title }: { title: string }) => {
       const notifications = JSON.parse(content) || [];
       const newCount = notifications.filter((n: any) => !n.read).length;
       setNewNotificationCount(newCount);
-      console.log("Header: Badge count updated to:", newCount);
+      // console.log("Header: Badge count updated to:", newCount);
     } catch (error) {
       console.error("Header: Error updating notification count:", error);
     }

@@ -56,9 +56,6 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-
-  console.log(selectedDate)
-
   // One-time cleanup and re-scheduling of notifications
   useEffect(() => {
     const initializeNotifications = async () => {
