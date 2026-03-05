@@ -31,7 +31,7 @@ export default function SignUpPage() {
     lastName: "",
     email: "",
     phoneNumber: "",
-    countryCode: "+1",
+    countryCode: "+234",
     password: "",
     confirmPassword: "",
     university: "",
@@ -65,9 +65,9 @@ export default function SignUpPage() {
     Constants.expoConfig?.extra?.apiUrl || "https://edvantage.com.ng/api";
 
   const countries = [
+    { label: "Nigeria", value: "+234", flag: "🇳🇬" },
     { label: "United States", value: "+1", flag: "🇺🇸" },
     { label: "United Kingdom", value: "+44", flag: "🇬🇧" },
-    { label: "Nigeria", value: "+234", flag: "🇳🇬" },
     { label: "Canada", value: "+1", flag: "🇨🇦" },
   ];
 
