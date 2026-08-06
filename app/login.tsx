@@ -1,0 +1,203 @@
+import { useAuth } from "@/context/AuthContext";
+import { useTheme, useUserData } from "@/components/Header";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
+import { useGlobalStyles } from "@/styles/globalStyles";
+import { useRouter } from "expo-router";
+import React, { memo, useEffect, useState } from "react";
+import {
+  Alert,
+  BackHandler,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+} from "react-native";
+
+const ProfileImage = memo(
+  ({ uri, borderColor }: { uri: string; borderColor: string }) => (
+    <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
+  )
+);
+
+export default function LoginPage() {
+  const { theme } = useTheme();
+  const { userData, setUserData } = useUserData();
+  const { signIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { screenWidth } = useResponsiveDimensions();
+  const globalStyles = useGlobalStyles();
+  const router = useRouter();
+
+  // Handle Android back button to close the app
+  useEffect(() => {
+    if (Platform.OS === "android") {
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        () => {
+          BackHandler.exitApp();
+          return true;
+        }
+      );
+      return () => backHandler.remove();
+    }
+  }, []);
+
+  const handleLogin = async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      // Basic client-side validation
+      if (!email.trim() || !password.trim()) {
+        throw new Error("Please fill in both email and password.");
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error("Invalid email address.");
+      }
+
+      // Firebase Auth sign in
+      await signIn(email.trim(), password.trim());
+
+      router.replace("/(tabs)");
+      Alert.alert("Success", "Logged in successfully!");
+    } catch (err: any) {
+      // Map Firebase error codes to friendly messages
+      let message = "Failed to log in.";
+      if (err?.code === "auth/user-not-found" || err?.code === "auth/wrong-password") {
+        message = "Invalid email or password.";
+      } else if (err?.code === "auth/invalid-email") {
+        message = "Invalid email address.";
+      } else if (err?.code === "auth/too-many-requests") {
+        message = "Too many attempts. Please try again later.";
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
+      Alert.alert("Error", message);
+      console.error("Login error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (error) {
+    return (
+      <ThemedView
+        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+      >
+        <ThemedText type="base" style={{ color: theme.error }}>
+          Error: {error}
+        </ThemedText>
+        <ThemedText type="base">
+          Please check the console for details.
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+
+  const responsiveStyles = StyleSheet.create({
+    scrollContainer: {
+      width: screenWidth - 30,
+    },
+  });
+
+  return (
+    <ThemedView
+      style={{
+        flex: 1,
+        backgroundColor: theme.primary,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.primary }}
+        contentContainerStyle={[
+          styles.scrollContainer,
+          responsiveStyles.scrollContainer,
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <ThemedView style={styles.card}>
+          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+            Welcome Back
+          </ThemedText>
+          <ThemedText style={[globalStyles.semiLargeText, { marginBottom: 5 }]}>
+            Log In to your account
+          </ThemedText>
+
+          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+            Email
+          </ThemedText>
+          <TextInput
+            style={[styles.input, globalStyles.baseText]}
+            keyboardType="email-address"
+            placeholder="Type in your Email *"
+            placeholderTextColor={theme.placeholder}
+            value={email}
+            onChangeText={setEmail}
+          />
+
+          <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
+            Password
+          </ThemedText>
+          <TextInput
+            style={[styles.input, globalStyles.baseText]}
+            secureTextEntry
+            placeholder="Type in your Password *"
+            placeholderTextColor={theme.placeholder}
+            value={password}
+            onChangeText={setPassword}
+          />
+
+          <TouchableOpacity onPress={handleLogin}>
+            <ThemedView style={[globalStyles.button1, { marginBottom: 10 }]}>
+              <ThemedText style={globalStyles.actionText2}>Continue</ThemedText>
+            </ThemedView>
+          </TouchableOpacity>
+        </ThemedView>
+      </ScrollView>
+    </ThemedView>
+  );
+}
+
+const styles = StyleSheet.create({
+  profilePic: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  input: {
+    width: "100%",
+    borderWidth: 0.9,
+    borderRadius: 6,
+    padding: Platform.OS === "ios" ? 12 : 10,
+    marginBottom: 12,
+    fontFamily: "Montserrat-Regular",
+  },
+  card: {
+    width: "100%",
+    padding: 15,
+    borderRadius: 15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 4,
+    marginBottom: 20,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    alignItems: "center",
+    paddingVertical: 20,
+    justifyContent: "center",
+  },
+});

@@ -1,0 +1,440 @@
+// lib/firestoreService.ts
+// Typed Firestore CRUD helpers for Edvantae Mobile
+// Collections: users, tasks, chatRooms, messages
+
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  Timestamp,
+  Unsubscribe,
+  updateDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
+import { db } from "./firebase";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  uid?: string;
+  role?: "student" | "lecturer" | "admin";
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  email?: string;
+  bio?: string;
+  dob?: string;
+  gender?: string;
+  profilePic?: string;
+  course?: string;
+  level?: string;
+  department?: string;
+  faculty?: string;
+  university?: string;
+  phoneNumber?: string;
+  themeMode?: "system" | "light" | "dark";
+  allowNotifications?: boolean;
+  allowAlarms?: boolean;
+  language?: string;
+  isOnline?: boolean;
+  lastSeen?: Timestamp;
+  privacy?: {
+    showOnlineStatus: boolean;
+    showProfileToGroups: boolean;
+    allowFriendRequests: boolean;
+    dataCollection: boolean;
+  };
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
+}
+
+export interface Task {
+  id?: string;
+  title: string;
+  description: string;
+  location: string;
+  isGroupEvent: boolean;
+  startTime: string;
+  endTime: string;
+  startTimeAMPM: string;
+  endTimeAMPM: string;
+  uid: string;
+  createdAt?: Timestamp;
+}
+
+export interface ChatRoom {
+  id?: string;
+  name: string;
+  participants: string[];          // array of UIDs
+  participantNames?: Record<string, string>; // uid -> displayName
+  participantAvatars?: Record<string, string>; // uid -> profilePic URL
+  lastMessage?: string;
+  lastMessageTime?: Timestamp;
+  lastMessageSenderUid?: string;
+  isGroup: boolean;
+  avatarUrl?: string;              // group avatar or other person's pic
+  unreadCounts?: Record<string, number>; // uid -> unread count
+  createdAt?: Timestamp;
+}
+
+export interface Message {
+  id?: string;
+  text: string;
+  sender: string;                  // UID
+  senderName?: string;
+  senderAvatar?: string;
+  timestamp?: Timestamp;
+  type?: "text" | "image" | "document" | "voice";
+  readBy?: string[];               // UIDs that have read this message
+  // Image fields
+  imageUrl?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  // Document fields
+  documentUrl?: string;
+  documentName?: string;
+  documentSize?: number;
+  documentMime?: string;
+  // Upload progress (local only, not stored in Firestore)
+  uploadProgress?: number;
+  status?: "sending" | "sent" | "failed";
+}
+
+// ─── Collection references ────────────────────────────────────────────────────
+
+const usersCol = () => collection(db, "users");
+const tasksCol = () => collection(db, "tasks");
+const chatRoomsCol = () => collection(db, "chatRooms");
+const messagesCol = (chatId: string) =>
+  collection(db, "chatRooms", chatId, "messages");
+
+// ─── User Profile ─────────────────────────────────────────────────────────────
+
+/** Create a user profile document at users/{uid} */
+export async function createUserProfile(
+  uid: string,
+  data: Partial<UserProfile>
+): Promise<void> {
+  await setDoc(doc(usersCol(), uid), {
+    ...data,
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/** Fetch a user profile by uid */
+export async function getUserProfile(
+  uid: string
+): Promise<UserProfile | null> {
+  const snap = await getDoc(doc(usersCol(), uid));
+  if (!snap.exists()) return null;
+  return { uid: snap.id, ...snap.data() } as UserProfile;
+}
+
+/** Update a user profile (partial merge) */
+export async function updateUserProfile(
+  uid: string,
+  data: Partial<UserProfile>
+): Promise<void> {
+  await updateDoc(doc(usersCol(), uid), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
+
+/** Fetch all tasks for a user */
+export async function getUserTasks(uid: string): Promise<Task[]> {
+  const q = query(tasksCol(), where("uid", "==", uid));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+}
+
+/** Create a task */
+export async function createTask(task: Omit<Task, "id">): Promise<string> {
+  const ref = await addDoc(tasksCol(), {
+    ...task,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+/** Update a task */
+export async function updateTask(
+  taskId: string,
+  data: Partial<Task>
+): Promise<void> {
+  await updateDoc(doc(tasksCol(), taskId), data);
+}
+
+/** Delete a task */
+export async function deleteTask(taskId: string): Promise<void> {
+  await deleteDoc(doc(tasksCol(), taskId));
+}
+
+// ─── Chat Rooms ───────────────────────────────────────────────────────────────
+
+/** Fetch all chat rooms a user participates in */
+export async function getUserChatRooms(uid: string): Promise<ChatRoom[]> {
+  const q = query(
+    chatRoomsCol(),
+    where("participants", "array-contains", uid)
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+}
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
+
+/** Subscribe to real-time messages in a chat room */
+export function subscribeToMessages(
+  chatId: string,
+  callback: (messages: Message[]) => void
+): Unsubscribe {
+  const q = query(messagesCol(chatId), orderBy("timestamp", "asc"));
+  return onSnapshot(q, (snap) => {
+    const messages = snap.docs.map(
+      (d) => ({ id: d.id, ...d.data() } as Message)
+    );
+    callback(messages);
+    // Also update local AsyncStorage cache
+    AsyncStorage.setItem(
+      `chat_messages_${chatId}`,
+      JSON.stringify(messages)
+    ).catch(console.error);
+  });
+}
+
+/** Send a message to a chat room */
+export async function sendMessage(
+  chatId: string,
+  message: Omit<Message, "id" | "timestamp">,
+  senderUid: string,
+  participantUids: string[]
+): Promise<void> {
+  const batch = writeBatch(db);
+
+  // Add the message document
+  const msgRef = doc(messagesCol(chatId));
+  batch.set(msgRef, {
+    ...message,
+    timestamp: serverTimestamp(),
+    readBy: [senderUid],
+  });
+
+  // Build unread increment for all participants except sender
+  const unreadUpdate: Record<string, any> = {
+    lastMessage: message.text,
+    lastMessageTime: serverTimestamp(),
+    lastMessageSenderUid: senderUid,
+  };
+  participantUids.forEach((uid) => {
+    if (uid !== senderUid) {
+      // Firestore increment — use FieldValue or manual increment
+      unreadUpdate[`unreadCounts.${uid}`] = { _increment: 1 };
+    }
+  });
+
+  // Update room metadata
+  await updateDoc(doc(chatRoomsCol(), chatId), {
+    lastMessage: message.text,
+    lastMessageTime: serverTimestamp(),
+    lastMessageSenderUid: senderUid,
+  });
+
+  await batch.commit();
+
+  // Increment unread for non-sender participants manually (batch doesn't support FieldValue well cross-platform)
+  const incrementPromises = participantUids
+    .filter((uid) => uid !== senderUid)
+    .map(async (uid) => {
+      const roomSnap = await getDoc(doc(chatRoomsCol(), chatId));
+      if (roomSnap.exists()) {
+        const current = roomSnap.data()?.unreadCounts?.[uid] ?? 0;
+        await updateDoc(doc(chatRoomsCol(), chatId), {
+          [`unreadCounts.${uid}`]: current + 1,
+        });
+      }
+    });
+  await Promise.all(incrementPromises);
+}
+
+// ─── User Search ──────────────────────────────────────────────────────────────
+
+/**
+ * Search users by firstName, lastName, or email prefix.
+ * Returns up to 20 results. Excludes the current user.
+ */
+export async function searchUsers(
+  queryStr: string,
+  currentUid: string
+): Promise<UserProfile[]> {
+  if (!queryStr.trim()) return [];
+
+  const term = queryStr.trim().toLowerCase();
+  const results = new Map<string, UserProfile>();
+
+  // Search by displayName prefix
+  const nameQ = query(
+    usersCol(),
+    where("displayName", ">=", queryStr),
+    where("displayName", "<=", queryStr + "\uf8ff"),
+    limit(20)
+  );
+
+  // Search by email prefix
+  const emailQ = query(
+    usersCol(),
+    where("email", ">=", term),
+    where("email", "<=", term + "\uf8ff"),
+    limit(20)
+  );
+
+  const [nameSnap, emailSnap] = await Promise.all([
+    getDocs(nameQ),
+    getDocs(emailQ),
+  ]);
+
+  [...nameSnap.docs, ...emailSnap.docs].forEach((d) => {
+    if (d.id !== currentUid) {
+      results.set(d.id, { uid: d.id, ...d.data() } as UserProfile);
+    }
+  });
+
+  return Array.from(results.values()).slice(0, 20);
+}
+
+// ─── Create / Find Direct Chat ────────────────────────────────────────────────
+
+/**
+ * Find an existing 1-on-1 chat room between two users or create one.
+ * Returns the chatRoom id.
+ */
+export async function getOrCreateDirectChat(
+  myUid: string,
+  myName: string,
+  myAvatar: string | undefined,
+  otherUid: string,
+  otherName: string,
+  otherAvatar: string | undefined
+): Promise<string> {
+  // Look for an existing non-group room with exactly these two participants
+  const q = query(
+    chatRoomsCol(),
+    where("participants", "array-contains", myUid),
+    where("isGroup", "==", false)
+  );
+  const snap = await getDocs(q);
+  const existing = snap.docs.find((d) => {
+    const p: string[] = d.data().participants ?? [];
+    return p.includes(otherUid) && p.length === 2;
+  });
+
+  if (existing) return existing.id;
+
+  // Create new direct chat room
+  const ref = await addDoc(chatRoomsCol(), {
+    name: otherName,           // shown from the other person's perspective
+    participants: [myUid, otherUid],
+    participantNames: { [myUid]: myName, [otherUid]: otherName },
+    participantAvatars: {
+      [myUid]: myAvatar ?? "",
+      [otherUid]: otherAvatar ?? "",
+    },
+    isGroup: false,
+    lastMessage: "",
+    unreadCounts: { [myUid]: 0, [otherUid]: 0 },
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+// ─── Create Group Chat ────────────────────────────────────────────────────────
+
+/**
+ * Create a named group chat with multiple participants.
+ * Returns the new chatRoom id.
+ */
+export async function createGroupChat(
+  groupName: string,
+  participantUids: string[],
+  participantNames: Record<string, string>,
+  participantAvatars: Record<string, string>
+): Promise<string> {
+  const unreadCounts: Record<string, number> = {};
+  participantUids.forEach((uid) => (unreadCounts[uid] = 0));
+
+  const ref = await addDoc(chatRoomsCol(), {
+    name: groupName,
+    participants: participantUids,
+    participantNames,
+    participantAvatars,
+    isGroup: true,
+    lastMessage: "",
+    unreadCounts,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+// ─── Real-time Chat Room List ─────────────────────────────────────────────────
+
+/**
+ * Subscribe to real-time updates for all chat rooms a user belongs to.
+ * Returns an unsubscribe function.
+ */
+export function subscribeToChatRooms(
+  uid: string,
+  callback: (rooms: ChatRoom[]) => void
+): Unsubscribe {
+  const q = query(
+    chatRoomsCol(),
+    where("participants", "array-contains", uid),
+    orderBy("lastMessageTime", "desc")
+  );
+  return onSnapshot(q, (snap) => {
+    const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+    callback(rooms);
+  });
+}
+
+// ─── Mark Room as Read ────────────────────────────────────────────────────────
+
+/** Reset the unread count for a user in a specific chat room. */
+export async function markRoomAsRead(
+  chatId: string,
+  uid: string
+): Promise<void> {
+  await updateDoc(doc(chatRoomsCol(), chatId), {
+    [`unreadCounts.${uid}`]: 0,
+  });
+}
+
+// ─── Presence ─────────────────────────────────────────────────────────────────
+
+/**
+ * Subscribe to real-time presence of another user.
+ * Returns { isOnline, lastSeen } on each update.
+ */
+export function subscribeToOtherPresence(
+  otherUid: string,
+  callback: (isOnline: boolean, lastSeen: Timestamp | null) => void
+): Unsubscribe {
+  return onSnapshot(doc(usersCol(), otherUid), (snap) => {
+    const data = snap.data();
+    callback(data?.isOnline ?? false, data?.lastSeen ?? null);
+  });
+}
