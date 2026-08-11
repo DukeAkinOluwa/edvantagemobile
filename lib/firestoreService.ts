@@ -83,6 +83,7 @@ export interface ChatRoom {
   lastMessageTime?: Timestamp;
   lastMessageSenderUid?: string;
   isGroup: boolean;
+  isPublic?: boolean;              // whether the group is discoverable
   avatarUrl?: string;              // group avatar or other person's pic
   unreadCounts?: Record<string, number>; // uid -> unread count
   createdAt?: Timestamp;
@@ -202,9 +203,15 @@ export async function getUserChatRooms(uid: string): Promise<ChatRoom[]> {
 /** Subscribe to real-time messages in a chat room */
 export function subscribeToMessages(
   chatId: string,
+  messageLimit: number,
   callback: (messages: Message[]) => void
 ): Unsubscribe {
-  const q = query(messagesCol(chatId), orderBy("timestamp", "asc"));
+  // Order descending so newest is first (for inverted FlatList)
+  const q = query(
+    messagesCol(chatId),
+    orderBy("timestamp", "desc"),
+    limit(messageLimit)
+  );
   return onSnapshot(q, (snap) => {
     const messages = snap.docs.map(
       (d) => ({ id: d.id, ...d.data() } as Message)
@@ -287,11 +294,19 @@ export async function searchUsers(
   const term = queryStr.trim().toLowerCase();
   const results = new Map<string, UserProfile>();
 
-  // Search by displayName prefix
-  const nameQ = query(
+  // Search by firstName prefix
+  const firstNameQ = query(
     usersCol(),
-    where("displayName", ">=", queryStr),
-    where("displayName", "<=", queryStr + "\uf8ff"),
+    where("firstName", ">=", queryStr),
+    where("firstName", "<=", queryStr + "\uf8ff"),
+    limit(20)
+  );
+
+  // Search by lastName prefix
+  const lastNameQ = query(
+    usersCol(),
+    where("lastName", ">=", queryStr),
+    where("lastName", "<=", queryStr + "\uf8ff"),
     limit(20)
   );
 
@@ -303,12 +318,13 @@ export async function searchUsers(
     limit(20)
   );
 
-  const [nameSnap, emailSnap] = await Promise.all([
-    getDocs(nameQ),
+  const [firstNameSnap, lastNameSnap, emailSnap] = await Promise.all([
+    getDocs(firstNameQ),
+    getDocs(lastNameQ),
     getDocs(emailQ),
   ]);
 
-  [...nameSnap.docs, ...emailSnap.docs].forEach((d) => {
+  [...firstNameSnap.docs, ...lastNameSnap.docs, ...emailSnap.docs].forEach((d) => {
     if (d.id !== currentUid) {
       results.set(d.id, { uid: d.id, ...d.data() } as UserProfile);
     }
@@ -372,7 +388,8 @@ export async function createGroupChat(
   groupName: string,
   participantUids: string[],
   participantNames: Record<string, string>,
-  participantAvatars: Record<string, string>
+  participantAvatars: Record<string, string>,
+  isPublic: boolean = false
 ): Promise<string> {
   const unreadCounts: Record<string, number> = {};
   participantUids.forEach((uid) => (unreadCounts[uid] = 0));
@@ -383,11 +400,64 @@ export async function createGroupChat(
     participantNames,
     participantAvatars,
     isGroup: true,
+    isPublic,
     lastMessage: "",
     unreadCounts,
     createdAt: serverTimestamp(),
   });
   return ref.id;
+}
+
+// ─── Public Groups Discovery ──────────────────────────────────────────────────
+
+/**
+ * Search for public groups by name prefix.
+ */
+export async function searchPublicGroups(queryStr: string): Promise<ChatRoom[]> {
+  if (!queryStr.trim()) return [];
+
+  const term = queryStr.trim();
+  
+  const q = query(
+    chatRoomsCol(),
+    where("isPublic", "==", true),
+    where("name", ">=", term),
+    where("name", "<=", term + "\uf8ff"),
+    limit(20)
+  );
+
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+}
+
+/**
+ * Join an existing public group chat.
+ */
+export async function joinGroupChat(
+  chatId: string,
+  uid: string,
+  name: string,
+  avatar: string
+): Promise<void> {
+  const roomRef = doc(chatRoomsCol(), chatId);
+  const snap = await getDoc(roomRef);
+  
+  if (!snap.exists()) throw new Error("Chat room not found.");
+  
+  const roomData = snap.data();
+  if (!roomData.isPublic) throw new Error("This group is not public.");
+  
+  if ((roomData.participants || []).includes(uid)) {
+    return; // Already a member
+  }
+
+  // Update room to include the new user
+  await updateDoc(roomRef, {
+    participants: [...(roomData.participants || []), uid],
+    [`participantNames.${uid}`]: name,
+    [`participantAvatars.${uid}`]: avatar,
+    [`unreadCounts.${uid}`]: 0
+  });
 }
 
 // ─── Real-time Chat Room List ─────────────────────────────────────────────────
@@ -402,12 +472,20 @@ export function subscribeToChatRooms(
 ): Unsubscribe {
   const q = query(
     chatRoomsCol(),
-    where("participants", "array-contains", uid),
-    orderBy("lastMessageTime", "desc")
+    where("participants", "array-contains", uid)
   );
   return onSnapshot(q, (snap) => {
     const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+    // Sort rooms client-side by lastMessageTime descending
+    rooms.sort((a, b) => {
+      const t1 = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : (a.lastMessageTime ? new Date(a.lastMessageTime as any).getTime() : 0);
+      const t2 = b.lastMessageTime?.toMillis ? b.lastMessageTime.toMillis() : (b.lastMessageTime ? new Date(b.lastMessageTime as any).getTime() : 0);
+      return t2 - t1;
+    });
     callback(rooms);
+  }, (error) => {
+    console.error("subscribeToChatRooms error:", error);
+    callback([]);
   });
 }
 

@@ -1,3 +1,21 @@
+import {
+  ThemeContext,
+  UserDataContext,
+  useTheme,
+  useUserData,
+  type ThemeContextType,
+  type UserDataContextType,
+} from "./HeaderContext";
+
+export {
+  ThemeContext,
+  UserDataContext,
+  useTheme,
+  useUserData,
+  type ThemeContextType,
+  type UserDataContextType,
+};
+
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { FontAwesome6 } from "@expo/vector-icons";
 import MaskedView from "@react-native-masked-view/masked-view";
@@ -17,67 +35,6 @@ import { Image, StyleSheet, TouchableOpacity, View } from "react-native";
 import { lightTheme } from "../assets/colors";
 import { requestNotificationPermissions } from "../utils/notifications";
 import { ThemedText } from "./ThemedText";
-
-interface ThemeContextType {
-  theme: typeof lightTheme;
-  setThemeMode: (mode: "system" | "light" | "dark") => void;
-}
-
-interface UserDataContextType {
-  userData: {
-    firstName?: string;
-    lastName?: string;
-    bio?: string;
-    dob?: string;
-    gender?: string;
-    profilePic?: string;
-    course?: string;
-    level?: string;
-    department?: string;
-    faculty?: string;
-    university?: string;
-    email?: string;
-    phoneNumber?: string;
-    themeMode?: string;
-    allowNotifications?: boolean;
-    allowAlarms?: boolean;
-    language?: string;
-    privacy?: {
-      showOnlineStatus: boolean;
-      showProfileToGroups: boolean;
-      allowFriendRequests: boolean;
-      dataCollection: boolean;
-    };
-  };
-  setUserData: (data: Partial<UserDataContextType["userData"]>) => void;
-  setIsFirstLaunch?: (value: boolean) => void;
-}
-
-export const ThemeContext = createContext<ThemeContextType>({
-  theme: lightTheme,
-  setThemeMode: () => {},
-});
-
-export const UserDataContext = createContext<UserDataContextType>({
-  userData: { university: "" },
-  setUserData: () => {},
-});
-
-export const useTheme = () => {
-  const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
-};
-
-export const useUserData = () => {
-  const context = useContext(UserDataContext);
-  if (!context) {
-    throw new Error("useUserData must be used within a UserDataProvider");
-  }
-  return context;
-};
 
 const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
@@ -103,7 +60,7 @@ export const NavigationHeader = ({ title }: { title: string }) => {
       const fileExists = await FileSystem.getInfoAsync(NOTIFICATIONS_FILE);
       if (!fileExists.exists) {
         setNewNotificationCount(0);
-        console.log("Header: Badge count updated to: 0 (file not found)");
+
         return;
       }
 
@@ -111,7 +68,7 @@ export const NavigationHeader = ({ title }: { title: string }) => {
       const notifications = JSON.parse(content) || [];
       const newCount = notifications.filter((n: any) => !n.read).length;
       setNewNotificationCount(newCount);
-      console.log("Header: Badge count updated to:", newCount);
+
     } catch (error) {
       console.error("Header: Error updating notification count:", error);
     }

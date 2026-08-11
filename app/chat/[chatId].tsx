@@ -53,6 +53,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,14 +93,12 @@ function getDocumentIcon(mime: string): string {
 
 function StatusTick({
   message,
-  room,
+  isRead,
   myUid,
-  isGroup,
 }: {
   message: Message;
-  room: ChatRoom | null;
+  isRead: boolean;
   myUid: string;
-  isGroup: boolean;
 }) {
   if (message.sender !== myUid) return null;
 
@@ -112,17 +111,8 @@ function StatusTick({
     return <FontAwesome6 name="circle-exclamation" size={10} color="#ff4d4d" />;
   }
 
-  // Determine read status from unread counts
-  let isRead = false;
-  if (room && !isGroup) {
-    const otherUid = room.participants.find((p) => p !== myUid) ?? "";
-    isRead = (room.unreadCounts?.[otherUid] ?? 0) === 0;
-  } else if (room && isGroup) {
-    // Read in group = ALL other participants have read (unread = 0)
-    isRead = room.participants
-      .filter((p) => p !== myUid)
-      .every((p) => (room.unreadCounts?.[p] ?? 0) === 0);
-  }
+  // Determine read status from boolean prop
+  // (calculated by parent to avoid passing full room object which causes re-renders)
 
   // Double tick — blue = read, grey = delivered
   return (
@@ -163,12 +153,12 @@ function ImageViewer({
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
-function MessageBubble({
+const MessageBubble = React.memo(function MessageBubble({
   item,
   isMe,
   isGroup,
   showSender,
-  room,
+  isRead,
   myUid,
   theme,
 }: {
@@ -176,7 +166,7 @@ function MessageBubble({
   isMe: boolean;
   isGroup: boolean;
   showSender: boolean;
-  room: ChatRoom | null;
+  isRead: boolean;
   myUid: string;
   theme: any;
 }) {
@@ -225,7 +215,7 @@ function MessageBubble({
             <Text style={[styles.bubbleText, { color: textColor }]}>{item.text}</Text>
             <View style={styles.bubbleMeta}>
               <Text style={[styles.bubbleTime, { color: timeColor }]}>{formatMsgTime(item.timestamp)}</Text>
-              <StatusTick message={item} room={room} myUid={myUid} isGroup={isGroup} />
+              <StatusTick message={item} isRead={isRead} myUid={myUid} />
             </View>
           </View>
         )}
@@ -249,7 +239,7 @@ function MessageBubble({
               )}
               <View style={styles.bubbleMetaOverlay}>
                 <Text style={[styles.bubbleTime, { color: "#fff" }]}>{formatMsgTime(item.timestamp)}</Text>
-                <StatusTick message={item} room={room} myUid={myUid} isGroup={isGroup} />
+                <StatusTick message={item} isRead={isRead} myUid={myUid} />
               </View>
             </View>
             <ImageViewer
@@ -291,14 +281,22 @@ function MessageBubble({
             </View>
             <View style={styles.docMeta}>
               <Text style={[styles.bubbleTime, { color: timeColor }]}>{formatMsgTime(item.timestamp)}</Text>
-              <StatusTick message={item} room={room} myUid={myUid} isGroup={isGroup} />
+              <StatusTick message={item} isRead={isRead} myUid={myUid} />
             </View>
           </TouchableOpacity>
         )}
       </View>
     </Animated.View>
   );
-}
+}, (prev, next) => {
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.status === next.item.status &&
+    prev.item.uploadProgress === next.item.uploadProgress &&
+    prev.item.imageUrl === next.item.imageUrl &&
+    prev.isRead === next.isRead
+  );
+});
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
@@ -315,18 +313,20 @@ export default function ChatScreen() {
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [messageLimit, setMessageLimit] = useState(30);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherLastSeen, setOtherLastSeen] = useState<Timestamp | null>(null);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const myUid = user?.uid ?? "";
   const myName =
     profile?.displayName ??
     `${profile?.firstName ?? ""} ${profile?.lastName ?? ""}`.trim();
-  const myAvatar = profile?.profilePic;
+  const myAvatar = profile?.profilePic || "";
   const isGroupChat = isGroup === "true";
   const chatName = name ?? "Chat";
 
@@ -341,17 +341,34 @@ export default function ChatScreen() {
       .catch(console.error);
   }, [chatId, myUid]);
 
+  // Instantly load from cache to eliminate lag
+  useEffect(() => {
+    if (!chatId) return;
+    AsyncStorage.getItem(`chat_messages_${chatId}`)
+      .then((cached) => {
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.length > 0) {
+              setMessages(parsed);
+              setLoading(false);
+            }
+          } catch (e) {}
+        }
+      })
+      .catch(console.error);
+  }, [chatId]);
+
   // Real-time messages
   useEffect(() => {
     if (!chatId) return;
     markRoomAsRead(chatId, myUid).catch(console.error);
-    const unsub = subscribeToMessages(chatId, (msgs) => {
+    const unsub = subscribeToMessages(chatId, messageLimit, (msgs) => {
       setMessages(msgs);
       setLoading(false);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
     });
     return unsub;
-  }, [chatId, myUid]);
+  }, [chatId, myUid, messageLimit]);
 
   // Presence subscription (1-on-1 only)
   useEffect(() => {
@@ -378,8 +395,7 @@ export default function ChatScreen() {
       };
 
       // Show immediately
-      setMessages((prev) => [...prev, optimistic]);
-      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
+      setMessages((prev) => [optimistic, ...prev]);
 
       try {
         const participants = room?.participants ?? [myUid];
@@ -447,8 +463,7 @@ export default function ChatScreen() {
       status: "sending",
       timestamp: null as any,
     };
-    setMessages((prev) => [...prev, placeholder]);
-    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
+    setMessages((prev) => [placeholder, ...prev]);
 
     try {
       const { downloadUrl, fileSize } = await uploadChatImage(
@@ -546,48 +561,43 @@ export default function ChatScreen() {
   // ── Attachment sheet ────────────────────────────────────────────────────────
 
   const showAttachmentOptions = useCallback(() => {
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancel", "Camera", "Photo Library", "Document"],
-          cancelButtonIndex: 0,
-        },
-        (idx) => {
-          if (idx === 1) handlePickImage(true);
-          if (idx === 2) handlePickImage(false);
-          if (idx === 3) handlePickDocument();
-        }
-      );
-    } else {
-      Alert.alert("Attach", "Choose attachment type", [
-        { text: "Camera", onPress: () => handlePickImage(true) },
-        { text: "Photo Library", onPress: () => handlePickImage(false) },
-        { text: "Document", onPress: () => handlePickDocument() },
-        { text: "Cancel", style: "cancel" },
-      ]);
-    }
-  }, [handlePickImage, handlePickDocument]);
+    setShowAttachMenu(true);
+  }, []);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
   const renderMessage = useCallback(
     ({ item, index }: { item: Message; index: number }) => {
       const isMe = item.sender === myUid;
-      const prevItem = messages[index - 1];
-      const showSender = !prevItem || prevItem.sender !== item.sender;
+      const prev = messages[index + 1];
+      const showSender =
+        !prev ||
+        prev.sender !== item.sender ||
+        (item.timestamp?.toMillis() ?? 0) - (prev.timestamp?.toMillis() ?? 0) > 60000;
+
+      let isRead = false;
+      if (room && !isGroupChat) {
+        const otherUid = room.participants.find((p) => p !== myUid) ?? "";
+        isRead = (room.unreadCounts?.[otherUid] ?? 0) === 0;
+      } else if (room && isGroupChat) {
+        isRead = room.participants
+          .filter((p) => p !== myUid)
+          .every((p) => (room.unreadCounts?.[p] ?? 0) === 0);
+      }
+
       return (
         <MessageBubble
           item={item}
           isMe={isMe}
           isGroup={isGroupChat}
           showSender={showSender}
-          room={room}
+          isRead={isRead}
           myUid={myUid}
           theme={theme}
         />
       );
     },
-    [messages, myUid, isGroupChat, room, theme]
+    [myUid, isGroupChat, messages, room, theme]
   );
 
   return (
@@ -636,23 +646,28 @@ export default function ChatScreen() {
         <FlatList
           ref={flatListRef}
           data={messages}
+          inverted={true}
           keyExtractor={(item) =>
             item.id ?? item.timestamp?.toString() ?? Math.random().toString()
           }
           renderItem={renderMessage}
           contentContainerStyle={styles.messageList}
-          onContentSizeChange={() =>
-            flatListRef.current?.scrollToEnd({ animated: true })
-          }
-          onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          onEndReached={() => setMessageLimit((prev) => prev + 30)}
+          onEndReachedThreshold={0.5}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <FontAwesome6 name="comment-dots" size={40} color={theme.placeholder} />
-              <Text style={[styles.emptyText, { color: theme.placeholder }]}>
-                No messages yet. Say hello! 👋
-              </Text>
-            </View>
+            !loading ? (
+              <View style={styles.emptyState}>
+                <FontAwesome6 name="comment-dots" size={40} color={theme.placeholder} />
+                <Text style={[styles.emptyText, { color: theme.placeholder }]}>
+                  No messages yet. Say hello! 👋
+                </Text>
+              </View>
+            ) : null
           }
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
         />
       )}
 
@@ -699,6 +714,52 @@ export default function ChatScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* ── Attachment Menu ── */}
+      <Modal
+        visible={showAttachMenu}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowAttachMenu(false)}
+      >
+        <Pressable style={styles.attachOverlay} onPress={() => setShowAttachMenu(false)}>
+          <View style={[styles.attachSheet, { backgroundColor: theme.backgroundSecondary, paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.attachHandle} />
+            <View style={styles.attachOptionsRow}>
+              <TouchableOpacity
+                style={styles.attachOption}
+                onPress={() => { setShowAttachMenu(false); handlePickImage(true); }}
+              >
+                <View style={[styles.attachIconBg, { backgroundColor: "#FF2D55" }]}>
+                  <FontAwesome6 name="camera" size={24} color="#fff" />
+                </View>
+                <Text style={[styles.attachOptionText, { color: theme.text }]}>Camera</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.attachOption}
+                onPress={() => { setShowAttachMenu(false); handlePickImage(false); }}
+              >
+                <View style={[styles.attachIconBg, { backgroundColor: "#007AFF" }]}>
+                  <FontAwesome6 name="image" size={24} color="#fff" />
+                </View>
+                <Text style={[styles.attachOptionText, { color: theme.text }]}>Photo</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.attachOption}
+                onPress={() => { setShowAttachMenu(false); handlePickDocument(); }}
+              >
+                <View style={[styles.attachIconBg, { backgroundColor: "#5856D6" }]}>
+                  <FontAwesome6 name="file-lines" size={24} color="#fff" />
+                </View>
+                <Text style={[styles.attachOptionText, { color: theme.text }]}>Document</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
     </KeyboardAvoidingView>
   );
 }
@@ -861,4 +922,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
+  // Attachment Menu
+  attachOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  attachSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 20,
+    alignItems: "center",
+  },
+  attachHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "rgba(150,150,150,0.3)",
+    marginBottom: 20,
+  },
+  attachOptionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    width: "100%",
+  },
+  attachOption: {
+    alignItems: "center",
+    gap: 8,
+  },
+  attachIconBg: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  attachOptionText: {
+    fontSize: 13,
+    fontWeight: "500",
+  }
 });

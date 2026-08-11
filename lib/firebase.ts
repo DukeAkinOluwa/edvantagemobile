@@ -3,9 +3,11 @@
 // Uses the Firebase JS SDK (compatible with Expo managed workflow / Expo Go)
 
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+// @ts-ignore
+import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDQg1m8U65ZnXMa8Qo70aT8wuECKLbmITY",
@@ -18,9 +20,15 @@ const firebaseConfig = {
 };
 
 // Prevent re-initialization during hot reloads in development
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const isNewApp = getApps().length === 0;
+const app = isNewApp ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
+export const auth = isNewApp
+  ? initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    })
+  : getAuth(app);
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 

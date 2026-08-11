@@ -12,12 +12,14 @@ import {
 } from "@/lib/authService";
 import { UserProfile } from "@/lib/firestoreService";
 import { startPresenceTracking, stopPresenceTracking } from "@/utils/presence";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "firebase/auth";
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -30,6 +32,8 @@ interface AuthContextValue {
   profile: UserProfile | null;
   /** True while auth state is being resolved on startup */
   loading: boolean;
+  /** True while the Firestore profile is being fetched after auth resolves */
+  profileLoading: boolean;
   /** Sign in with email and password */
   signIn: (email: string, password: string) => Promise<void>;
   /** Sign up with full form data */
@@ -50,6 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // Ref to suppress the onAuthStateChange handler while signUp is running.
+  // When we call createUserWithEmailAndPassword, Firebase fires onAuthStateChanged
+  // immediately — before the Firestore profile document has been created. Without
+  // this guard the layout would briefly see (user ≠ null, profile === null) and
+  // redirect back to signUpPage.
+  const signingUpRef = useRef(false);
 
   // Load Firestore profile whenever the Firebase Auth user changes
   const loadProfile = useCallback(async (firebaseUser: User | null) => {
@@ -57,26 +69,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setProfile(null);
       return;
     }
+    setProfileLoading(true);
     try {
       const p = await fetchUserProfile(firebaseUser.uid);
       setProfile(p);
-    } catch (err) {
+    } catch (err: any) {
       console.error("AuthContext: Failed to load user profile", err);
+      // If permission is denied, the auth session is likely invalid
+      if (
+        err?.code === "permission-denied" ||
+        err?.message?.includes("permission-denied")
+      ) {
+        console.warn("AuthContext: Permission denied. Clearing invalid session.");
+        await signOut();
+        setUser(null);
+        setProfile(null);
+      }
+    } finally {
+      setProfileLoading(false);
     }
   }, []);
 
   // Subscribe to Firebase Auth state on mount
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
-      setUser(firebaseUser);
-      await loadProfile(firebaseUser);
-      setLoading(false);
-      // Start/stop presence tracking based on auth state
+      // Suppress intermediate auth events fired during signUp registration
+      if (signingUpRef.current) return;
+
       if (firebaseUser) {
-        startPresenceTracking(firebaseUser.uid);
+        try {
+          // Force-refresh token to verify the session is valid
+          await firebaseUser.getIdToken(true);
+          setUser(firebaseUser);
+          await loadProfile(firebaseUser);
+          startPresenceTracking(firebaseUser.uid);
+        } catch (err) {
+          console.error("AuthContext: Invalid or stale access token", err);
+          await signOut().catch(console.error);
+          setUser(null);
+          setProfile(null);
+          stopPresenceTracking();
+        }
       } else {
+        setUser(null);
+        setProfile(null);
         stopPresenceTracking();
       }
+      setLoading(false);
     });
     return () => {
       unsubscribe();
@@ -86,21 +125,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const firebaseUser = await signInWithEmail(email, password);
-    await loadProfile(firebaseUser);
-  }, [loadProfile]);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const firebaseUser = await signInWithEmail(email, password);
+      setUser(firebaseUser);
+      await loadProfile(firebaseUser);
+    },
+    [loadProfile]
+  );
 
-  const signUp = useCallback(async (data: SignUpData) => {
-    const firebaseUser = await signUpWithEmail(data);
-    await loadProfile(firebaseUser);
-  }, [loadProfile]);
+  const signUp = useCallback(
+    async (data: SignUpData) => {
+      // Block the auth-state listener while we're inside the registration flow
+      signingUpRef.current = true;
+      try {
+        const firebaseUser = await signUpWithEmail(data);
+        // Token is fresh — no need to getIdToken again
+        setUser(firebaseUser);
+        await loadProfile(firebaseUser);
+        startPresenceTracking(firebaseUser.uid);
+        setLoading(false);
+      } finally {
+        signingUpRef.current = false;
+      }
+    },
+    [loadProfile]
+  );
 
   const logout = useCallback(async () => {
     stopPresenceTracking();
     await signOut();
     setUser(null);
     setProfile(null);
+    // Clear all local cached data so a stale session can never bypass auth
+    try {
+      await AsyncStorage.multiRemove([
+        "userData",
+        "firstLaunch",
+        "tasks",
+        "scheduled_notifications",
+      ]);
+    } catch (e) {
+      console.warn("AuthContext: Failed to clear local storage on logout", e);
+    }
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -109,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, profile, loading, signIn, signUp, logout, refreshProfile }}
+      value={{ user, profile, loading, profileLoading, signIn, signUp, logout, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>

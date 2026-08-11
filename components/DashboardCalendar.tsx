@@ -205,7 +205,7 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
     );
 };
 
-export default Calendar;
+export default React.memo(Calendar);
 
 const styles = StyleSheet.create({
     container: {

@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "eas-build-pre-install": "npm config set legacy-peer-deps true"
   },
   "dependencies": {
     "@expo-google-fonts/montserrat": "^0.4.1",
@@ -38,12 +39,12 @@
     "expo-image-picker": "^16.1.4",
     "expo-linear-gradient": "~14.1.5",
     "expo-linking": "~7.1.5",
+    "expo-location": "~18.1.6",
     "expo-modules-core": "~2.4.0",
     "expo-notifications": "~0.31.3",
     "expo-router": "~5.0.7",
     "expo-secure-store": "^14.2.3",
     "expo-splash-screen": "~0.30.9",
-    "expo-sqlite": "^15.2.12",
     "expo-status-bar": "~2.2.3",
     "expo-symbols": "~0.4.5",
     "expo-system-ui": "~5.0.8",
@@ -51,7 +52,6 @@
     "expo-web-browser": "~14.1.6",
     "firebase": "^12.17.1",
     "lucide-react-native": "^0.544.0",
-    "openai": "^5.20.2",
     "phosphor-react-native": "^3.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -64,15 +64,16 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "~4.11.1",
+    "react-native-svg": "15.11.2",
     "react-native-switch-toggle": "^2.2.1",
     "react-native-web": "~0.20.0",
     "react-native-webview": "13.13.5",
-    "uuid": "^11.1.0",
-    "expo-location": "~18.1.6"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "baseline-browser-mapping": "^2.11.13",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "typescript": "~5.8.3"

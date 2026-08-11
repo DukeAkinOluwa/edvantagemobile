@@ -8,9 +8,11 @@ import {
   ChatRoom,
   createGroupChat,
   getOrCreateDirectChat,
-  markRoomAsRead,
   searchUsers,
+  searchPublicGroups,
+  joinGroupChat,
   subscribeToChatRooms,
+  markRoomAsRead,
   UserProfile,
 } from "@/lib/firestoreService";
 import { FontAwesome6 } from "@expo/vector-icons";
@@ -30,6 +32,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Switch,
 } from "react-native";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -59,6 +62,78 @@ function getRoomDisplayInfo(room: ChatRoom, myUid: string) {
     avatar: room.participantAvatars?.[otherUid] ?? null,
   };
 }
+// ─── Chat Room Item ───────────────────────────────────────────────────────────
+
+const ChatRoomItem = React.memo(function ChatRoomItem({
+  item,
+  myUid,
+  theme,
+  onPress,
+}: {
+  item: ChatRoom;
+  myUid: string;
+  theme: any;
+  onPress: (room: ChatRoom) => void;
+}) {
+  const { name, avatar } = getRoomDisplayInfo(item, myUid);
+  const unread = item.unreadCounts?.[myUid] ?? 0;
+
+  return (
+    <TouchableOpacity
+      style={[styles.roomItem, { borderBottomColor: theme.border }]}
+      onPress={() => onPress(item)}
+      activeOpacity={0.7}
+    >
+      {/* Avatar */}
+      {avatar ? (
+        <Image source={{ uri: avatar }} style={styles.avatar} />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarInitial}>{(name[0] ?? "?").toUpperCase()}</Text>
+        </View>
+      )}
+
+      {/* Info */}
+      <View style={styles.roomInfo}>
+        <View style={styles.roomHeader}>
+          <Text
+            style={[styles.roomName, { color: theme.text }, unread > 0 && styles.bold]}
+            numberOfLines={1}
+          >
+            {name}
+          </Text>
+          <Text style={[styles.roomTime, { color: theme.placeholder }]}>
+            {formatTime(item.lastMessageTime)}
+          </Text>
+        </View>
+        <View style={styles.roomFooter}>
+          <Text
+            style={[
+              styles.lastMessage,
+              { color: unread > 0 ? theme.text : theme.placeholder },
+              unread > 0 && styles.bold,
+            ]}
+            numberOfLines={1}
+          >
+            {item.lastMessage || "No messages yet"}
+          </Text>
+          {unread > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prev, next) => {
+  return (
+    prev.item.id === next.item.id &&
+    prev.item.lastMessageTime === next.item.lastMessageTime &&
+    prev.item.lastMessage === next.item.lastMessage &&
+    (prev.item.unreadCounts?.[prev.myUid] ?? 0) === (next.item.unreadCounts?.[next.myUid] ?? 0)
+  );
+});
 
 // ─── New Chat Modal ───────────────────────────────────────────────────────────
 
@@ -81,7 +156,9 @@ function NewChatModal({
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<UserProfile[]>([]);
   const [selected, setSelected] = useState<UserProfile[]>([]);
+  const [isGroupMode, setIsGroupMode] = useState(false);
   const [groupName, setGroupName] = useState("");
+  const [isPublic, setIsPublic] = useState(true);
   const [searching, setSearching] = useState(false);
   const [creating, setCreating] = useState(false);
   const debounceRef = useRef<any>(null);
@@ -104,83 +181,111 @@ function NewChatModal({
     [myUid]
   );
 
-  const toggleSelect = (user: UserProfile) => {
-    setSelected((prev) =>
-      prev.find((u) => u.uid === user.uid)
-        ? prev.filter((u) => u.uid !== user.uid)
-        : [...prev, user]
-    );
+  const handleSelectUser = async (user: UserProfile) => {
+    if (isGroupMode) {
+      setSelected((prev) =>
+        prev.find((u) => u.uid === user.uid)
+          ? prev.filter((u) => u.uid !== user.uid)
+          : [...prev, user]
+      );
+    } else {
+      // Instantly start direct chat
+      setCreating(true);
+      try {
+        const chatId = await getOrCreateDirectChat(
+          myUid, myName, myAvatar || "",
+          user.uid!, user.displayName ?? `${user.firstName} user.lastName`,
+          user.profilePic
+        );
+        onClose();
+        onChatCreated(chatId);
+      } catch (err) {
+        Alert.alert("Error", "Could not start chat. Please try again.");
+        console.error(err);
+      } finally {
+        setCreating(false);
+      }
+    }
   };
 
-  const handleStart = async () => {
+  const handleStartGroup = async () => {
     if (selected.length === 0) return;
     setCreating(true);
     try {
-      let chatId: string;
-      if (selected.length === 1) {
-        const other = selected[0];
-        chatId = await getOrCreateDirectChat(
-          myUid, myName, myAvatar,
-          other.uid!, other.displayName ?? `${other.firstName} ${other.lastName}`,
-          other.profilePic
-        );
-      } else {
-        const name = groupName.trim() || selected.map((u) => u.firstName).join(", ");
-        const uids = [myUid, ...selected.map((u) => u.uid!)];
-        const names: Record<string, string> = { [myUid]: myName };
-        const avatars: Record<string, string> = { [myUid]: myAvatar ?? "" };
-        selected.forEach((u) => {
-          names[u.uid!] = u.displayName ?? `${u.firstName} ${u.lastName}`;
-          avatars[u.uid!] = u.profilePic ?? "";
-        });
-        chatId = await createGroupChat(name, uids, names, avatars);
-      }
+      const name = groupName.trim() || selected.map((u) => u.firstName).join(", ");
+      const uids = [myUid, ...selected.map((u) => u.uid!)];
+      const names: Record<string, string> = { [myUid]: myName };
+      const avatars: Record<string, string> = { [myUid]: myAvatar ?? "" };
+      selected.forEach((u) => {
+        names[u.uid!] = u.displayName ?? `${u.firstName} ${u.lastName}`;
+        avatars[u.uid!] = u.profilePic ?? "";
+      });
+      const chatId = await createGroupChat(name, uids, names, avatars, isPublic);
+      
       onClose();
       onChatCreated(chatId);
     } catch (err) {
-      Alert.alert("Error", "Could not start chat. Please try again.");
+      Alert.alert("Error", "Could not start group chat. Please try again.");
       console.error(err);
     } finally {
       setCreating(false);
     }
   };
 
-  const isGroup = selected.length > 1;
+  // Reset mode when closing
+  const handleClose = () => {
+    setIsGroupMode(false);
+    setSelected([]);
+    setGroupName("");
+    onClose();
+  };
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         style={[styles.modal, { backgroundColor: theme.background }]}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* Header */}
         <View style={styles.modalHeader}>
-          <TouchableOpacity onPress={onClose}>
+          <TouchableOpacity onPress={handleClose}>
             <FontAwesome6 name="xmark" size={20} color={theme.text} />
           </TouchableOpacity>
-          <Text style={[styles.modalTitle, { color: theme.text }]}>New Chat</Text>
-          <TouchableOpacity
-            onPress={handleStart}
-            disabled={selected.length === 0 || creating}
-          >
-            {creating
-              ? <ActivityIndicator color={theme.primary} />
-              : <Text style={[styles.startBtn, { color: selected.length > 0 ? "#2A52BE" : theme.placeholder }]}>
-                  {isGroup ? "Create" : "Start"}
-                </Text>
-            }
-          </TouchableOpacity>
+          <Text style={[styles.modalTitle, { color: theme.text }]}>
+            {isGroupMode ? "New Group" : "New Chat"}
+          </Text>
+          {isGroupMode ? (
+            <TouchableOpacity
+              onPress={handleStartGroup}
+              disabled={selected.length === 0 || creating}
+            >
+              {creating
+                ? <ActivityIndicator color={theme.primary} />
+                : <Text style={[styles.startBtn, { color: selected.length > 0 ? "#2A52BE" : theme.placeholder }]}>
+                    Create
+                  </Text>
+              }
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 40 }} /> /* Placeholder for balance */
+          )}
         </View>
 
-        {/* Group name input (shown when >1 selected) */}
-        {isGroup && (
-          <TextInput
-            style={[styles.groupNameInput, { borderColor: theme.border, color: theme.text }]}
-            placeholder="Group name (optional)"
-            placeholderTextColor={theme.placeholder}
-            value={groupName}
-            onChangeText={setGroupName}
-          />
+        {/* Group name input (shown when in group mode) */}
+        {isGroupMode && (
+          <View style={{ marginBottom: 15 }}>
+            <TextInput
+              style={[styles.groupNameInput, { borderColor: theme.border, color: theme.text, marginBottom: 10 }]}
+              placeholder="Group name (optional)"
+              placeholderTextColor={theme.placeholder}
+              value={groupName}
+              onChangeText={setGroupName}
+            />
+            <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 5 }}>
+              <Text style={{ color: theme.text, flex: 1, fontSize: 14 }}>Make group public (discoverable)</Text>
+              <Switch value={isPublic} onValueChange={setIsPublic} trackColor={{ false: "#767577", true: "#2A52BE" }} />
+            </View>
+          </View>
         )}
 
         {/* Selected chips */}
@@ -190,7 +295,7 @@ function NewChatModal({
               <TouchableOpacity
                 key={u.uid}
                 style={styles.chip}
-                onPress={() => toggleSelect(u)}
+                onPress={() => handleSelectUser(u)}
               >
                 <Text style={styles.chipText}>{u.firstName}</Text>
                 <FontAwesome6 name="xmark" size={10} color="#fff" />
@@ -213,6 +318,18 @@ function NewChatModal({
           {searching && <ActivityIndicator size="small" color={theme.placeholder} />}
         </View>
 
+        {!isGroupMode && (
+          <TouchableOpacity
+            style={styles.createGroupBtn}
+            onPress={() => setIsGroupMode(true)}
+          >
+            <View style={styles.createGroupIcon}>
+              <FontAwesome6 name="user-group" size={16} color="#fff" />
+            </View>
+            <Text style={[styles.createGroupText, { color: theme.text }]}>New Group</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Results */}
         <FlatList
           data={results}
@@ -222,7 +339,7 @@ function NewChatModal({
             return (
               <TouchableOpacity
                 style={styles.userRow}
-                onPress={() => toggleSelect(item)}
+                onPress={() => handleSelectUser(item)}
               >
                 {item.profilePic
                   ? <Image source={{ uri: item.profilePic }} style={styles.userAvatar} />
@@ -240,17 +357,23 @@ function NewChatModal({
                     {item.email}
                   </Text>
                 </View>
-                {isChecked && (
-                  <FontAwesome6 name="circle-check" size={20} color="#2A52BE" />
+                {isGroupMode && (
+                  <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+                    {isChecked && <FontAwesome6 name="check" size={12} color="#fff" />}
+                  </View>
                 )}
               </TouchableOpacity>
             );
           }}
           ListEmptyComponent={
-            query && !searching
-              ? <Text style={[styles.emptyText, { color: theme.placeholder }]}>No users found</Text>
-              : null
+            <View style={{ padding: 20, alignItems: "center" }}>
+              <Text style={{ color: theme.placeholder }}>No conversations yet.</Text>
+            </View>
           }
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
         />
       </KeyboardAvoidingView>
     </Modal>
@@ -267,6 +390,14 @@ export default function ChatsScreen() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNewChat, setShowNewChat] = useState(false);
+  const [activeTab, setActiveTab] = useState<"chats" | "discover">("chats");
+  
+  // Discover State
+  const [discoverQuery, setDiscoverQuery] = useState("");
+  const [publicGroups, setPublicGroups] = useState<ChatRoom[]>([]);
+  const [searchingGroups, setSearchingGroups] = useState(false);
+  const discoverDebounceRef = useRef<any>(null);
+
   const fabAnim = useRef(new Animated.Value(0)).current;
 
   const myUid = user?.uid ?? "";
@@ -274,7 +405,10 @@ export default function ChatsScreen() {
   const myAvatar = profile?.profilePic;
 
   useEffect(() => {
-    if (!myUid) return;
+    if (!myUid) {
+      setLoading(false);
+      return;
+    }
     const unsub = subscribeToChatRooms(myUid, (data) => {
       setRooms(data);
       setLoading(false);
@@ -300,66 +434,73 @@ export default function ChatsScreen() {
     }
   };
 
-  const renderRoom = ({ item }: { item: ChatRoom }) => {
-    const { name, avatar } = getRoomDisplayInfo(item, myUid);
-    const unread = item.unreadCounts?.[myUid] ?? 0;
-
-    return (
-      <TouchableOpacity
-        style={[styles.roomItem, { borderBottomColor: theme.border }]}
-        onPress={() => openRoom(item)}
-        activeOpacity={0.7}
-      >
-        {/* Avatar */}
-        {avatar
-          ? <Image source={{ uri: avatar }} style={styles.avatar} />
-          : <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarInitial}>{(name[0] ?? "?").toUpperCase()}</Text>
-            </View>
+  const handleSearchGroups = useCallback(
+    (text: string) => {
+      setDiscoverQuery(text);
+      clearTimeout(discoverDebounceRef.current);
+      if (!text.trim()) { setPublicGroups([]); return; }
+      discoverDebounceRef.current = setTimeout(async () => {
+        setSearchingGroups(true);
+        try {
+          const groups = await searchPublicGroups(text);
+          setPublicGroups(groups);
+        } finally {
+          setSearchingGroups(false);
         }
+      }, 350);
+    },
+    []
+  );
 
-        {/* Info */}
-        <View style={styles.roomInfo}>
-          <View style={styles.roomHeader}>
-            <Text
-              style={[styles.roomName, { color: theme.text }, unread > 0 && styles.bold]}
-              numberOfLines={1}
-            >
-              {name}
-            </Text>
-            <Text style={[styles.roomTime, { color: theme.placeholder }]}>
-              {formatTime(item.lastMessageTime)}
-            </Text>
-          </View>
-          <View style={styles.roomFooter}>
-            <Text
-              style={[styles.lastMessage, { color: unread > 0 ? theme.text : theme.placeholder },
-                unread > 0 && styles.bold]}
-              numberOfLines={1}
-            >
-              {item.lastMessage || "No messages yet"}
-            </Text>
-            {unread > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
+  const handleJoinGroup = async (group: ChatRoom) => {
+    if (!group.id) return;
+    try {
+      await joinGroupChat(group.id, myUid, myName, myAvatar || "");
+      setActiveTab("chats");
+      router.push(`/chat/${group.id}?name=${encodeURIComponent(group.name)}&isGroup=true`);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to join group");
+    }
   };
+
+  const renderRoom = useCallback(({ item }: { item: ChatRoom }) => {
+    return (
+      <ChatRoomItem
+        item={item}
+        myUid={myUid}
+        theme={theme}
+        onPress={openRoom}
+      />
+    );
+  }, [myUid, theme, openRoom]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Messages</Text>
+        
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabBtn, activeTab === "chats" && { backgroundColor: "#2A52BE" }]} 
+            onPress={() => setActiveTab("chats")}
+          >
+            <Text style={[styles.tabText, { color: activeTab === "chats" ? "#fff" : theme.text }]}>My Chats</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabBtn, activeTab === "discover" && { backgroundColor: "#2A52BE" }]} 
+            onPress={() => setActiveTab("discover")}
+          >
+            <Text style={[styles.tabText, { color: activeTab === "discover" ? "#fff" : theme.text }]}>Discover</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#2A52BE" style={{ marginTop: 40 }} />
-      ) : (
+      {activeTab === "chats" ? (
+        loading ? (
+          <ActivityIndicator size="large" color="#2A52BE" style={{ marginTop: 40 }} />
+        ) : (
         <FlatList
           data={rooms}
           keyExtractor={(item) => item.id!}
@@ -374,19 +515,71 @@ export default function ChatsScreen() {
               </Text>
             </View>
           }
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
         />
+        )
+      ) : (
+        /* Discover Tab */
+        <View style={{ flex: 1 }}>
+          <View style={[styles.searchBar, { backgroundColor: theme.backgroundSecondary, marginTop: 15 }]}>
+            <FontAwesome6 name="magnifying-glass" size={14} color={theme.placeholder} />
+            <TextInput
+              style={[styles.searchInput, { color: theme.text }]}
+              placeholder="Search public groups..."
+              placeholderTextColor={theme.placeholder}
+              value={discoverQuery}
+              onChangeText={handleSearchGroups}
+            />
+            {searchingGroups && <ActivityIndicator size="small" color={theme.placeholder} />}
+          </View>
+          <FlatList
+            data={publicGroups}
+            keyExtractor={(item) => item.id!}
+            renderItem={({ item }) => (
+              <View style={[styles.roomItem, { borderBottomColor: theme.border }]}>
+                {item.avatarUrl
+                  ? <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
+                  : <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                      <Text style={styles.avatarInitial}>{(item.name[0] ?? "?").toUpperCase()}</Text>
+                    </View>
+                }
+                <View style={styles.roomInfo}>
+                  <Text style={[styles.roomName, { color: theme.text }]}>{item.name}</Text>
+                  <Text style={[styles.roomTime, { color: theme.placeholder }]}>
+                    {(item.participants || []).length} members
+                  </Text>
+                </View>
+                <TouchableOpacity style={styles.joinBtn} onPress={() => handleJoinGroup(item)}>
+                  <Text style={styles.joinBtnText}>Join</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={
+              discoverQuery && !searchingGroups ? (
+                <View style={styles.emptyState}>
+                  <Text style={[styles.emptyText, { color: theme.placeholder }]}>No public groups found.</Text>
+                </View>
+              ) : null
+            }
+          />
+        </View>
       )}
 
-      {/* FAB */}
-      <Animated.View
-        style={[styles.fab, {
-          transform: [{ scale: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }]
-        }]}
-      >
-        <TouchableOpacity onPress={() => setShowNewChat(true)} style={styles.fabInner}>
-          <FontAwesome6 name="pen-to-square" size={20} color="#fff" />
-        </TouchableOpacity>
-      </Animated.View>
+      {/* FAB (Only in Chats tab) */}
+      {activeTab === "chats" && (
+        <Animated.View
+          style={[styles.fab, {
+            transform: [{ scale: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }]
+          }]}
+        >
+          <TouchableOpacity onPress={() => setShowNewChat(true)} style={styles.fabInner}>
+            <FontAwesome6 name="pen-to-square" size={20} color="#fff" />
+          </TouchableOpacity>
+        </Animated.View>
+      )}
 
       {/* New Chat Modal */}
       <NewChatModal
@@ -409,7 +602,23 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 0.5,
   },
-  headerTitle: { fontSize: 22, fontWeight: "700" },
+  headerTitle: { fontSize: 22, fontWeight: "700", marginBottom: 15 },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "rgba(100,100,100,0.1)",
+    borderRadius: 8,
+    padding: 4,
+  },
+  tabBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
   roomItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -523,4 +732,49 @@ const styles = StyleSheet.create({
   userAvatar: { width: 44, height: 44, borderRadius: 22 },
   userName: { fontSize: 15, fontWeight: "500" },
   userEmail: { fontSize: 12, marginTop: 1 },
+  joinBtn: {
+    backgroundColor: "#2A52BE",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  joinBtnText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  createGroupBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: "rgba(100,100,100,0.2)",
+  },
+  createGroupIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#2A52BE",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  createGroupText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#ccc",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxChecked: {
+    backgroundColor: "#2A52BE",
+    borderColor: "#2A52BE",
+  }
 });

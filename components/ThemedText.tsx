@@ -1,4 +1,4 @@
-import { useTheme } from "@/components/Header";
+import { useTheme } from "@/components/HeaderContext";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { Text, type TextProps } from "react-native";
 

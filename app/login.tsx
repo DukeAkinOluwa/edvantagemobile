@@ -7,7 +7,6 @@ import { useGlobalStyles } from "@/styles/globalStyles";
 import { useRouter } from "expo-router";
 import React, { memo, useEffect, useState } from "react";
 import {
-  Alert,
   BackHandler,
   Image,
   Platform,
@@ -16,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
 } from "react-native";
+import { ALERT_TYPE, Toast } from "react-native-alert-notification";
 
 const ProfileImage = memo(
   ({ uri, borderColor }: { uri: string; borderColor: string }) => (
@@ -65,12 +65,16 @@ export default function LoginPage() {
       // Firebase Auth sign in
       await signIn(email.trim(), password.trim());
 
+      Toast.show({
+        type: ALERT_TYPE.SUCCESS,
+        title: "Welcome back!",
+        textBody: "You have logged in successfully.",
+      });
       router.replace("/(tabs)");
-      Alert.alert("Success", "Logged in successfully!");
     } catch (err: any) {
       // Map Firebase error codes to friendly messages
       let message = "Failed to log in.";
-      if (err?.code === "auth/user-not-found" || err?.code === "auth/wrong-password") {
+      if (err?.code === "auth/user-not-found" || err?.code === "auth/wrong-password" || err?.code === "auth/invalid-credential") {
         message = "Invalid email or password.";
       } else if (err?.code === "auth/invalid-email") {
         message = "Invalid email address.";
@@ -80,27 +84,18 @@ export default function LoginPage() {
         message = err.message;
       }
       setError(message);
-      Alert.alert("Error", message);
+      Toast.show({
+        type: ALERT_TYPE.DANGER,
+        title: "Login Failed",
+        textBody: message,
+      });
       console.error("Login error:", err);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (error) {
-    return (
-      <ThemedView
-        style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
-      >
-        <ThemedText type="base" style={{ color: theme.error }}>
-          Error: {error}
-        </ThemedText>
-        <ThemedText type="base">
-          Please check the console for details.
-        </ThemedText>
-      </ThemedView>
-    );
-  }
+
 
   const responsiveStyles = StyleSheet.create({
     scrollContainer: {
@@ -157,10 +152,31 @@ export default function LoginPage() {
             onChangeText={setPassword}
           />
 
-          <TouchableOpacity onPress={handleLogin}>
-            <ThemedView style={[globalStyles.button1, { marginBottom: 10 }]}>
-              <ThemedText style={globalStyles.actionText2}>Continue</ThemedText>
+          {error && (
+            <ThemedText style={{ color: theme.error, fontSize: 13, marginBottom: 10, textAlign: "center" }}>
+              {error}
+            </ThemedText>
+          )}
+
+          <TouchableOpacity onPress={handleLogin} disabled={isLoading}>
+            <ThemedView style={[globalStyles.button1, { marginBottom: 10, opacity: isLoading ? 0.6 : 1 }]}>
+              <ThemedText style={globalStyles.actionText2}>
+                {isLoading ? "Logging in..." : "Log In"}
+              </ThemedText>
             </ThemedView>
+          </TouchableOpacity>
+
+          {/* Navigate to Sign Up */}
+          <TouchableOpacity
+            onPress={() => router.replace("/signUpPage")}
+            style={{ alignItems: "center", marginTop: 8 }}
+          >
+            <ThemedText style={{ fontSize: 14, color: theme.placeholder }}>
+              Don't have an account?{" "}
+              <ThemedText style={{ fontSize: 14, color: theme.primary, fontWeight: "600" }}>
+                Sign Up
+              </ThemedText>
+            </ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>

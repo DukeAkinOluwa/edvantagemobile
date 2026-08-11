@@ -264,7 +264,13 @@ export default function HomeScreen() {
   const fetchTasks = useCallback(async () => {
     try {
       const savedTasks = await getData("tasks");
-      setTasks(savedTasks || []);
+      setTasks((prev) => {
+        const saved = savedTasks || [];
+        if (prev.length === saved.length && JSON.stringify(prev) === JSON.stringify(saved)) {
+          return prev;
+        }
+        return saved;
+      });
     } catch (error) {
       console.error("Error fetching tasks:", error);
     }
@@ -296,6 +302,8 @@ export default function HomeScreen() {
     },
   });
 
+  const handleDayPress = useCallback((date: Date) => {}, []);
+
   return (
     <ThemedView style={[styles.page, dynamicStyles.page]}>
       <NavigationHeader title="Dashboard" />
@@ -307,7 +315,7 @@ export default function HomeScreen() {
           ]}
         />
         <Calendar
-          onDayPress={(date) => {}}
+          onDayPress={handleDayPress}
           setModalVisible={setModalVisible}
           modalVisible={modalVisible}
         />

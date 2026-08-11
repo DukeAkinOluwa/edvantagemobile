@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { ALERT_TYPE, Toast } from "react-native-alert-notification";
 import { saveData } from "../utils/storage";
 
 export default function SignUpPage() {
@@ -178,39 +179,39 @@ export default function SignUpPage() {
         setCurrentStep(currentStep + 1);
       } else if (currentStep === 5) {
         validateStep(currentStep);
-        const apiLevel =
-          formData.level === "Postgraduate" ? "Postgraduate" : "Undergraduate";
 
-        // ── Firebase Auth registration ──────────────────────────────────────
+        // ── Firebase Auth + Firestore registration ─────────────────────────
         await signUp({
           email: formData.email.trim(),
           password: formData.password.trim(),
           firstName: formData.firstName.trim(),
           lastName: formData.lastName.trim(),
+          phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}`,
           university: formData.university.trim(),
           course: formData.major.trim(),
-          level: apiLevel,
-          phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}`,
+          department: formData.major.trim(),  // store major as both course + department
           bio: formData.bio.trim(),
+          level: formData.level,             // store the exact value: 100, 200…500, Postgraduate
+          role: "student",
+          language: "english",
         });
-        // ────────────────────────────────────────────────────────────────────
+        // ──────────────────────────────────────────────────────────────────
 
-        // Also update local UserDataContext so the rest of the app has it
+        // Mirror into local UserDataContext so the rest of the app has it
         await setUserData({
-          firstName: formData.firstName?.trim() || undefined,
-          lastName: formData.lastName?.trim() || undefined,
-          email: formData.email?.trim() || undefined,
-          phoneNumber: formData.phoneNumber
-            ? `${formData.countryCode}${formData.phoneNumber.trim()}`
-            : undefined,
-          university: formData.university?.trim() || undefined,
-          department: formData.major?.trim() || undefined,
-          course: formData.major?.trim() || undefined,
+          firstName: formData.firstName.trim() || undefined,
+          lastName: formData.lastName.trim() || undefined,
+          email: formData.email.trim() || undefined,
+          phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}` || undefined,
+          university: formData.university.trim() || undefined,
+          course: formData.major.trim() || undefined,
+          department: formData.major.trim() || undefined,
+          bio: formData.bio.trim() || undefined,
           level: formData.level || undefined,
           themeMode: "system" as "system" | "light" | "dark",
-          bio: formData.bio?.trim() || undefined,
           allowNotifications: true,
           allowAlarms: true,
+          language: "english",
           privacy: {
             showOnlineStatus: true,
             showProfileToGroups: true,
@@ -219,14 +220,24 @@ export default function SignUpPage() {
           },
         });
         await saveData("firstLaunch", "false");
+
+        // Show success toast — navigation is handled by AuthGatedLayout
+        // once it sees user + profile are both set.
+        Toast.show({
+          type: ALERT_TYPE.SUCCESS,
+          title: "Account Created!",
+          textBody: `Welcome, ${formData.firstName.trim()}! Your account is ready.`,
+        });
+
         setCurrentStep(6);
       } else {
+        // Step 6 "Continue" → navigate to app (layout will also handle this)
         router.replace("/(tabs)");
       }
     } catch (error) {
       let errorMessage = "Failed to proceed";
       if ((error as any)?.code === "auth/email-already-in-use") {
-        errorMessage = "Email already registered.";
+        errorMessage = "That email is already registered.";
       } else if ((error as any)?.code === "auth/weak-password") {
         errorMessage = "Password must be at least 6 characters.";
       } else if ((error as any)?.code === "auth/invalid-email") {
@@ -239,6 +250,11 @@ export default function SignUpPage() {
       }
       console.error("SignUpPage error:", errorMessage);
       setErrors((prev) => ({ ...prev, general: errorMessage }));
+      Toast.show({
+        type: ALERT_TYPE.DANGER,
+        title: "Registration Failed",
+        textBody: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -589,9 +605,9 @@ export default function SignUpPage() {
                   globalStyles.actionText,
                   { fontFamily: "Montserrat-Bold" },
                 ]}
-                onPress={() => router.push("/login")}
+                onPress={() => router.replace("/login")}
               >
-                LOGIN HERE
+                Log In
               </ThemedText>
             </ThemedText>
           </ThemedView>

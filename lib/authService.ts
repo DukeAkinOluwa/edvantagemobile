@@ -16,45 +16,98 @@ import { createUserProfile, getUserProfile } from "./firestoreService";
 // ─── Sign Up ────────────────────────────────────────────────────────────────
 
 export interface SignUpData {
+  // Step 1 – Account credentials
   email: string;
   password: string;
   firstName: string;
   lastName: string;
-  university?: string;
-  course?: string;
-  level?: string;
   phoneNumber?: string;
+
+  // Step 2 – Institution
+  university?: string;
+
+  // Step 3 – Academic programme
+  course?: string;
+  department?: string;
+
+  // Step 4 – Bio / objective
   bio?: string;
+
+  // Step 5 – Level
+  level?: string;
+
+  // Optional extras
+  faculty?: string;
+  gender?: string;
+  dob?: string;
+  language?: string;
+  role?: "student" | "lecturer" | "admin";
 }
 
 export async function signUpWithEmail(data: SignUpData): Promise<User> {
-  const { email, password, firstName, lastName, ...rest } = data;
+  const {
+    email,
+    password,
+    firstName,
+    lastName,
+    phoneNumber,
+    university,
+    course,
+    department,
+    bio,
+    level,
+    faculty,
+    gender,
+    dob,
+    language,
+    role,
+  } = data;
+
   const displayName = `${firstName} ${lastName}`.trim();
 
-  // Create the Firebase Auth user
+  // 1. Create the Firebase Auth user
   const credential = await createUserWithEmailAndPassword(auth, email, password);
   const user = credential.user;
 
-  // Set displayName on the auth profile
+  // 2. Set displayName on the auth profile
   await updateProfile(user, { displayName });
 
-  // Create the Firestore user document
-  await createUserProfile(user.uid, {
+  // 3. Build the Firestore profile document — include every collected field
+  const profileData: Partial<import("./firestoreService").UserProfile> = {
     firstName,
     lastName,
-    email,
     displayName,
+    email,
+    phoneNumber,
+    university,
+    course,
+    // store major/course also as department so both fields are populated
+    department: department ?? course,
+    bio,
+    level,
+    faculty,
+    gender,
+    dob,
+    language: language ?? "english",
+    role: role ?? "student",
     themeMode: "system",
     allowNotifications: true,
     allowAlarms: true,
+    isOnline: false,
     privacy: {
       showOnlineStatus: true,
       showProfileToGroups: true,
       allowFriendRequests: true,
       dataCollection: true,
     },
-    ...rest,
+  };
+
+  // Remove undefined keys so Firestore doesn't store empty fields
+  Object.keys(profileData).forEach((k) => {
+    if ((profileData as any)[k] === undefined) delete (profileData as any)[k];
   });
+
+  await createUserProfile(user.uid, profileData);
 
   return user;
 }

@@ -1,4 +1,4 @@
-import { useTheme } from "@/components/Header";
+import { useTheme } from "@/components/HeaderContext";
 import { borderRadius, fontSizes, spacing } from "@/styles/theme";
 import { StyleSheet } from "react-native";
 

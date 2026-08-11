@@ -1,11 +1,11 @@
 import { useTheme } from "@/components/Header";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
-  BookOpenIcon,
-  CalendarDotsIcon,
-  ChatsIcon,
-  GlobeHemisphereEastIcon,
-  HouseIcon,
+  BookOpen,
+  CalendarDots,
+  Chats,
+  GlobeHemisphereEast,
+  House,
 } from "phosphor-react-native";
 import React, { useEffect, useRef } from "react";
 import {
@@ -19,26 +19,40 @@ import {
 } from "react-native";
 import { ThemedView } from "./ThemedView";
 
-import ChatListScreen from "@/app/(tabs)/chatlistscreen";
-import ExploreScreen from "@/app/(tabs)/explore";
-import HomeScreen from "@/app/(tabs)/index";
-import ResourcesScreen from "@/app/(tabs)/resources";
-import ScheduleScreen from "@/app/(tabs)/schedule";
-
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 const TAB_COUNT = 5;
 const TAB_WIDTH = width / TAB_COUNT;
 
-const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+export const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const { theme } = useTheme();
 
-  const translateX = useRef(new Animated.Value(state.index * TAB_WIDTH)).current;
+  const iconMap: Record<
+    string,
+    React.ComponentType<any>
+  > = {
+    index: House,
+    schedule: CalendarDots,
+    chatlistscreen: Chats,
+    resources: BookOpen,
+    explore: GlobeHemisphereEast,
+  };
+
+  const visibleRoutes = (state?.routes || []).filter(
+    (route: any) => descriptors?.[route.key]?.options?.href !== null && iconMap[route.name]
+  );
+  const activeVisibleIndex = visibleRoutes.findIndex(
+    (r: any) => r.key === state?.routes?.[state?.index]?.key
+  );
+  // Default to 0 if the current route is hidden
+  const displayIndex = activeVisibleIndex >= 0 ? activeVisibleIndex : 0;
+
+  const translateX = useRef(new Animated.Value(displayIndex * TAB_WIDTH)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(translateX, {
-      toValue: state.index * TAB_WIDTH,
+      toValue: displayIndex * TAB_WIDTH,
       useNativeDriver: true,
     }).start();
 
@@ -55,18 +69,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [state.index]);
-
-  const iconMap: Record<
-    string,
-    React.ComponentType<any>
-  > = {
-    index: HouseIcon,
-    schedule: CalendarDotsIcon,
-    chatlistscreen: ChatsIcon,
-    resources: BookOpenIcon,
-    explore: GlobeHemisphereEastIcon,
-  };
+  }, [displayIndex]);
 
   return (
     <View>
@@ -83,13 +86,23 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
         ]}
       />
       <ThemedView style={[styles.tabBarContainer, { backgroundColor: theme.background }]}>
-        {state.routes.map((route: any, index: number) => {
+        {visibleRoutes.map((route: any, index: number) => {
           const Icon = iconMap[route.name];
-          const label = descriptors[route.key].options.title ?? route.name;
-          const isFocused = state.index === index;
+          if (!Icon) return null;
+
+          const label = descriptors?.[route.key]?.options?.title ?? route.name;
+          const isFocused = activeVisibleIndex === index;
 
           const onPress = () => {
-            if (!isFocused) navigation.navigate(route.name);
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
           };
 
           return (
@@ -120,26 +133,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   );
 };
 
-export default function BottomTabNavigator() {
-  const { theme } = useTheme();
-
-  return (
-    <Tab.Navigator
-      initialRouteName="index"
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: { display: "none" },
-      }}
-      tabBar={(props) => <CustomTabBar {...props} />}
-    >
-      <Tab.Screen name="index" component={HomeScreen} options={{ title: "Home" }} />
-      <Tab.Screen name="schedule" component={ScheduleScreen} options={{ title: "Schedule" }} />
-      <Tab.Screen name="chatlistscreen" component={ChatListScreen} options={{ title: "Chats" }} />
-      <Tab.Screen name="resources" component={ResourcesScreen} options={{ title: "Resources" }} />
-      <Tab.Screen name="explore" component={ExploreScreen} options={{ title: "Explore" }} />
-    </Tab.Navigator>
-  );
-}
+// BottomTabNavigator is removed, using expo-router Tabs directly in _layout.tsx
 
 const styles = StyleSheet.create({
   tabBarContainer: {

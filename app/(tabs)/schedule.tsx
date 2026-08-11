@@ -37,6 +37,57 @@ const formatTime = (ts: number) => {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
+const ScheduleItem = React.memo(function ScheduleItem({
+  item,
+  theme,
+  isLecturer,
+  onDelete,
+  onCheckIn,
+}: {
+  item: ScheduleEvent;
+  theme: any;
+  isLecturer: boolean;
+  onDelete: (id: string) => void;
+  onCheckIn: (item: ScheduleEvent) => void;
+}) {
+  return (
+    <View style={[styles.taskBox, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+      <View style={styles.timeCol}>
+        <Text style={[styles.taskTime, { color: theme.text }]}>{formatTime(item.startTime)}</Text>
+        <Text style={{ color: theme.placeholder, fontSize: 10 }}>to</Text>
+        <Text style={[styles.taskTime, { color: theme.placeholder, fontSize: 11 }]}>{formatTime(item.endTime)}</Text>
+      </View>
+      
+      <View style={styles.taskInfo}>
+        <ThemedText style={[styles.taskTitle, { color: theme.text }]}>{item.courseCode}: {item.title}</ThemedText>
+        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 }}>
+          <FontAwesome6 name="location-dot" size={10} color={theme.placeholder} />
+          <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.location}</ThemedText>
+        </View>
+        {!isLecturer && (
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 }}>
+            <FontAwesome6 name="chalkboard-user" size={10} color={theme.placeholder} />
+            <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.lecturerName}</ThemedText>
+          </View>
+        )}
+        {/* Check-In Button — visible to students during active class window */}
+        {!isLecturer && isClassActive(item.startTime, item.endTime) && (
+          <TouchableOpacity style={styles.checkInBtn} onPress={() => onCheckIn(item)}>
+            <FontAwesome6 name="location-dot" size={11} color="#fff" />
+            <Text style={styles.checkInBtnText}>Check In</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {isLecturer && (
+        <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(item.id)}>
+          <FontAwesome6 name="trash" size={14} color="#ff4d4d" />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}, (prev, next) => prev.item.id === next.item.id && prev.item.startTime === next.item.startTime);
+
 export default function ScheduleScreen() {
   const { theme } = useTheme();
   const globalStyles = useGlobalStyles();
@@ -63,7 +114,10 @@ export default function ScheduleScreen() {
   const router = useRouter();
 
   const loadSchedule = useCallback(async () => {
-    if (!user || !profile) return;
+    if (!user || !profile) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       // Sync native alarms for the device while fetching
@@ -116,7 +170,7 @@ export default function ScheduleScreen() {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback((id: string) => {
     Alert.alert("Delete Class", "Are you sure you want to cancel this class?", [
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
@@ -124,7 +178,22 @@ export default function ScheduleScreen() {
         loadSchedule();
       }}
     ]);
-  };
+  }, [loadSchedule]);
+
+  const handleCheckIn = useCallback((item: ScheduleEvent) => {
+    router.push({
+      pathname: "/attendance-checkin",
+      params: {
+        classId: item.id,
+        courseCode: item.courseCode,
+        classTitle: item.title,
+        classroomLat: String((item as any).classroomLat ?? 0),
+        classroomLon: String((item as any).classroomLon ?? 0),
+        classroomRadius: String((item as any).classroomRadius ?? 100),
+        classroomName: item.location,
+      },
+    });
+  }, [router]);
 
   const sections = useMemo(() => {
     const today = new Date();
@@ -156,7 +225,7 @@ export default function ScheduleScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1, paddingRight: 10 }}>
           <ThemedText style={[globalStyles.largeText, { color: theme.text, fontWeight: "bold" }]}>
             {isLecturer ? "Lecturer Schedule" : "My Timetable"}
           </ThemedText>
@@ -165,12 +234,10 @@ export default function ScheduleScreen() {
           </ThemedText>
         </View>
         
-        {isLecturer && (
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-            <FontAwesome6 name="plus" size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+          <FontAwesome6 name="plus" size={16} color="#fff" />
+          <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.toggleRow}>
@@ -196,57 +263,18 @@ export default function ScheduleScreen() {
             </ThemedText>
           )}
           renderItem={({ item }) => (
-            <View style={[styles.taskBox, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
-              <View style={styles.timeCol}>
-                <Text style={[styles.taskTime, { color: theme.text }]}>{formatTime(item.startTime)}</Text>
-                <Text style={{ color: theme.placeholder, fontSize: 10 }}>to</Text>
-                <Text style={[styles.taskTime, { color: theme.placeholder, fontSize: 11 }]}>{formatTime(item.endTime)}</Text>
-              </View>
-              
-              <View style={styles.taskInfo}>
-                <ThemedText style={[styles.taskTitle, { color: theme.text }]}>{item.courseCode}: {item.title}</ThemedText>
-                <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 }}>
-                  <FontAwesome6 name="location-dot" size={10} color={theme.placeholder} />
-                  <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.location}</ThemedText>
-                </View>
-                {!isLecturer && (
-                  <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 }}>
-                    <FontAwesome6 name="chalkboard-user" size={10} color={theme.placeholder} />
-                    <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.lecturerName}</ThemedText>
-                  </View>
-                )}
-                {/* Check-In Button — visible to students during active class window */}
-                {!isLecturer && isClassActive(item.startTime, item.endTime) && (
-                  <TouchableOpacity
-                    style={styles.checkInBtn}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/attendance-checkin",
-                        params: {
-                          classId: item.id,
-                          courseCode: item.courseCode,
-                          classTitle: item.title,
-                          classroomLat: String((item as any).classroomLat ?? 0),
-                          classroomLon: String((item as any).classroomLon ?? 0),
-                          classroomRadius: String((item as any).classroomRadius ?? 100),
-                          classroomName: item.location,
-                        },
-                      })
-                    }
-                  >
-                    <FontAwesome6 name="location-dot" size={11} color="#fff" />
-                    <Text style={styles.checkInBtnText}>Check In</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {isLecturer && (
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id)}>
-                  <FontAwesome6 name="trash" size={14} color="#ff4d4d" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <ScheduleItem
+              item={item}
+              theme={theme}
+              isLecturer={isLecturer}
+              onDelete={handleDelete}
+              onCheckIn={handleCheckIn}
+            />
           )}
+          initialNumToRender={10}
+          maxToRenderPerBatch={5}
+          windowSize={5}
+          removeClippedSubviews={true}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <FontAwesome6 name="calendar-check" size={40} color={theme.placeholder} />

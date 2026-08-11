@@ -5,13 +5,13 @@ import { getData, saveData } from "@/utils/storage";
 import userDataInfo from "@/utils/userDataInfo";
 import * as FileSystem from "expo-file-system";
 import * as Font from "expo-font";
-import { Stack, useRouter } from "expo-router";
+import { Stack, router, usePathname, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import React, { Component, useEffect, useState } from "react";
+import React, { Component, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { Appearance, AppState, Text } from "react-native";
+import { AlertNotificationRoot } from "react-native-alert-notification";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import "../env"; // Load environment variables
 
 const NOTIFICATIONS_FILE = `${FileSystem.documentDirectory}notifications.json`;
 
@@ -42,7 +42,33 @@ class ErrorBoundary extends Component<
   }
 }
 
+let isRouterPatched = false;
+
 export default function RootLayout() {
+  const pathname = usePathname();
+  const currentPathRef = useRef(pathname);
+
+  useEffect(() => {
+    currentPathRef.current = pathname;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!isRouterPatched && router) {
+      const originalPush = router.push;
+      router.push = (href, options) => {
+        const targetPath = typeof href === 'string' ? href : href?.pathname;
+        const targetBase = targetPath?.split('?')[0];
+        const currentBase = currentPathRef.current?.split('?')[0];
+        
+        if (targetBase && targetBase === currentBase) {
+          console.log(`Prevented stacking identical screen: ${targetBase}`);
+          return;
+        }
+        originalPush(href, options);
+      };
+      isRouterPatched = true;
+    }
+  }, []);
   interface UserData {
     firstName?: string;
     lastName?: string;
@@ -91,7 +117,6 @@ export default function RootLayout() {
     Appearance.getColorScheme() === "dark" ? darkTheme : lightTheme
   );
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
-  const router = useRouter();
 
   const checkMissedNotifications = async () => {
     try {
@@ -99,7 +124,7 @@ export default function RootLayout() {
       let scheduledNotifications =
         (await getData("scheduled_notifications")) || [];
 
-      console.log("Raw scheduledNotifications:", scheduledNotifications);
+
 
       const validNotifications = scheduledNotifications.filter(
         (sn: any, index: number) => {
@@ -271,7 +296,7 @@ export default function RootLayout() {
       }
     };
     initialize();
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
@@ -291,37 +316,48 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, []);
 
-  const handleSetUserData = async (data: Partial<UserData>) => {
+  const handleSetUserData = useCallback(async (data: Partial<UserData>) => {
     try {
-      const newUserData = { ...userData, ...data };
-      setUserDataState(newUserData);
-      await saveData("userData", newUserData);
+      setUserDataState((prev) => {
+        const newUserData = { ...prev, ...data };
+        saveData("userData", newUserData).catch((err) =>
+          console.error("Failed to save user data:", err)
+        );
+        return newUserData;
+      });
     } catch (err) {
       console.error("Failed to save user data:", err);
       throw err;
     }
-  };
+  }, []);
 
-  const handleSetThemeMode = async (mode: "system" | "light" | "dark") => {
-    try {
-      setThemeModeState(mode);
-      setTheme(
-        mode === "system"
-          ? Appearance.getColorScheme() === "dark"
+  const handleSetThemeMode = useCallback(
+    async (mode: "system" | "light" | "dark") => {
+      try {
+        setThemeModeState(mode);
+        setTheme(
+          mode === "system"
+            ? Appearance.getColorScheme() === "dark"
+              ? darkTheme
+              : lightTheme
+            : mode === "dark"
             ? darkTheme
             : lightTheme
-          : mode === "dark"
-          ? darkTheme
-          : lightTheme
-      );
-      const newUserData = { ...userData, themeMode: mode };
-      setUserDataState(newUserData);
-      await saveData("userData", newUserData);
-    } catch (err) {
-      console.error("Failed to set theme:", err);
-      throw err;
-    }
-  };
+        );
+        setUserDataState((prev) => {
+          const newUserData = { ...prev, themeMode: mode };
+          saveData("userData", newUserData).catch((err) =>
+            console.error("Failed to save user data:", err)
+          );
+          return newUserData;
+        });
+      } catch (err) {
+        console.error("Failed to set theme:", err);
+        throw err;
+      }
+    },
+    []
+  );
 
   const setIsFirstLaunchHandler = async (value: boolean) => {
     try {
@@ -346,17 +382,19 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <ErrorBoundary>
-        <AuthProvider>
-          <AuthGatedLayout
-            theme={theme}
-            themeMode={themeMode}
-            userData={userData}
-            handleSetUserData={handleSetUserData}
-            handleSetThemeMode={handleSetThemeMode}
-          />
-        </AuthProvider>
-      </ErrorBoundary>
+      <AlertNotificationRoot>
+        <ErrorBoundary>
+          <AuthProvider>
+            <AuthGatedLayout
+              theme={theme}
+              themeMode={themeMode}
+              userData={userData}
+              handleSetUserData={handleSetUserData}
+              handleSetThemeMode={handleSetThemeMode}
+            />
+          </AuthProvider>
+        </ErrorBoundary>
+      </AlertNotificationRoot>
     </SafeAreaProvider>
   );
 }
@@ -376,9 +414,7 @@ function AuthGatedLayout({
   handleSetUserData: (data: any) => Promise<void>;
   handleSetThemeMode: (mode: "system" | "light" | "dark") => Promise<void>;
 }) {
-  const { user, profile, loading: authLoading } = useAuth();
-  // isNewUser: authenticated but no Firestore profile doc yet
-  const isNewUser = !!user && profile === null;
+  const { user, profile, loading: authLoading, profileLoading } = useAuth();
 
   // Sync Firestore profile into userDataInfo when auth user changes
   useEffect(() => {
@@ -386,7 +422,6 @@ function AuthGatedLayout({
       userDataInfo.setUid(user.uid);
       userDataInfo.syncFromFirestore(user.uid)
         .then(() => {
-          // Merge Firestore data into local UserDataContext
           const synced = userDataInfo.getData();
           handleSetUserData(synced).catch(console.error);
         })
@@ -396,7 +431,44 @@ function AuthGatedLayout({
     }
   }, [user, profile]);
 
-  if (authLoading) {
+  const segments = useSegments();
+  const isNewUser = !!user && profile === null;
+
+  useEffect(() => {
+    if (authLoading || profileLoading) return;
+
+    const inAuthGroup = segments[0] === "login" || segments[0] === "signUpPage";
+
+    if (!user && !inAuthGroup) {
+      router.replace("/login");
+    } else if (user && isNewUser && segments[0] !== "signUpPage") {
+      router.replace("/signUpPage");
+    } else if (user && !isNewUser && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [user, profile, authLoading, profileLoading, segments, isNewUser]);
+
+  // Memoize context values to prevent O(N) re-renders of all screens on every navigation
+  const themeContextValue = useMemo(
+    () => ({ theme, setThemeMode: handleSetThemeMode }),
+    [theme, handleSetThemeMode]
+  );
+  
+  const userDataContextValue = useMemo(
+    () => ({ userData, setUserData: handleSetUserData }),
+    [userData, handleSetUserData]
+  );
+
+  const stackScreenOptions = useMemo(
+    () => ({
+      headerShown: false,
+      contentStyle: { backgroundColor: theme.background },
+    }),
+    [theme.background]
+  );
+
+  // Show a loading screen while auth or profile is resolving
+  if (authLoading || profileLoading) {
     return (
       <SafeAreaView
         style={{ flex: 1, justifyContent: "center", alignItems: "center",
@@ -409,48 +481,24 @@ function AuthGatedLayout({
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.background }}>
-      <ThemeContext.Provider
-        value={{ theme, setThemeMode: handleSetThemeMode }}
-      >
-        <UserDataContext.Provider
-          value={{
-            userData,
-            setUserData: handleSetUserData,
-          }}
-        >
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: theme.background },
-            }}
-          >
-            {!user ? (
-              // Not authenticated → Login
-              <Stack.Screen name="login" />
-            ) : isNewUser ? (
-              // Authenticated but no Firestore profile → complete sign up
-              <Stack.Screen name="signUpPage" />
-            ) : (
-              // Fully authenticated with profile → main app
-              <>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="login" />
-                <Stack.Screen name="signUpPage" />
-                <Stack.Screen name="+not-found" />
-                <Stack.Screen name="notifications-page" />
-                <Stack.Screen name="userProfileScreen" />
-                <Stack.Screen name="gamificationPage" />
-                <Stack.Screen name="test" />
-                <Stack.Screen name="task-form" />
-                <Stack.Screen name="profile-page" />
-                <Stack.Screen name="settingsPage" />
-                <Stack.Screen name="faqsPage" />
-                <Stack.Screen name="termsAndConditions" />
-                <Stack.Screen name="chat/[chatId]" />
-                <Stack.Screen name="study/[studyId]" />
-                <Stack.Screen name="projects/[projectId]" />
-              </>
-            )}
+      <ThemeContext.Provider value={themeContextValue}>
+        <UserDataContext.Provider value={userDataContextValue}>
+          <Stack screenOptions={stackScreenOptions}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="login" />
+            <Stack.Screen name="signUpPage" />
+            <Stack.Screen name="+not-found" />
+            <Stack.Screen name="notifications-page" />
+            <Stack.Screen name="userProfileScreen" />
+            <Stack.Screen name="gamificationPage" />
+            <Stack.Screen name="task-form" />
+            <Stack.Screen name="profile-page" />
+            <Stack.Screen name="settingsPage" />
+            <Stack.Screen name="faqsPage" />
+            <Stack.Screen name="termsAndConditions" />
+            <Stack.Screen name="chat/[chatId]" />
+            <Stack.Screen name="study/[studyId]" />
+            <Stack.Screen name="projects/[projectId]" />
           </Stack>
           <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
         </UserDataContext.Provider>
@@ -458,3 +506,4 @@ function AuthGatedLayout({
     </SafeAreaView>
   );
 }
+
