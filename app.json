@@ -1,22 +1,24 @@
 {
   "expo": {
     "name": "Edvantage",
-    "slug": "Edvantage",
+    "slug": "edvantaemobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "edvantagemobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
-    "assetBundlePatterns": ["assets/**/*"],
-    "notification": {
-      "icon": "./assets/notification-icon.png",
-      "color": "#007AFF"
-    },
+    "assetBundlePatterns": [
+      "assets/**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "UIBackgroundModes": ["audio", "fetch", "remote-notification", "location"],
+        "UIBackgroundModes": [
+          "audio",
+          "fetch",
+          "remote-notification",
+          "location"
+        ],
         "NSPhotoLibraryUsageDescription": "Allow access to select a profile picture.",
         "NSLocationWhenInUseUsageDescription": "Edvantage uses your location to verify you are physically present in class before marking attendance.",
         "NSLocationAlwaysUsageDescription": "Edvantage uses your location to verify attendance."
@@ -42,7 +44,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#FAFBFD"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.akinoluwa.edvantage.dev"
     },
     "web": {
@@ -65,14 +66,22 @@
               "name": "Alarms",
               "importance": "max",
               "sound": true,
-              "vibrate": [0, 250, 250, 250]
+              "vibrate": [
+                0,
+                250,
+                250,
+                250
+              ]
             },
             {
               "id": "notifications",
               "name": "Notifications",
               "importance": "default",
               "sound": true,
-              "vibrate": [0, 250]
+              "vibrate": [
+                0,
+                250
+              ]
             }
           ]
         }
@@ -102,9 +111,9 @@
       "apiUrl": "https://edvantage.com.ng/api",
       "router": {},
       "eas": {
-        "projectId": "4cf1f793-a004-4afa-81bc-88ac2263abc4"
+        "projectId": "cf817760-30d6-43d1-bd4e-8847cb512698"
       }
     },
-    "owner": "mikeyyy"
+    "owner": "akinoluwa"
   }
 }

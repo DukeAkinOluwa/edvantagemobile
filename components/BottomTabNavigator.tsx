@@ -1,5 +1,4 @@
 import { useTheme } from "@/components/Header";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   BookOpen,
   CalendarDots,
@@ -19,7 +18,6 @@ import {
 } from "react-native";
 import { ThemedView } from "./ThemedView";
 
-const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
 const TAB_COUNT = 5;
 const TAB_WIDTH = width / TAB_COUNT;
