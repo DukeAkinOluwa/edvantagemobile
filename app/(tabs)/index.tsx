@@ -1,12 +1,17 @@
 import Calendar from "@/components/DashboardCalendar";
-import { NavigationHeader, useTheme, useUserData } from "@/components/Header";
+import { NavigationHeader } from "@/components/Header";
+import { useTheme, useUserData } from "@/components/HeaderContext";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
+import StaffDashboard from "@/app/staff-dashboard";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { scheduleEventNotification } from "@/utils/notifications";
+import { scheduleAlarm } from "@/lib/alarmService";
 import { getData, saveData } from "@/utils/storage";
+import { Task, createTask, subscribeUserTasks, syncTaskAlarms } from "@/lib/firestoreService";
+import { auth } from "@/lib/firebase";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useFocusEffect, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
@@ -19,19 +24,9 @@ import {
   Switch,
   TextInput,
   TouchableOpacity,
+  RefreshControl,
 } from "react-native";
-
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  isGroupEvent: boolean;
-  startTime: string;
-  endTime: string;
-  startTimeAMPM: string;
-  endTimeAMPM: string;
-}
+import { FontAwesome6 } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { theme } = useTheme();
@@ -41,7 +36,22 @@ export default function HomeScreen() {
   const router = useRouter();
   const adjustedWidth = screenWidth - 30;
 
+  if (userData.role === "lecturer") {
+    return <StaffDashboard />;
+  }
+
   const [modalVisible, setModalVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setRefreshTrigger((prev) => prev + 1);
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 800);
+  }, []);
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
@@ -54,6 +64,8 @@ export default function HomeScreen() {
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [createdTask, setCreatedTask] = useState<Task | null>(null);
 
   // One-time cleanup and re-scheduling of notifications
   useEffect(() => {
@@ -183,9 +195,15 @@ export default function HomeScreen() {
 
     const startTimeAMPM = formatTimeToAMPM(startTime);
     const endTimeAMPM = formatTimeToAMPM(endTime);
+    const taskUid = userData.uid || auth.currentUser?.uid;
+
+    if (!taskUid) {
+      alert("Error: User not authenticated.");
+      setIsLoading(false);
+      return;
+    }
 
     const newTask = {
-      id: Date.now().toString(),
       title,
       description,
       location,
@@ -194,16 +212,19 @@ export default function HomeScreen() {
       endTime: endTime.toISOString(),
       startTimeAMPM,
       endTimeAMPM,
+      uid: taskUid,
     };
 
     try {
-      const tasks = (await getData("tasks")) || [];
-      tasks.push(newTask);
-      await saveData("tasks", tasks);
+      const newTaskId = await createTask(newTask);
 
       // Always save to scheduled_notifications and log, but only schedule pop-up if allowed
-      const triggerTime = new Date(newTask.startTime).getTime() - 5 * 60 * 1000;
-      if (triggerTime > Date.now()) {
+      const startTimeMs = new Date(newTask.startTime).getTime();
+      const triggerTime = startTimeMs - 5 * 60 * 1000;
+      const now = Date.now();
+
+      // 1. Pre-notification 5 minutes before (if still in the future)
+      if (triggerTime > now) {
         let scheduledNotifications =
           (await getData("scheduled_notifications")) || [];
         scheduledNotifications = scheduledNotifications.filter(
@@ -216,7 +237,7 @@ export default function HomeScreen() {
             typeof sn.triggerTime === "number"
         );
         scheduledNotifications.push({
-          taskId: newTask.id,
+          taskId: newTaskId,
           triggerTime,
         });
         await saveData("scheduled_notifications", scheduledNotifications);
@@ -228,59 +249,60 @@ export default function HomeScreen() {
         );
 
         if (userData.allowNotifications !== false) {
-          await scheduleEventNotification(newTask);
+          await scheduleEventNotification({ ...newTask, id: newTaskId });
           console.log("Pop-up notification scheduled for task:", newTask.title);
-        } else {
-          console.log(
-            "Pop-up notifications disabled, notification not scheduled for task:",
-            newTask.title
+        }
+      }
+
+      // 2. Alarm EXACTLY at task start time (if start time is in the future)
+      if (startTimeMs > now) {
+        if (userData.allowAlarms !== false) {
+          await scheduleAlarm(
+            newTaskId,
+            startTimeMs,
+            `Task Starting: ${newTask.title}`,
+            `Your task starts now at ${newTask.location}.`
           );
+          console.log("OS-level alarm scheduled for task:", newTask.title, "at", new Date(startTimeMs).toLocaleTimeString());
         }
       } else {
         console.log(
-          "Task start time is in the past, notification not scheduled for task:",
+          "Task start time is in the past, alarm not scheduled for task:",
           newTask.title
         );
       }
-
-      setTasks(tasks);
+      setIsLoading(false);
+      setCreatedTask({ ...newTask, id: newTaskId });
+      setSuccessModalVisible(true);
+      setModalVisible(false);
+      setTitle("");
+      setDescription("");
+      setLocation("");
+      setIsGroupEvent(false);
+      setStartTime(null);
+      setEndTime(null);
     } catch (error) {
       console.error("Error saving task or notification:", error);
       alert("Failed to save task. Please try again.");
       setIsLoading(false);
       return;
     }
-
-    setModalVisible(false);
-    setTitle("");
-    setDescription("");
-    setLocation("");
-    setIsGroupEvent(false);
-    setStartTime(null);
-    setEndTime(null);
-    setIsLoading(false);
   };
 
-  const fetchTasks = useCallback(async () => {
-    try {
-      const savedTasks = await getData("tasks");
-      setTasks((prev) => {
-        const saved = savedTasks || [];
-        if (prev.length === saved.length && JSON.stringify(prev) === JSON.stringify(saved)) {
-          return prev;
-        }
-        return saved;
-      });
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-    }
-  }, []);
+  useEffect(() => {
+    const uid = userData?.uid || auth.currentUser?.uid;
+    if (!uid) return;
+    
+    // Sync scheduled tasks alarms with device alarms on mount
+    syncTaskAlarms(uid).catch(console.error);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchTasks();
-    }, [fetchTasks])
-  );
+    // Subscribe to tasks in real-time
+    const unsubscribe = subscribeUserTasks(uid, (fetchedTasks) => {
+      setTasks(fetchedTasks);
+    });
+
+    return () => unsubscribe();
+  }, [userData?.uid]);
 
   const dynamicStyles = StyleSheet.create({
     page: {
@@ -307,17 +329,39 @@ export default function HomeScreen() {
   return (
     <ThemedView style={[styles.page, dynamicStyles.page]}>
       <NavigationHeader title="Dashboard" />
-      <ParallaxScrollView>
+      <ParallaxScrollView
+        contentContainerStyle={{ paddingBottom: 120 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
+        }
+      >
         <ThemedView
           style={[
             styles.gamificationContainer,
             dynamicStyles.gamificationContainer,
           ]}
         />
+        {/* 
+        <TouchableOpacity
+          style={{ backgroundColor: "red", padding: 15, borderRadius: 8, marginVertical: 10, alignItems: "center" }}
+          onPress={async () => {
+            alert("Test alarm scheduled for 10 seconds from now! Lock your screen!");
+            await scheduleAlarm("test-alarm", Date.now() + 10000, "Test Alarm", "This is an automatic test alarm.");
+          }}
+        >
+          <ThemedText style={{ color: "white", fontWeight: "bold" }}>TRIGGER TEST ALARM (10s)</ThemedText>
+        </TouchableOpacity> 
+        */}
         <Calendar
           onDayPress={handleDayPress}
           setModalVisible={setModalVisible}
           modalVisible={modalVisible}
+          refreshTrigger={refreshTrigger}
         />
       </ParallaxScrollView>
       <Modal
@@ -342,6 +386,14 @@ export default function HomeScreen() {
               { backgroundColor: theme.background, borderColor: theme.border },
             ]}
           >
+            <ThemedText
+              style={[
+                globalStyles.semiLargeText,
+                { fontWeight: "bold", marginBottom: 15, color: theme.text },
+              ]}
+            >
+              Create New Task
+            </ThemedText>
             <TextInput
               placeholder="Title *"
               value={title}
@@ -376,8 +428,8 @@ export default function HomeScreen() {
               <Switch
                 value={isGroupEvent}
                 onValueChange={setIsGroupEvent}
-                trackColor={{ false: theme.border, true: theme.primary }}
-                thumbColor={theme.background}
+                trackColor={{ false: "#767577", true: theme.primary }}
+                thumbColor={isGroupEvent ? theme.secondary : "#f4f3f4"}
               />
             </ThemedView>
             <TextInput
@@ -470,7 +522,7 @@ export default function HomeScreen() {
                     style={[
                       globalStyles.semiLargeText,
                       styles.customButtonText,
-                      { color: theme.text },
+                      { color: theme.secondary },
                     ]}
                   >
                     Confirm
@@ -487,13 +539,13 @@ export default function HomeScreen() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color={theme.text} />
+                <ActivityIndicator size="small" color={theme.secondary} />
               ) : (
                 <ThemedText
                   style={[
                     globalStyles.semiLargeText,
                     styles.customButtonText,
-                    { color: theme.text },
+                    { color: theme.secondary },
                   ]}
                 >
                   Create Task
@@ -503,6 +555,64 @@ export default function HomeScreen() {
           </ThemedView>
         </ThemedView>
       </Modal>
+
+      <Modal
+        transparent
+        visible={successModalVisible}
+        animationType="fade"
+        onRequestClose={() => setSuccessModalVisible(false)}
+      >
+        <ThemedView
+          style={[
+            styles.modalBackdrop,
+            { backgroundColor: theme.modalBackdrop || theme.background + "80" },
+          ]}
+        >
+          <ThemedView
+            style={[
+              styles.modalContent,
+              { backgroundColor: theme.background, borderColor: theme.border, alignItems: "center" },
+            ]}
+          >
+            <FontAwesome6 name="circle-check" size={50} color="#2A52BE" style={{ marginBottom: 15 }} />
+            <ThemedText style={[globalStyles.semiLargeText, { fontWeight: "bold", marginBottom: 10, textAlign: "center", color: theme.text }]}>
+              Task Created Successfully!
+            </ThemedText>
+            {createdTask && (
+              <ThemedView style={{ width: "100%", marginVertical: 15 }}>
+                <ThemedText style={[globalStyles.baseText, { color: theme.text, marginBottom: 5 }]}>
+                  <ThemedText style={{ fontWeight: "bold" }}>Title:</ThemedText> {createdTask.title}
+                </ThemedText>
+                <ThemedText style={[globalStyles.baseText, { color: theme.text, marginBottom: 5 }]}>
+                  <ThemedText style={{ fontWeight: "bold" }}>Time:</ThemedText> {createdTask.startTimeAMPM} - {createdTask.endTimeAMPM}
+                </ThemedText>
+                <ThemedText style={[globalStyles.baseText, { color: theme.text }]}>
+                  <ThemedText style={{ fontWeight: "bold" }}>Location:</ThemedText> {createdTask.location}
+                </ThemedText>
+              </ThemedView>
+            )}
+            <Pressable
+              style={[
+                globalStyles.button1,
+                { width: "100%", backgroundColor: theme.primary, marginTop: 10 },
+              ]}
+              onPress={() => setSuccessModalVisible(false)}
+            >
+              <ThemedText style={[globalStyles.mediumText, { color: theme.secondary }]}>
+                Done
+              </ThemedText>
+            </Pressable>
+          </ThemedView>
+        </ThemedView>
+      </Modal>
+
+      <TouchableOpacity
+        style={[styles.fab, { backgroundColor: theme.primary }]}
+        onPress={() => setModalVisible(true)}
+        activeOpacity={0.8}
+      >
+        <FontAwesome6 name="plus" size={20} color={theme.secondary} />
+      </TouchableOpacity>
     </ThemedView>
   );
 }
@@ -598,5 +708,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginTop: 20,
+  },
+  fab: {
+    position: "absolute",
+    bottom: 85,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
 });

@@ -1,5 +1,6 @@
 import { darkTheme, lightTheme } from "@/assets/colors";
 import { scheduleEventNotification } from "@/utils/notifications";
+import { scheduleAlarm } from "@/lib/alarmService";
 import { getData, saveData } from "@/utils/storage";
 import userDataInfo from "@/utils/userDataInfo";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -156,6 +157,22 @@ const TaskForm: React.FC = () => {
     tasks.push(task);
     await saveData("tasks", tasks);
     await scheduleEventNotification(task);
+
+    // Schedule OS-level alarm using Notifee at exact task start time
+    try {
+      const alarmTime = startTime.getTime();
+      if (alarmTime > Date.now()) {
+        await scheduleAlarm(
+          task.id,
+          alarmTime,
+          `Task Starting: ${task.title}`,
+          `Starts at ${task.startTimeAMPM} at ${task.location}.`
+        );
+        console.log("OS-level alarm scheduled from task form:", task.title);
+      }
+    } catch (e) {
+      console.error("Failed to schedule task alarm in form:", e);
+    }
 
     Alert.alert("Success", "Task created!", [
       { text: "OK", onPress: () => router.back() },

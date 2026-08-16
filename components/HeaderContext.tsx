@@ -9,6 +9,7 @@ export interface ThemeContextType {
 
 export interface UserDataContextType {
   userData: {
+    uid?: string;
     firstName?: string;
     lastName?: string;
     bio?: string;
@@ -22,6 +23,17 @@ export interface UserDataContextType {
     university?: string;
     email?: string;
     phoneNumber?: string;
+    role?: "student" | "lecturer" | "admin";
+    themeMode?: "system" | "light" | "dark";
+    allowNotifications?: boolean;
+    allowAlarms?: boolean;
+    language?: string;
+    privacy?: {
+      showOnlineStatus: boolean;
+      showProfileToGroups: boolean;
+      allowFriendRequests: boolean;
+      dataCollection: boolean;
+    };
   };
   setUserData: (data: Partial<UserDataContextType["userData"]>) => void;
   setIsFirstLaunch?: (value: boolean) => void;

@@ -1,12 +1,12 @@
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/components/Header";
+import { useTheme } from "@/components/HeaderContext";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useGlobalStyles } from "@/styles/globalStyles";
-import { fetchUserSchedule, createScheduleEvent, ScheduleEvent, syncScheduleAlarms, deleteScheduleEvent } from "@/lib/scheduleService";
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
-import { SectionList, StyleSheet, Switch, View, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Text } from "react-native";
+import { createScheduleEvent, ScheduleEvent, syncScheduleAlarms, deleteScheduleEvent, subscribeUserSchedule } from "@/lib/scheduleService";
+import { useRouter } from "expo-router";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import { SectionList, StyleSheet, Switch, View, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Text, ScrollView, Animated, RefreshControl } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -35,6 +35,47 @@ const formatDateHeader = (date: Date) => {
 
 const formatTime = (ts: number) => {
   return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
+
+// Pulsing skeleton loading row
+const SkeletonItem = ({ theme }: { theme: any }) => {
+  const animatedValue = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(animatedValue, {
+          toValue: 0.8,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(animatedValue, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        styles.skeletonCard,
+        {
+          backgroundColor: theme.backgroundSecondary,
+          borderColor: theme.border,
+          opacity: animatedValue,
+        },
+      ]}
+    >
+      <View style={styles.skeletonTimeCol} />
+      <View style={styles.skeletonInfoCol}>
+        <View style={styles.skeletonTitleLine} />
+        <View style={styles.skeletonMetaLine} />
+      </View>
+    </Animated.View>
+  );
 };
 
 const ScheduleItem = React.memo(function ScheduleItem({
@@ -98,6 +139,18 @@ export default function ScheduleScreen() {
   const [includePast, setIncludePast] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    if (user && profile) {
+      syncScheduleAlarms(user.uid, profile.role === "lecturer" ? "lecturer" : "student").catch(console.error);
+    }
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 800);
+  }, [user, profile]);
+
   // New Event Form State
   const [title, setTitle] = useState("");
   const [courseCode, setCourseCode] = useState("");
@@ -113,29 +166,30 @@ export default function ScheduleScreen() {
   const isLecturer = profile?.role === "lecturer";
   const router = useRouter();
 
-  const loadSchedule = useCallback(async () => {
+  // Establish real-time listener subscription on mount
+  useEffect(() => {
     if (!user || !profile) {
       setLoading(false);
       return;
     }
-    setLoading(true);
-    try {
-      // Sync native alarms for the device while fetching
-      await syncScheduleAlarms(user.uid, profile.role === "lecturer" ? "lecturer" : "student");
-      const fetched = await fetchUserSchedule(user.uid, profile.role === "lecturer" ? "lecturer" : "student");
-      setEvents(fetched);
-    } catch (err) {
-      console.error("Failed to load schedule:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [user, profile]);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadSchedule();
-    }, [loadSchedule])
-  );
+    setLoading(true);
+
+    // Sync native device alarms in background
+    syncScheduleAlarms(user.uid, profile.role === "lecturer" ? "lecturer" : "student").catch(console.error);
+
+    // Real-time listener
+    const unsubscribe = subscribeUserSchedule(
+      user.uid,
+      profile.role === "lecturer" ? "lecturer" : "student",
+      (fetched) => {
+        setEvents(fetched);
+        setLoading(false);
+      }
+    );
+
+    return unsubscribe;
+  }, [user, profile]);
 
   const handleAddEvent = async () => {
     if (!title || !courseCode || !location || !user || !profile) {
@@ -162,7 +216,13 @@ export default function ScheduleScreen() {
         participants: [],
       });
       setShowAddModal(false);
-      loadSchedule();
+      // Reset fields
+      setTitle("");
+      setCourseCode("");
+      setLocation("");
+      setClassroomLat("");
+      setClassroomLon("");
+      setClassroomRadius("100");
     } catch (err) {
       Alert.alert("Error", "Failed to schedule class.");
     } finally {
@@ -175,10 +235,9 @@ export default function ScheduleScreen() {
       { text: "Cancel", style: "cancel" },
       { text: "Delete", style: "destructive", onPress: async () => {
         await deleteScheduleEvent(id);
-        loadSchedule();
       }}
     ]);
-  }, [loadSchedule]);
+  }, []);
 
   const handleCheckIn = useCallback((item: ScheduleEvent) => {
     router.push({
@@ -234,10 +293,12 @@ export default function ScheduleScreen() {
           </ThemedText>
         </View>
         
-        <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-          <FontAwesome6 name="plus" size={16} color="#fff" />
-          <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
-        </TouchableOpacity>
+        {isLecturer && (
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+            <FontAwesome6 name="plus" size={16} color="#fff" />
+            <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.toggleRow}>
@@ -250,13 +311,36 @@ export default function ScheduleScreen() {
         />
       </View>
 
-      {/* Schedule List */}
-      {loading ? (
-        <ActivityIndicator size="large" color="#2A52BE" style={{ marginTop: 40 }} />
+      {/* Real-time Schedule list with Pulsing Skeleton Loader fallbacks */}
+      {loading && events.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={{ gap: 10, paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
+        >
+          <SkeletonItem theme={theme} />
+          <SkeletonItem theme={theme} />
+          <SkeletonItem theme={theme} />
+          <SkeletonItem theme={theme} />
+        </ScrollView>
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[theme.primary]}
+              tintColor={theme.primary}
+            />
+          }
           renderSectionHeader={({ section: { title } }) => (
             <ThemedText style={[styles.sectionHeader, globalStyles.semiLargeText, { color: theme.text }]}>
               {title}
@@ -334,7 +418,7 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 15, paddingTop: 60 }, // Added top padding for Safe Area
+  container: { flex: 1, paddingHorizontal: 15, paddingTop: 60 },
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
   addBtn: { flexDirection: "row", backgroundColor: "#2A52BE", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, alignItems: "center" },
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, paddingBottom: 10, borderBottomWidth: 0.5, borderBottomColor: "#ddd" },
@@ -357,4 +441,37 @@ const styles = StyleSheet.create({
   dateBtn: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 30 },
   submitBtn: { backgroundColor: "#2A52BE", padding: 16, borderRadius: 8, alignItems: "center" },
   submitText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  // Skeletons
+  skeletonCard: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    height: 80,
+    alignItems: "center",
+    marginBottom: 5,
+  },
+  skeletonTimeCol: {
+    width: 60,
+    height: 45,
+    backgroundColor: "rgba(128,128,128,0.15)",
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  skeletonInfoCol: {
+    flex: 1,
+    gap: 8,
+  },
+  skeletonTitleLine: {
+    width: "70%",
+    height: 14,
+    backgroundColor: "rgba(128,128,128,0.15)",
+    borderRadius: 4,
+  },
+  skeletonMetaLine: {
+    width: "40%",
+    height: 10,
+    backgroundColor: "rgba(128,128,128,0.15)",
+    borderRadius: 4,
+  },
 });

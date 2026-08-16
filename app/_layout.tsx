@@ -45,25 +45,29 @@ class ErrorBoundary extends Component<
 let isRouterPatched = false;
 
 export default function RootLayout() {
-  const pathname = usePathname();
-  const currentPathRef = useRef(pathname);
+  const segments = useSegments();
+  const currentSegmentRef = useRef("");
 
   useEffect(() => {
-    currentPathRef.current = pathname;
-  }, [pathname]);
+    const activeSegment = segments.length > 0 ? segments[segments.length - 1] : "";
+    currentSegmentRef.current = activeSegment;
+  }, [segments]);
 
   useEffect(() => {
     if (!isRouterPatched && router) {
       const originalPush = router.push;
       router.push = (href, options) => {
-        const targetPath = typeof href === 'string' ? href : href?.pathname;
-        const targetBase = targetPath?.split('?')[0];
-        const currentBase = currentPathRef.current?.split('?')[0];
-        
-        if (targetBase && targetBase === currentBase) {
-          console.log(`Prevented stacking identical screen: ${targetBase}`);
+        const targetPath = typeof href === "string" ? href : href?.pathname;
+        if (!targetPath) return originalPush(href, options);
+
+        // Normalize target path (e.g. "/notifications-page" -> "notifications-page")
+        const targetClean = targetPath.split("?")[0].replace(/^\//, "").replace(/\/$/, "");
+        const currentClean = currentSegmentRef.current.replace(/^\//, "").replace(/\/$/, "");
+
+        if (targetClean && currentClean && targetClean === currentClean) {
           return;
         }
+
         originalPush(href, options);
       };
       isRouterPatched = true;
@@ -284,11 +288,21 @@ export default function RootLayout() {
         console.log("First launch:", firstLaunch);
 
         setFontsLoaded(true);
+
         await SplashScreen.hideAsync();
         console.log("Splash screen hidden");
 
         await checkMissedNotifications();
         console.log("Missed notifications checked");
+
+        // Request Alarm and Notification permissions on startup
+        try {
+          const { requestAlarmPermissions } = require("../lib/alarmService");
+          await requestAlarmPermissions();
+          console.log("Alarm and Notification permissions requested on startup");
+        } catch (e) {
+          console.error("Failed to request alarm permissions on startup:", e);
+        }
       } catch (err) {
         console.error("Initialization error:", err);
         setFontsLoaded(true);
@@ -308,7 +322,7 @@ export default function RootLayout() {
   }, [themeMode]);
 
   useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextAppState) => {
+    const subscription = AppState.addEventListener("change", async (nextAppState) => {
       if (nextAppState === "active") {
         checkMissedNotifications();
       }

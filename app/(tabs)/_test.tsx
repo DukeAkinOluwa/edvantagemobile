@@ -154,7 +154,7 @@ export default function SettingsScreen() {
       <View style={styles.container}>
         <View style={styles.profilePicContainer}>
           <Image
-            source={{ uri: profilePic || "https://via.placeholder.com/100" }}
+            source={profilePic ? { uri: profilePic } : require("@/assets/images/default-avatar.jpg")}
             style={styles.profilePic}
           />
           <Button

@@ -98,17 +98,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (firebaseUser) {
         try {
-          // Force-refresh token to verify the session is valid
-          await firebaseUser.getIdToken(true);
+          // Try to get token (refreshes only if expired)
+          await firebaseUser.getIdToken();
           setUser(firebaseUser);
           await loadProfile(firebaseUser);
           startPresenceTracking(firebaseUser.uid);
-        } catch (err) {
-          console.error("AuthContext: Invalid or stale access token", err);
-          await signOut().catch(console.error);
-          setUser(null);
-          setProfile(null);
-          stopPresenceTracking();
+        } catch (err: any) {
+          console.error("AuthContext: Token verification failed", err);
+          const isNetworkError =
+            err?.code === "auth/network-request-failed" ||
+            err?.message?.includes("network-request-failed") ||
+            err?.message?.includes("fetch");
+
+          if (isNetworkError) {
+            console.log("AuthContext: Network offline, keeping session active.");
+            // Maintain user session and attempt to load profile from offline cache
+            setUser(firebaseUser);
+            await loadProfile(firebaseUser).catch(console.error);
+          } else {
+            // Actual authorization error (e.g., token revoked, user deleted), log out
+            await signOut().catch(console.error);
+            setUser(null);
+            setProfile(null);
+            stopPresenceTracking();
+          }
         }
       } else {
         setUser(null);

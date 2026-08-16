@@ -11,7 +11,7 @@
     "assetBundlePatterns": ["assets/**/*"],
     "notification": {
       "icon": "./assets/notification-icon.png",
-      "color": "#007AFF"
+      "color": "#2A52BE"
     },
     "ios": {
       "supportsTablet": true,
@@ -55,7 +55,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#007AFF",
+          "color": "#2A52BE",
           "sounds": [],
           "iosDisplayInForeground": true,
           "androidMode": "default",

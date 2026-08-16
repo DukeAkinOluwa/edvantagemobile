@@ -1,4 +1,4 @@
-import { useTheme } from "@/components/Header";
+import { useTheme } from "@/components/HeaderContext";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import {
   BookOpen,
@@ -6,6 +6,7 @@ import {
   Chats,
   GlobeHemisphereEast,
   House,
+  ClipboardText,
 } from "phosphor-react-native";
 import React, { useEffect, useRef } from "react";
 import {
@@ -21,8 +22,6 @@ import { ThemedView } from "./ThemedView";
 
 const Tab = createBottomTabNavigator();
 const { width } = Dimensions.get("window");
-const TAB_COUNT = 5;
-const TAB_WIDTH = width / TAB_COUNT;
 
 export const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   const { theme } = useTheme();
@@ -47,19 +46,23 @@ export const CustomTabBar = ({ state, descriptors, navigation }: any) => {
   // Default to 0 if the current route is hidden
   const displayIndex = activeVisibleIndex >= 0 ? activeVisibleIndex : 0;
 
-  const translateX = useRef(new Animated.Value(displayIndex * TAB_WIDTH)).current;
+  const visibleCount = visibleRoutes.length || 5;
+  const tabWidth = width / visibleCount;
+  const BUBBLE_WIDTH = 64;
+  const offset = (tabWidth - BUBBLE_WIDTH) / 2;
+
+  const translateX = useRef(new Animated.Value(displayIndex * tabWidth + offset)).current;
   const translateY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(translateX, {
-      toValue: displayIndex * TAB_WIDTH,
+      toValue: displayIndex * tabWidth + offset,
       useNativeDriver: true,
     }).start();
 
     Animated.sequence([
       Animated.timing(translateY, {
         toValue: 0,
-        // toValue: -10,
         duration: 150,
         useNativeDriver: true,
       }),
@@ -69,7 +72,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: any) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [displayIndex]);
+  }, [displayIndex, tabWidth, offset]);
 
   return (
     <View>
@@ -77,6 +80,7 @@ export const CustomTabBar = ({ state, descriptors, navigation }: any) => {
         style={[
           styles.semiCircle,
           {
+            width: BUBBLE_WIDTH,
             backgroundColor: theme.background,
             elevation: 5,
             borderWidth: 1,

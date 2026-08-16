@@ -15,7 +15,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useTheme, useUserData } from "./_layout";
+import { useTheme, useUserData } from "@/components/HeaderContext";
 
 export default function SettingsScreen() {
   const { theme, setThemeMode } = useTheme();
@@ -120,7 +120,7 @@ export default function SettingsScreen() {
       <View style={styles.container}>
         <View style={styles.profilePicContainer}>
           <Image
-            source={{ uri: profilePic || "https://via.placeholder.com/100" }}
+            source={profilePic ? { uri: profilePic } : require("@/assets/images/default-avatar.jpg")}
             style={styles.profilePic}
           />
           <Button

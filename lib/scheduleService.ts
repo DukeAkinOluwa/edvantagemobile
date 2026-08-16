@@ -2,7 +2,7 @@
 // Handles Class Schedules and auto-hooks into Native Alarms
 
 import { db } from "./firebase";
-import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, query, where, deleteDoc, onSnapshot } from "firebase/firestore";
 import { scheduleAlarm, cancelAlarm } from "./alarmService";
 
 export interface ScheduleEvent {
@@ -97,4 +97,30 @@ export async function syncScheduleAlarms(uid: string, role: "student" | "lecture
 export async function deleteScheduleEvent(eventId: string) {
   await deleteDoc(doc(db, "schedules", eventId));
   await cancelAlarm(`class_${eventId}`);
+}
+
+/**
+ * Subscribes to the schedule for a specific user in real-time.
+ */
+export function subscribeUserSchedule(
+  uid: string,
+  role: "student" | "lecturer",
+  onData: (events: ScheduleEvent[]) => void
+) {
+  const schedulesRef = collection(db, "schedules");
+  let q;
+
+  if (role === "lecturer") {
+    q = query(schedulesRef, where("lecturerId", "==", uid));
+  } else {
+    q = query(schedulesRef, where("participants", "array-contains", uid));
+  }
+
+  return onSnapshot(q, (snapshot) => {
+    const events: ScheduleEvent[] = [];
+    snapshot.forEach((doc) => {
+      events.push(doc.data() as ScheduleEvent);
+    });
+    onData(events.sort((a, b) => a.startTime - b.startTime));
+  });
 }

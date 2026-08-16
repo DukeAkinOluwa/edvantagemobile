@@ -32,7 +32,7 @@ export function getChatMessages(
     .catch(console.error);
 
   // Subscribe to Firestore real-time updates
-  const unsubscribe = subscribeToMessages(chatId, onMessages);
+  const unsubscribe = subscribeToMessages(chatId, 50, onMessages);
   return unsubscribe;
 }
 

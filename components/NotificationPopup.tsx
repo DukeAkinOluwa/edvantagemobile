@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, Text, View, Button, StyleSheet } from "react-native";
-import { useTheme } from "../app/_layout";
+import { useTheme } from "./HeaderContext";
 
 interface Props {
   visible: boolean;
@@ -9,7 +9,7 @@ interface Props {
 }
 
 const NotificationPopup: React.FC<Props> = ({ visible, task, onClose }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
 
   if (!task) return null;
 

@@ -29,6 +29,14 @@ export const requestNotificationPermissions = async () => {
   }
 };
 
+export interface Task {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  startTime: string;
+}
+
 export const scheduleEventNotification = async (task: Task) => {
   const startTime = new Date(task.startTime);
   const triggerTime = new Date(startTime.getTime() - 5 * 60 * 1000); // 5 minutes before
@@ -57,6 +65,18 @@ export const scheduleEventNotification = async (task: Task) => {
       )}.`,
       data: { taskId: task.id },
     },
-    trigger: triggerTime,
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: triggerTime,
+    },
   });
+};
+
+export const cancelNotification = async (taskId: string) => {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(taskId);
+    console.log("Canceled scheduled notification for task:", taskId);
+  } catch (error) {
+    console.error("Error canceling scheduled notification:", error);
+  }
 };

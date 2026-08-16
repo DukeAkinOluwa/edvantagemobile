@@ -17,7 +17,6 @@ export async function initializeAudio() {
     await Audio.setAudioModeAsync({
       staysActiveInBackground: true,
       playsInSilentModeIOS: true,
-      shouldRouteThroughEarpiece: false,
       playThroughEarpieceAndroid: false,
     });
   } catch (err) {
@@ -45,7 +44,7 @@ export async function startAlarmAudio() {
     // Use a default alarm sound from assets or system
     // Note: You must require a local audio file here, e.g. require('../assets/alarm.mp3')
     // For this implementation, we assume a local asset exists or fallback to a remote one for testing
-    const source = require("@/assets/audio/alarm-default.mp3"); 
+    const source = require("@/assets/audio/alarm-default.wav"); 
     
     await soundObject.loadAsync(source, {
       shouldPlay: true,

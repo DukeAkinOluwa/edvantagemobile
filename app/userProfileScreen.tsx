@@ -50,9 +50,9 @@ export default function ProfilePage() {
         <ParallaxScrollView>
           <ThemedView style={[styles.container]}>
             <Image
-              source={{
-                uri: userData.profilePic || "https://via.placeholder.com/150",
-              }}
+              source={
+                userData.profilePic ? { uri: userData.profilePic } : require("@/assets/images/default-avatar.jpg")
+              }
               style={[styles.avatar, { borderColor: theme.border }]}
             />
             <Text

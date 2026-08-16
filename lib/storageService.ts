@@ -90,6 +90,49 @@ export async function uploadChatDocument(
   return { downloadUrl, storagePath, fileName: originalName, fileSize, mimeType };
 }
 
+// ─── Video upload ─────────────────────────────────────────────────────────────
+
+export async function uploadChatVideo(
+  chatId: string,
+  senderUid: string,
+  localUri: string,
+  onProgress?: (pct: number) => void
+): Promise<UploadResult> {
+  const ext = localUri.split(".").pop() ?? "mp4";
+  const fileName = `${Date.now()}_${senderUid}.${ext}`;
+  const storagePath = `chat/${chatId}/videos/${fileName}`;
+  const mimeType = ext === "mov" ? "video/quicktime" : "video/mp4";
+
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+  const fileSize = blob.size;
+
+  const downloadUrl = await uploadFile(localUri, storagePath, mimeType, onProgress);
+  return { downloadUrl, storagePath, fileName, fileSize, mimeType };
+}
+
+// ─── Voice note upload ────────────────────────────────────────────────────────
+
+export async function uploadChatVoiceNote(
+  chatId: string,
+  senderUid: string,
+  localUri: string,
+  onProgress?: (pct: number) => void
+): Promise<UploadResult> {
+  const ext = localUri.split(".").pop() ?? "m4a";
+  const fileName = `${Date.now()}_${senderUid}.${ext}`;
+  const storagePath = `chat/${chatId}/voice/${fileName}`;
+  // React Native typically records audio in m4a format
+  const mimeType = "audio/m4a";
+
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+  const fileSize = blob.size;
+
+  const downloadUrl = await uploadFile(localUri, storagePath, mimeType, onProgress);
+  return { downloadUrl, storagePath, fileName, fileSize, mimeType };
+}
+
 // ─── File size formatter ──────────────────────────────────────────────────────
 
 export function formatFileSize(bytes: number): string {

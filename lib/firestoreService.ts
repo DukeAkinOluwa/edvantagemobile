@@ -23,6 +23,8 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { scheduleAlarm } from "./alarmService";
+import { scheduleEventNotification } from "../utils/notifications";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -64,6 +66,7 @@ export interface Task {
   title: string;
   description: string;
   location: string;
+  level?: string;
   isGroupEvent: boolean;
   startTime: string;
   endTime: string;
@@ -86,6 +89,7 @@ export interface ChatRoom {
   isPublic?: boolean;              // whether the group is discoverable
   avatarUrl?: string;              // group avatar or other person's pic
   unreadCounts?: Record<string, number>; // uid -> unread count
+  typingUsers?: Record<string, number>;  // uid -> timestamp of last typing event
   createdAt?: Timestamp;
 }
 
@@ -96,12 +100,17 @@ export interface Message {
   senderName?: string;
   senderAvatar?: string;
   timestamp?: Timestamp;
-  type?: "text" | "image" | "document" | "voice";
+  type?: "text" | "image" | "document" | "voice" | "video";
   readBy?: string[];               // UIDs that have read this message
   // Image fields
   imageUrl?: string;
   imageWidth?: number;
   imageHeight?: number;
+  // Video fields
+  videoUrl?: string;
+  // Voice fields
+  voiceUrl?: string;
+  voiceDuration?: number;
   // Document fields
   documentUrl?: string;
   documentName?: string;
@@ -162,6 +171,51 @@ export async function getUserTasks(uid: string): Promise<Task[]> {
   const q = query(tasksCol(), where("uid", "==", uid));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+}
+
+/** Subscribe to a user's tasks in real-time */
+export function subscribeUserTasks(
+  uid: string,
+  onUpdate: (tasks: Task[]) => void
+): Unsubscribe {
+  const q = query(tasksCol(), where("uid", "==", uid));
+  return onSnapshot(q, (snap) => {
+    const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+    onUpdate(tasks);
+  });
+}
+
+/** Sync task alarms for a user */
+export async function syncTaskAlarms(uid: string): Promise<void> {
+  const tasks = await getUserTasks(uid);
+  const now = Date.now();
+  
+  for (const task of tasks) {
+    if (!task.id) continue;
+    
+    // Notification 5 mins before
+    const notificationTime = new Date(task.startTime).getTime() - 5 * 60 * 1000;
+    if (notificationTime > now) {
+      await scheduleEventNotification({
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        location: task.location,
+        startTime: task.startTime,
+      });
+    }
+
+    // Alarm exactly at start time
+    const alarmTime = new Date(task.startTime).getTime();
+    if (alarmTime > now) {
+      await scheduleAlarm(
+        task.id,
+        alarmTime,
+        `Task Starting: ${task.title}`,
+        `Your task starts now at ${task.location}.`
+      );
+    }
+  }
 }
 
 /** Create a task */
@@ -515,4 +569,25 @@ export function subscribeToOtherPresence(
     const data = snap.data();
     callback(data?.isOnline ?? false, data?.lastSeen ?? null);
   });
+}
+
+// ─── Typing Status ────────────────────────────────────────────────────────────
+
+/** Update typing status in a chat room */
+export async function setTypingStatus(
+  chatId: string,
+  uid: string,
+  isTyping: boolean
+): Promise<void> {
+  const roomRef = doc(chatRoomsCol(), chatId);
+  if (isTyping) {
+    await updateDoc(roomRef, {
+      [`typingUsers.${uid}`]: Date.now(),
+    });
+  } else {
+    // We could delete the field but setting it to 0 is safer with Firestore rules
+    await updateDoc(roomRef, {
+      [`typingUsers.${uid}`]: 0,
+    });
+  }
 }

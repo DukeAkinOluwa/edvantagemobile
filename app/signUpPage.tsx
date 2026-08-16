@@ -37,6 +37,7 @@ export default function SignUpPage() {
     password: "",
     confirmPassword: "",
     university: "",
+    role: "student" as "student" | "lecturer",
     major: "",
     bio: "",
     level: "100",
@@ -94,7 +95,7 @@ export default function SignUpPage() {
     };
     let isValid = true;
 
-    if (step === 1 || step === 5) {
+    if (step === 1) {
       if (!formData.firstName.trim()) {
         newErrors.firstName = "First name is required.";
         isValid = false;
@@ -132,27 +133,9 @@ export default function SignUpPage() {
         isValid = false;
       }
     }
-    if (step === 2 || step === 5) {
+    if (step === 2) {
       if (!formData.university.trim()) {
         newErrors.university = "Institution name is required.";
-        isValid = false;
-      }
-    }
-    if (step === 3 || step === 5) {
-      if (!formData.major.trim()) {
-        newErrors.major = "Academic program or major is required.";
-        isValid = false;
-      }
-    }
-    if (step === 4 || step === 5) {
-      if (!formData.bio.trim()) {
-        newErrors.bio = "Main objective is required.";
-        isValid = false;
-      }
-    }
-    if (step === 5) {
-      if (!formData.level) {
-        newErrors.level = "Academic level is required.";
         isValid = false;
       }
     }
@@ -160,8 +143,7 @@ export default function SignUpPage() {
     setErrors(newErrors);
     if (!isValid) {
       console.error("Validation errors:", newErrors);
-      if (step === 5) {
-        // For step 5, show the first relevant error as a general message
+      if (step === 2) {
         const firstError = Object.values(newErrors).find((error) => error);
         if (firstError) {
           newErrors.general = firstError;
@@ -174,11 +156,11 @@ export default function SignUpPage() {
   const handleNext = async () => {
     try {
       setIsLoading(true);
-      if (currentStep < 5) {
-        validateStep(currentStep);
-        setCurrentStep(currentStep + 1);
-      } else if (currentStep === 5) {
-        validateStep(currentStep);
+      if (currentStep === 1) {
+        validateStep(1);
+        setCurrentStep(2);
+      } else if (currentStep === 2) {
+        validateStep(2);
 
         // ── Firebase Auth + Firestore registration ─────────────────────────
         await signUp({
@@ -188,11 +170,11 @@ export default function SignUpPage() {
           lastName: formData.lastName.trim(),
           phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}`,
           university: formData.university.trim(),
-          course: formData.major.trim(),
-          department: formData.major.trim(),  // store major as both course + department
-          bio: formData.bio.trim(),
-          level: formData.level,             // store the exact value: 100, 200…500, Postgraduate
-          role: "student",
+          course: "Not specified",
+          department: "Not specified",
+          bio: "",
+          level: "100",
+          role: formData.role,
           language: "english",
         });
         // ──────────────────────────────────────────────────────────────────
@@ -204,10 +186,11 @@ export default function SignUpPage() {
           email: formData.email.trim() || undefined,
           phoneNumber: `${formData.countryCode}${formData.phoneNumber.trim()}` || undefined,
           university: formData.university.trim() || undefined,
-          course: formData.major.trim() || undefined,
-          department: formData.major.trim() || undefined,
-          bio: formData.bio.trim() || undefined,
-          level: formData.level || undefined,
+          course: "Not specified",
+          department: "Not specified",
+          bio: "",
+          level: "100",
+          role: formData.role,
           themeMode: "system" as "system" | "light" | "dark",
           allowNotifications: true,
           allowAlarms: true,
@@ -229,9 +212,9 @@ export default function SignUpPage() {
           textBody: `Welcome, ${formData.firstName.trim()}! Your account is ready.`,
         });
 
-        setCurrentStep(6);
+        setCurrentStep(3);
       } else {
-        // Step 6 "Continue" → navigate to app (layout will also handle this)
+        // Step 3 "Continue" → navigate to app (layout will also handle this)
         router.replace("/(tabs)");
       }
     } catch (error) {
@@ -318,7 +301,7 @@ export default function SignUpPage() {
       alignItems: "center",
       paddingVertical: 20,
       justifyContent: "center",
-      backgroundColor: theme.primary,
+      backgroundColor: theme.fixedPrimary,
     },
     phoneRow: {
       flexDirection: "row",
@@ -382,16 +365,16 @@ export default function SignUpPage() {
   });
 
   return (
-    <ThemedView style={{ flex: 1, backgroundColor: theme.primary }}>
+    <ThemedView style={{ flex: 1, backgroundColor: theme.fixedPrimary }}>
       <ScrollView
-        style={{ flex: 1, backgroundColor: theme.primary }}
+        style={{ flex: 1, backgroundColor: theme.fixedPrimary }}
         contentContainerStyle={responsiveStyles.scrollContainer}
         keyboardShouldPersistTaps="handled"
       >
         {currentStep === 1 && (
           <ThemedView style={responsiveStyles.card}>
             <ThemedText style={[globalStyles.smallText, { marginBottom: 5 }]}>
-              STEP {currentStep} OF 6
+              STEP {currentStep} OF 2
             </ThemedText>
             <ThemedText
               style={[globalStyles.semiLargeText, { marginBottom: 5 }]}
@@ -618,10 +601,95 @@ export default function SignUpPage() {
             style={{
               flex: 1,
               justifyContent: "center",
-              backgroundColor: theme.primary,
+              backgroundColor: theme.fixedPrimary,
               paddingHorizontal: 10,
             }}
           >
+            <ThemedText
+              style={[
+                globalStyles.smallText,
+                { color: "white", marginBottom: 5 },
+              ]}
+            >
+              STEP {currentStep} OF 2
+            </ThemedText>
+            <ThemedText
+              style={[
+                globalStyles.largeText,
+                { color: "white", marginBottom: 10 },
+              ]}
+            >
+              Select Your Role
+            </ThemedText>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginBottom: 20,
+                gap: 10,
+              }}
+            >
+              <Pressable
+                onPress={() => handleChange("role", "student")}
+                style={{
+                  flex: 1,
+                  backgroundColor:
+                    formData.role === "student"
+                      ? "white"
+                      : "rgba(255, 255, 255, 0.2)",
+                  padding: 15,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  borderWidth: formData.role === "student" ? 2 : 0,
+                  borderColor: theme.fixedPrimary,
+                }}
+              >
+                <FontAwesome6
+                  name="user-graduate"
+                  size={24}
+                  color={formData.role === "student" ? theme.fixedPrimary : "white"}
+                  style={{ marginBottom: 5 }}
+                />
+                <ThemedText
+                  style={{
+                    color: formData.role === "student" ? theme.fixedPrimary : "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Student
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => handleChange("role", "lecturer")}
+                style={{
+                  flex: 1,
+                  backgroundColor:
+                    formData.role === "lecturer"
+                      ? "white"
+                      : "rgba(255, 255, 255, 0.2)",
+                  padding: 15,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  borderWidth: formData.role === "lecturer" ? 2 : 0,
+                  borderColor: theme.fixedPrimary,
+                }}
+              >
+                <FontAwesome6
+                  name="chalkboard-user"
+                  size={24}
+                  color={formData.role === "lecturer" ? theme.fixedPrimary : "white"}
+                  style={{ marginBottom: 5 }}
+                />
+                <ThemedText
+                  style={{
+                    color: formData.role === "lecturer" ? theme.fixedPrimary : "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Lecturer
+                </ThemedText>
+              </Pressable>
+            </View>
             <ThemedText
               style={[
                 globalStyles.largeText,
@@ -666,10 +734,10 @@ export default function SignUpPage() {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <ActivityIndicator size="small" color={theme.primary} />
+                  <ActivityIndicator size="small" color={theme.fixedPrimary} />
                 ) : (
-                  <ThemedText style={[{ color: theme.primary }]}>
-                    Next
+                  <ThemedText style={[{ color: theme.fixedPrimary, fontWeight: "bold" }]}>
+                    Register
                   </ThemedText>
                 )}
               </TouchableOpacity>
@@ -688,246 +756,20 @@ export default function SignUpPage() {
           <ThemedView
             style={{
               flex: 1,
-              justifyContent: "center",
-              backgroundColor: theme.primary,
-              paddingHorizontal: 10,
-            }}
-          >
-            <ThemedText
-              style={[
-                globalStyles.largeText,
-                { color: "white", marginBottom: 20 },
-              ]}
-            >
-              Understanding your major or program allows for customized academic
-              support.
-            </ThemedText>
-            <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
-              What's your Academic Program/Major?
-            </ThemedText>
-            <TextInput
-              style={[responsiveStyles.input, globalStyles.baseText]}
-              placeholder="Enter your Academic Program/Major *"
-              placeholderTextColor={theme.placeholder}
-              value={formData.major}
-              onChangeText={(text) => handleChange("major", text)}
-              editable={!isLoading}
-            />
-            {errors.major && (
-              <ThemedText style={responsiveStyles.errorText}>
-                {errors.major}
-              </ThemedText>
-            )}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-                marginTop: 10,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleNext}
-                style={{
-                  backgroundColor: "white",
-                  padding: 12,
-                  borderRadius: 7,
-                  opacity: isLoading ? 0.5 : 1,
-                }}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={theme.primary} />
-                ) : (
-                  <ThemedText style={[{ color: theme.primary }]}>
-                    Next
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePrevious} disabled={isLoading}>
-                <ThemedText
-                  style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
-                >
-                  Previous
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        )}
-
-        {currentStep === 4 && (
-          <ThemedView
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              backgroundColor: theme.primary,
-              paddingHorizontal: 10,
-            }}
-          >
-            <ThemedText
-              style={[
-                globalStyles.largeText,
-                { color: "white", marginBottom: 20 },
-              ]}
-            >
-              What's your main objective in Edvantage? Your choice here won't
-              limit what you can do.
-            </ThemedText>
-            <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
-              What's your main objective?
-            </ThemedText>
-            <TextInput
-              style={[responsiveStyles.input, globalStyles.baseText]}
-              placeholder="Enter your main objective *"
-              placeholderTextColor={theme.placeholder}
-              value={formData.bio}
-              onChangeText={(text) => handleChange("bio", text)}
-              editable={!isLoading}
-            />
-            {errors.bio && (
-              <ThemedText style={responsiveStyles.errorText}>
-                {errors.bio}
-              </ThemedText>
-            )}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-                marginTop: 10,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleNext}
-                style={{
-                  backgroundColor: "white",
-                  padding: 12,
-                  borderRadius: 7,
-                  opacity: isLoading ? 0.5 : 1,
-                }}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={theme.primary} />
-                ) : (
-                  <ThemedText style={[{ color: theme.primary }]}>
-                    Next
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePrevious} disabled={isLoading}>
-                <ThemedText
-                  style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
-                >
-                  Previous
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        )}
-
-        {currentStep === 5 && (
-          <ThemedView
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              backgroundColor: theme.primary,
-              paddingHorizontal: 10,
-            }}
-          >
-            <ThemedText
-              style={[
-                globalStyles.largeText,
-                { color: "white", marginBottom: 20 },
-              ]}
-            >
-              Stating your academic level helps provide relevant resources.
-            </ThemedText>
-            <ThemedText style={[{ marginBottom: 5, color: "white" }]}>
-              What is your academic level?
-            </ThemedText>
-            <Picker
-              selectedValue={formData.level}
-              onValueChange={(value) => handleChange("level", value)}
-              style={responsiveStyles.input1}
-              dropdownIconColor="white"
-              enabled={!isLoading}
-            >
-              {[
-                { label: "100 Level", value: "100" },
-                { label: "200 Level", value: "200" },
-                { label: "300 Level", value: "300" },
-                { label: "400 Level", value: "400" },
-                { label: "500 Level", value: "500" },
-                { label: "Postgraduate Level", value: "Postgraduate" },
-              ].map((item) => (
-                <Picker.Item
-                  key={item.value}
-                  label={item.label}
-                  value={item.value}
-                />
-              ))}
-            </Picker>
-            {(errors.level || errors.general) && (
-              <ThemedText style={responsiveStyles.errorText}>
-                {errors.level || errors.general}
-              </ThemedText>
-            )}
-            <View
-              style={{
-                flexDirection: "row",
-                gap: 20,
-                marginTop: 10,
-                alignItems: "center",
-              }}
-            >
-              <TouchableOpacity
-                onPress={handleNext}
-                style={{
-                  backgroundColor: "white",
-                  padding: 12,
-                  borderRadius: 7,
-                  opacity: isLoading ? 0.5 : 1,
-                }}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color={theme.primary} />
-                ) : (
-                  <ThemedText style={[{ color: theme.primary }]}>
-                    Register
-                  </ThemedText>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handlePrevious} disabled={isLoading}>
-                <ThemedText
-                  style={[{ color: "white", opacity: isLoading ? 0.5 : 1 }]}
-                >
-                  Previous
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-          </ThemedView>
-        )}
-
-        {currentStep === 6 && (
-          <ThemedView
-            style={{
-              flex: 1,
               alignItems: "center",
               justifyContent: "center",
-              backgroundColor: theme.fixedSecondary,
+              backgroundColor: theme.fixedPrimary,
             }}
           >
             <ThemedText
-              style={[globalStyles.xLargeText, { color: theme.text }]}
+              style={[globalStyles.xLargeText, { color: theme.fixedSecondary }]}
             >
               Congratulations
             </ThemedText>
             <ThemedText
               style={[
                 globalStyles.semiMediumText,
-                { marginTop: 10, marginBottom: 20, color: theme.text },
+                { marginTop: 10, marginBottom: 20, color: theme.fixedSecondary },
               ]}
             >
               You're all set
@@ -944,16 +786,16 @@ export default function SignUpPage() {
                 marginTop: 20,
                 borderRadius: 7,
                 borderWidth: 1,
-                borderColor: theme.text,
+                borderColor: "white",
                 opacity: isLoading ? 0.5 : 1,
               }}
               onPress={handleNext}
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color={theme.text} />
+                <ActivityIndicator size="small" color={theme.fixedPrimary} />
               ) : (
-                <ThemedText style={[{ color: theme.text }]}>
+                <ThemedText style={[{ color: theme.fixedPrimary, fontWeight: "bold" }]}>
                   Continue
                 </ThemedText>
               )}

@@ -7,6 +7,8 @@ import notifee, {
   TimestampTrigger,
   TriggerType,
   RepeatFrequency,
+  AndroidNotificationSetting,
+  AndroidCategory,
 } from "@notifee/react-native";
 import { Platform } from "react-native";
 
@@ -19,7 +21,7 @@ export async function requestAlarmPermissions() {
   if (Platform.OS === "android") {
     // Android 12+ requires explicit exact alarm permission
     const settings = await notifee.getNotificationSettings();
-    if (settings.android.alarm == notifee.AndroidAlarmPermissionStatus.DENIED) {
+    if (settings.android.alarm !== AndroidNotificationSetting.ENABLED) {
       // In a real app, you would prompt the user before calling this,
       // as it opens the OS settings page.
       await notifee.openAlarmPermissionSettings();
@@ -30,17 +32,22 @@ export async function requestAlarmPermissions() {
 /**
  * Creates the high-priority Android channel required for alarms.
  */
-async function createAlarmChannel() {
-  if (Platform.OS !== "android") return "alarm-channel";
+async function createAlarmChannel(soundType: "default" | "alarm_default" = "default") {
+  if (Platform.OS !== "android") return "alarm-channel-sys-v5";
+
+  const soundUri = soundType === "default" ? "content://settings/system/alarm_alert" : "alarm_default";
+  const channelId = soundType === "default" ? "alarm-channel-sys-v5" : "alarm-channel-custom-v5";
+  const channelName = soundType === "default" ? "Alarms (System Alarm Sound)" : "Alarms (Custom Beep)";
 
   return await notifee.createChannel({
-    id: "alarm-channel",
-    name: "Alarms",
+    id: channelId,
+    name: channelName,
     importance: AndroidImportance.HIGH,
     visibility: AndroidVisibility.PUBLIC,
-    sound: "default", // Or your custom sound
+    sound: soundUri,
     vibration: true,
-    bypassDnd: true, // Crucial for alarms
+    vibrationPattern: [500, 1000, 500, 1000],
+    bypassDnd: true,
   });
 }
 
@@ -51,9 +58,11 @@ export async function scheduleAlarm(
   id: string,
   timestampMs: number,
   title: string,
-  body: string
+  body: string,
+  soundType: "default" | "alarm_default" = "default"
 ) {
-  const channelId = await createAlarmChannel();
+  const channelId = await createAlarmChannel(soundType);
+  const soundUri = soundType === "default" ? "content://settings/system/alarm_alert" : "alarm_default";
 
   const trigger: TimestampTrigger = {
     type: TriggerType.TIMESTAMP,
@@ -63,39 +72,49 @@ export async function scheduleAlarm(
     },
   };
 
-  await notifee.createTriggerNotification(
-    {
-      id,
-      title,
-      body,
-      android: {
-        channelId,
-        category: notifee.AndroidCategory.ALARM,
-        // Full screen intent for lock screen overlay
-        fullScreenAction: {
-          id: "default",
-          mainComponent: "AlarmOverlay", // Needs to be registered in index.js
+  try {
+    await notifee.createTriggerNotification(
+      {
+        id,
+        title,
+        body,
+        data: { isAlarm: "true", id, title, body },
+        android: {
+          channelId,
+          category: AndroidCategory.ALARM,
+          sound: soundUri,
+          loopSound: true, // Make sure the ringtone loops continuously until dismissed
+          visibility: AndroidVisibility.PUBLIC,
+          importance: AndroidImportance.HIGH,
+          fullScreenAction: {
+            id: "default",
+            launchActivity: "com.akinoluwa.edvantage.dev.AlarmActivity",
+          },
+          ongoing: true,
+          autoCancel: false,
+          timeoutAfter: 300000, // Optional: auto-cancel after 5 minutes if completely ignored
+          actions: [
+            {
+              title: "Snooze",
+              pressAction: { id: "snooze" },
+            },
+            {
+              title: "Dismiss",
+              pressAction: { id: "dismiss" },
+            },
+          ],
         },
-        ongoing: true,
-        autoCancel: false,
-        actions: [
-          {
-            title: "Snooze",
-            pressAction: { id: "snooze" },
-          },
-          {
-            title: "Dismiss",
-            pressAction: { id: "dismiss" },
-          },
-        ],
+        ios: {
+          critical: true,
+          sound: soundType === "default" ? "default" : "alarm_default.wav",
+        },
       },
-      ios: {
-        critical: true, // Bypasses mute switch on iOS (requires Apple entitlement in prod)
-        sound: "default",
-      },
-    },
-    trigger
-  );
+      trigger
+    );
+    console.log(`[AlarmService] Successfully scheduled alarm: ${id} at ${new Date(timestampMs).toLocaleTimeString()}`);
+  } catch (error) {
+    console.error("[AlarmService] CRITICAL ERROR scheduling alarm:", error);
+  }
 }
 
 /**

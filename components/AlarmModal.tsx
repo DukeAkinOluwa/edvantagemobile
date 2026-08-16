@@ -1,27 +1,27 @@
 import React, { useState } from "react";
 import { Modal, Text, View, Button, StyleSheet, Alert } from "react-native";
-import { triggerAlarm } from "../utils/notifications";
-import { useTheme } from "../app/_layout";
+import { snoozeAlarm } from "../lib/alarmService";
+import { useTheme } from "./HeaderContext";
 
 interface Props {
   visible: boolean;
-  task: { id: string; title: string } | null;
+  task: { id: string; title: string; description: string } | null;
   onDismiss: () => void;
 }
 
 const AlarmModal: React.FC<Props> = ({ visible, task, onDismiss }) => {
-  const theme = useTheme();
+  const { theme } = useTheme();
   const [snoozeCount, setSnoozeCount] = useState(0);
 
-  const handleSnooze = () => {
+  const handleSnooze = async () => {
     if (snoozeCount >= 3) {
       Alert.alert("Snooze Limit", "Maximum snooze limit reached.");
       return;
     }
     setSnoozeCount(snoozeCount + 1);
-    setTimeout(() => {
-      if (task) triggerAlarm(task);
-    }, 5 * 60 * 1000);
+    if (task) {
+      await snoozeAlarm(task.id, task.title, task.description || "Alarm", 5);
+    }
     onDismiss();
   };
 

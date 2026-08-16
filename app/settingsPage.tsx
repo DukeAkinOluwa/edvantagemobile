@@ -30,8 +30,8 @@ import {
 import RNPickerSelect from "react-native-picker-select";
 
 const ProfileImage = memo(
-  ({ uri, borderColor }: { uri: string; borderColor: string }) => (
-    <Image source={{ uri }} style={[styles.profilePic, { borderColor }]} />
+  ({ uri, borderColor }: { uri: string | undefined; borderColor: string }) => (
+    <Image source={uri ? { uri } : require("@/assets/images/default-avatar.jpg")} style={[styles.profilePic, { borderColor }]} />
   )
 );
 
@@ -46,7 +46,32 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
 
   const { screenWidth } = useResponsiveDimensions();
-  const globalStyles = useGlobalStyles();
+  const globalStyles = useGlobalStyles() as any;
+
+  const pickerSelectStyles = {
+    inputIOS: {
+      ...globalStyles.baseText,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      color: theme.text,
+      backgroundColor: theme.background,
+      marginBottom: 12,
+    },
+    inputAndroid: {
+      ...globalStyles.baseText,
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderWidth: 0.5,
+      borderColor: theme.border,
+      borderRadius: 6,
+      color: theme.text,
+      backgroundColor: theme.background,
+      marginBottom: 12,
+    },
+  };
 
   const countries = [
     { label: "United States", value: "+1", flag: "🇺🇸" },
@@ -71,7 +96,7 @@ export default function SettingsPage() {
   }, [userData.phoneNumber]);
 
   const imageUri = useMemo(() => {
-    return userData.profilePic || "https://via.placeholder.com/100";
+    return userData.profilePic;
   }, [userData.profilePic]);
 
   useEffect(() => {
@@ -213,6 +238,7 @@ export default function SettingsPage() {
       const documentDirectory = FileSystem.documentDirectory;
       if (
         userData.profilePic &&
+        documentDirectory &&
         userData.profilePic.startsWith(documentDirectory)
       ) {
         try {
@@ -228,7 +254,7 @@ export default function SettingsPage() {
       Alert.alert("Success", "Profile picture cleared.");
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? err.message : "Unknown error";
+        error instanceof Error ? error.message : "Unknown error";
       setError(`Failed to clear profile picture: ${errorMessage}`);
       Alert.alert("Error", `Failed to clear profile picture: ${errorMessage}`);
       console.error("Clear profile pic error:", error);
@@ -303,10 +329,16 @@ export default function SettingsPage() {
   };
 
   const togglePrivacy = (key: keyof NonNullable<typeof userData.privacy>) => {
+    const currentPrivacy = userData.privacy || {
+      showOnlineStatus: true,
+      showProfileToGroups: true,
+      allowFriendRequests: true,
+      dataCollection: true,
+    };
     setUserData({
       privacy: {
-        ...userData.privacy,
-        [key]: !userData.privacy![key],
+        ...currentPrivacy,
+        [key]: !currentPrivacy[key],
       },
     });
   };
@@ -366,30 +398,7 @@ export default function SettingsPage() {
       color: theme.text,
       backgroundColor: theme.background,
     },
-    pickerSelect: {
-      inputIOS: {
-        ...globalStyles.baseText,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderWidth: 0.5,
-        borderColor: theme.border,
-        borderRadius: 6,
-        color: theme.text,
-        backgroundColor: theme.background,
-        marginBottom: 12,
-      },
-      inputAndroid: {
-        ...globalStyles.baseText,
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderWidth: 0.5,
-        borderColor: theme.border,
-        borderRadius: 6,
-        color: theme.text,
-        backgroundColor: theme.background,
-        marginBottom: 12,
-      },
-    },
+
     phoneRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -443,7 +452,7 @@ export default function SettingsPage() {
       color: theme.text,
       fontFamily: "Montserrat-Regular",
     },
-  });
+  }) as any;
 
   if (error) {
     return (
@@ -724,7 +733,7 @@ export default function SettingsPage() {
               { label: "Hausa", value: "hausa" },
               { label: "Igbo", value: "igbo" },
             ]}
-            style={responsiveStyles.pickerSelect}
+            style={pickerSelectStyles}
           />
           <ThemedView style={globalStyles.button1}>
             <Pressable onPress={handleSave}>

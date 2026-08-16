@@ -22,8 +22,14 @@ import {
   formatFileSize,
   uploadChatDocument,
   uploadChatImage,
+  uploadChatVideo,
+  uploadChatVoiceNote
 } from "@/lib/storageService";
+import { setTypingStatus } from "@/lib/firestoreService";
 import { FontAwesome6 } from "@expo/vector-icons";
+import { Video, Audio, ResizeMode } from "expo-av";
+import { useMediaCache } from "@/hooks/useMediaCache";
+import { AudioPlayer } from "@/components/AudioPlayer";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -151,6 +157,91 @@ function ImageViewer({
   );
 }
 
+// ─── Bubble Components (with Media Caching) ────────────────────────────────────
+
+function ImageBubble({ item, bubbleBg, isMe, theme, isRead, myUid }: any) {
+  const [showImage, setShowImage] = useState(false);
+  const { localUri } = useMediaCache(item.imageUrl, "jpg");
+  
+  return (
+    <TouchableOpacity onPress={() => setShowImage(true)} activeOpacity={0.9}>
+      <View style={[styles.bubble, styles.imageBubble, { backgroundColor: bubbleBg }, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+        {item.imageUrl && localUri ? (
+          <Image
+            source={{ uri: localUri }}
+            style={styles.chatImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.chatImage, styles.uploadingImage]}>
+            <ActivityIndicator color="#fff" />
+            <Text style={styles.uploadPct}>{item.uploadProgress ?? 0}%</Text>
+          </View>
+        )}
+        <View style={styles.bubbleMetaOverlay}>
+          <Text style={[styles.bubbleTime, { color: "#fff" }]}>{formatMsgTime(item.timestamp)}</Text>
+          <StatusTick message={item} isRead={isRead} myUid={myUid} />
+        </View>
+      </View>
+      <ImageViewer
+        uri={localUri || item.imageUrl || ""}
+        visible={showImage}
+        onClose={() => setShowImage(false)}
+      />
+    </TouchableOpacity>
+  );
+}
+
+function VideoBubble({ item, bubbleBg, isMe, theme, isRead, myUid }: any) {
+  const videoRef = useRef<Video>(null);
+  const { localUri } = useMediaCache(item.videoUrl, "mp4");
+
+  return (
+    <View style={[styles.bubble, styles.imageBubble, { backgroundColor: bubbleBg }, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+      {item.videoUrl && localUri ? (
+        <Video
+          ref={videoRef}
+          style={styles.chatImage}
+          source={{ uri: localUri }}
+          useNativeControls
+          resizeMode={ResizeMode.COVER}
+          isLooping={false}
+        />
+      ) : (
+        <View style={[styles.chatImage, styles.uploadingImage]}>
+          <ActivityIndicator color="#fff" />
+          <Text style={styles.uploadPct}>{item.uploadProgress ?? 0}%</Text>
+        </View>
+      )}
+      <View style={styles.bubbleMetaOverlay}>
+        <Text style={[styles.bubbleTime, { color: "#fff" }]}>{formatMsgTime(item.timestamp)}</Text>
+        <StatusTick message={item} isRead={isRead} myUid={myUid} />
+      </View>
+    </View>
+  );
+}
+
+function VoiceBubble({ item, bubbleBg, isMe, theme, isRead, myUid }: any) {
+  const { localUri } = useMediaCache(item.voiceUrl, "m4a");
+
+  return (
+    <View style={[styles.bubble, { backgroundColor: bubbleBg, minWidth: 200 }, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+      {item.voiceUrl && localUri ? (
+        <AudioPlayer uri={localUri} theme={theme} isMe={isMe} />
+      ) : (
+        <View style={[styles.chatImage, styles.uploadingImage, { height: 50 }]}>
+          <ActivityIndicator color="#fff" />
+          <Text style={styles.uploadPct}>{item.uploadProgress ?? 0}%</Text>
+        </View>
+      )}
+      <View style={styles.bubbleMeta}>
+        <Text style={[styles.bubbleTime, { color: isMe ? "rgba(255,255,255,0.65)" : theme.placeholder }]}>{formatMsgTime(item.timestamp)}</Text>
+        <StatusTick message={item} isRead={isRead} myUid={myUid} />
+      </View>
+    </View>
+  );
+}
+
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 
 const MessageBubble = React.memo(function MessageBubble({
@@ -195,11 +286,10 @@ const MessageBubble = React.memo(function MessageBubble({
     >
       {/* Avatar for other person in group chats */}
       {!isMe && isGroup && showSender && (
-        item.senderAvatar
-          ? <Image source={{ uri: item.senderAvatar }} style={styles.senderAvatar} />
-          : <View style={[styles.senderAvatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarInitial}>{(item.senderName?.[0] ?? "?").toUpperCase()}</Text>
-            </View>
+        <Image 
+          source={item.senderAvatar ? { uri: item.senderAvatar } : require("@/assets/images/default-avatar.jpg")} 
+          style={styles.senderAvatar} 
+        />
       )}
       {!isMe && isGroup && !showSender && <View style={styles.avatarSpacer} />}
 
@@ -222,32 +312,17 @@ const MessageBubble = React.memo(function MessageBubble({
 
         {/* ── IMAGE message ── */}
         {item.type === "image" && (
-          <TouchableOpacity onPress={() => setShowImage(true)} activeOpacity={0.9}>
-            <View style={[styles.bubble, styles.imageBubble, { backgroundColor: bubbleBg }, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-              {item.imageUrl ? (
-                <Image
-                  source={{ uri: item.imageUrl }}
-                  style={styles.chatImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                // Upload in progress
-                <View style={[styles.chatImage, styles.uploadingImage]}>
-                  <ActivityIndicator color="#fff" />
-                  <Text style={styles.uploadPct}>{item.uploadProgress ?? 0}%</Text>
-                </View>
-              )}
-              <View style={styles.bubbleMetaOverlay}>
-                <Text style={[styles.bubbleTime, { color: "#fff" }]}>{formatMsgTime(item.timestamp)}</Text>
-                <StatusTick message={item} isRead={isRead} myUid={myUid} />
-              </View>
-            </View>
-            <ImageViewer
-              uri={item.imageUrl ?? ""}
-              visible={showImage}
-              onClose={() => setShowImage(false)}
-            />
-          </TouchableOpacity>
+          <ImageBubble item={item} bubbleBg={bubbleBg} isMe={isMe} theme={theme} isRead={isRead} myUid={myUid} />
+        )}
+
+        {/* ── VIDEO message ── */}
+        {item.type === "video" && (
+          <VideoBubble item={item} bubbleBg={bubbleBg} isMe={isMe} theme={theme} isRead={isRead} myUid={myUid} />
+        )}
+
+        {/* ── VOICE message ── */}
+        {item.type === "voice" && (
+          <VoiceBubble item={item} bubbleBg={bubbleBg} isMe={isMe} theme={theme} isRead={isRead} myUid={myUid} />
         )}
 
         {/* ── DOCUMENT message ── */}
@@ -320,7 +395,14 @@ export default function ChatScreen() {
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherLastSeen, setOtherLastSeen] = useState<Timestamp | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
+  
+  // Audio recording state
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+
   const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef<boolean>(false);
 
   const myUid = user?.uid ?? "";
   const myName =
@@ -414,10 +496,37 @@ export default function ChatScreen() {
     [chatId, myUid, room]
   );
 
+  const handleInputChange = (text: string) => {
+    setInput(text);
+    
+    // Typing indicator logic
+    if (chatId && myUid) {
+      if (!isTypingRef.current) {
+        isTypingRef.current = true;
+        setTypingStatus(chatId, myUid, true).catch(console.error);
+      }
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      typingTimeoutRef.current = setTimeout(() => {
+        isTypingRef.current = false;
+        setTypingStatus(chatId, myUid, false).catch(console.error);
+      }, 5000);
+    }
+  };
+
   const handleSendText = useCallback(async () => {
     const text = input.trim();
     if (!text || sending) return;
     setInput("");
+    
+    if (chatId && myUid && typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+      isTypingRef.current = false;
+      setTypingStatus(chatId, myUid, false).catch(console.error);
+    }
+
     setSending(true);
     try {
       await doSend({
@@ -430,25 +539,26 @@ export default function ChatScreen() {
     } finally {
       setSending(false);
     }
-  }, [input, sending, doSend, myUid, myName, myAvatar]);
+  }, [input, sending, doSend, myUid, myName, myAvatar, chatId]);
 
-  // ── Image picker ────────────────────────────────────────────────────────────
+  // ── Image / Video picker ────────────────────────────────────────────────────
 
-  const handlePickImage = useCallback(async (fromCamera: boolean) => {
-    const pendingId = `pending_img_${Date.now()}`;
+  const handlePickMedia = useCallback(async (fromCamera: boolean) => {
+    const pendingId = `pending_media_${Date.now()}`;
 
     const picker = fromCamera
       ? ImagePicker.launchCameraAsync
       : ImagePicker.launchImageLibraryAsync;
 
     const result = await picker({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       quality: 0.8,
       allowsEditing: false,
     });
 
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
+    const isVideo = asset.type === "video";
 
     // Show placeholder immediately
     const placeholder: Message = {
@@ -457,8 +567,9 @@ export default function ChatScreen() {
       sender: myUid,
       senderName: myName,
       senderAvatar: myAvatar,
-      type: "image",
-      imageUrl: asset.uri,   // local URI for instant preview
+      type: isVideo ? "video" : "image",
+      imageUrl: !isVideo ? asset.uri : undefined,
+      videoUrl: isVideo ? asset.uri : undefined,
       uploadProgress: 0,
       status: "sending",
       timestamp: null as any,
@@ -466,33 +577,54 @@ export default function ChatScreen() {
     setMessages((prev) => [placeholder, ...prev]);
 
     try {
-      const { downloadUrl, fileSize } = await uploadChatImage(
-        chatId,
-        myUid,
-        asset.uri,
-        (pct) => {
-          setMessages((prev) =>
-            prev.map((m) => (m.id === pendingId ? { ...m, uploadProgress: pct } : m))
-          );
-        }
-      );
-      // Replace placeholder with real Firestore message
-      setMessages((prev) => prev.filter((m) => m.id !== pendingId));
-      await doSend({
-        text: "",
-        sender: myUid,
-        senderName: myName,
-        senderAvatar: myAvatar,
-        type: "image",
-        imageUrl: downloadUrl,
-        imageWidth: asset.width,
-        imageHeight: asset.height,
-      });
+      if (isVideo) {
+        const { downloadUrl } = await uploadChatVideo(
+          chatId,
+          myUid,
+          asset.uri,
+          (pct) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === pendingId ? { ...m, uploadProgress: pct } : m))
+            );
+          }
+        );
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+        await doSend({
+          text: "",
+          sender: myUid,
+          senderName: myName,
+          senderAvatar: myAvatar,
+          type: "video",
+          videoUrl: downloadUrl,
+        });
+      } else {
+        const { downloadUrl } = await uploadChatImage(
+          chatId,
+          myUid,
+          asset.uri,
+          (pct) => {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === pendingId ? { ...m, uploadProgress: pct } : m))
+            );
+          }
+        );
+        setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+        await doSend({
+          text: "",
+          sender: myUid,
+          senderName: myName,
+          senderAvatar: myAvatar,
+          type: "image",
+          imageUrl: downloadUrl,
+          imageWidth: asset.width,
+          imageHeight: asset.height,
+        });
+      }
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) => (m.id === pendingId ? { ...m, status: "failed" as const } : m))
       );
-      Alert.alert("Upload failed", "Could not upload image. Please try again.");
+      Alert.alert("Upload failed", "Could not upload media. Please try again.");
     }
   }, [chatId, myUid, myName, myAvatar, doSend]);
 
@@ -563,6 +695,105 @@ export default function ChatScreen() {
   const showAttachmentOptions = useCallback(() => {
     setShowAttachMenu(true);
   }, []);
+
+  // ── Audio Recording ─────────────────────────────────────────────────────────
+
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== "granted") {
+        Alert.alert("Permission denied", "We need audio permissions to record voice notes.");
+        return;
+      }
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(recording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Failed to start recording", err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!recording) return;
+    setIsRecording(false);
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      const status = await recording.getStatusAsync();
+      setRecording(null);
+
+      if (uri) {
+        // Send Voice Note
+        const pendingId = `pending_voice_${Date.now()}`;
+        const placeholder: Message = {
+          id: pendingId,
+          text: "",
+          sender: myUid,
+          senderName: myName,
+          senderAvatar: myAvatar,
+          type: "voice",
+          voiceUrl: uri,
+          voiceDuration: status.durationMillis,
+          uploadProgress: 0,
+          status: "sending",
+          timestamp: null as any,
+        };
+        setMessages((prev) => [placeholder, ...prev]);
+
+        try {
+          const { downloadUrl } = await uploadChatVoiceNote(
+            chatId,
+            myUid,
+            uri,
+            (pct) => {
+              setMessages((prev) =>
+                prev.map((m) => (m.id === pendingId ? { ...m, uploadProgress: pct } : m))
+              );
+            }
+          );
+          setMessages((prev) => prev.filter((m) => m.id !== pendingId));
+          await doSend({
+            text: "",
+            sender: myUid,
+            senderName: myName,
+            senderAvatar: myAvatar,
+            type: "voice",
+            voiceUrl: downloadUrl,
+            voiceDuration: status.durationMillis,
+          });
+        } catch (err) {
+          setMessages((prev) =>
+            prev.map((m) => (m.id === pendingId ? { ...m, status: "failed" as const } : m))
+          );
+          Alert.alert("Upload failed", "Could not upload voice note.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to stop recording", err);
+    }
+  };
+
+  // ── Render Helpers ──────────────────────────────────────────────────────────
+
+  const getTypingUsersText = () => {
+    if (!room?.typingUsers) return null;
+    const now = Date.now();
+    const typingNames = Object.entries(room.typingUsers)
+      .filter(([uid, timestamp]) => uid !== myUid && (now - timestamp) < 3000)
+      .map(([uid]) => room.participantNames?.[uid] || "Someone");
+    
+    if (typingNames.length === 0) return null;
+    if (typingNames.length === 1) return `${typingNames[0]} is typing...`;
+    return `${typingNames.join(", ")} are typing...`;
+  };
+
+  const typingText = getTypingUsersText();
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -671,6 +902,13 @@ export default function ChatScreen() {
         />
       )}
 
+      {/* ── Typing Indicator ── */}
+      {typingText && (
+        <View style={styles.typingIndicator}>
+          <Text style={[styles.typingText, { color: theme.placeholder }]}>{typingText}</Text>
+        </View>
+      )}
+
       {/* ── Input Bar ── */}
       <View
         style={[
@@ -696,23 +934,33 @@ export default function ChatScreen() {
           placeholder="Type a message..."
           placeholderTextColor={theme.placeholder}
           value={input}
-          onChangeText={setInput}
+          onChangeText={handleInputChange}
           multiline
           maxLength={2000}
         />
 
-        {/* Send button */}
-        <TouchableOpacity
-          onPress={handleSendText}
-          style={[styles.sendBtn, { opacity: input.trim() ? 1 : 0.4 }]}
-          disabled={!input.trim() || sending}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <FontAwesome6 name="paper-plane" size={16} color="#fff" />
-          )}
-        </TouchableOpacity>
+        {/* Send / Mic button */}
+        {input.trim() ? (
+          <TouchableOpacity
+            onPress={handleSendText}
+            style={[styles.sendBtn, { opacity: sending ? 0.4 : 1 }]}
+            disabled={sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <FontAwesome6 name="paper-plane" size={16} color="#fff" />
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+            style={[styles.sendBtn, { backgroundColor: isRecording ? "#FF3B30" : "#2A52BE" }]}
+          >
+            <FontAwesome6 name="microphone" size={16} color="#fff" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Attachment Menu ── */}
@@ -728,7 +976,7 @@ export default function ChatScreen() {
             <View style={styles.attachOptionsRow}>
               <TouchableOpacity
                 style={styles.attachOption}
-                onPress={() => { setShowAttachMenu(false); handlePickImage(true); }}
+                onPress={() => { setShowAttachMenu(false); handlePickMedia(true); }}
               >
                 <View style={[styles.attachIconBg, { backgroundColor: "#FF2D55" }]}>
                   <FontAwesome6 name="camera" size={24} color="#fff" />
@@ -738,12 +986,12 @@ export default function ChatScreen() {
 
               <TouchableOpacity
                 style={styles.attachOption}
-                onPress={() => { setShowAttachMenu(false); handlePickImage(false); }}
+                onPress={() => { setShowAttachMenu(false); handlePickMedia(false); }}
               >
                 <View style={[styles.attachIconBg, { backgroundColor: "#007AFF" }]}>
                   <FontAwesome6 name="image" size={24} color="#fff" />
                 </View>
-                <Text style={[styles.attachOptionText, { color: theme.text }]}>Photo</Text>
+                <Text style={[styles.attachOptionText, { color: theme.text }]}>Photo/Video</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -967,5 +1215,15 @@ const styles = StyleSheet.create({
   attachOptionText: {
     fontSize: 13,
     fontWeight: "500",
+  },
+  
+  // Typing Indicator
+  typingIndicator: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  typingText: {
+    fontSize: 12,
+    fontStyle: "italic",
   }
 });

@@ -38,3 +38,7 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+# Alarm Architecture Docs
+ALARM_ARCHITECTURE.md
+ALARM_ARCHITECTURE.pdf

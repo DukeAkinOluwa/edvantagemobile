@@ -1,42 +1,36 @@
-import { useTheme } from "@/components/Header";
+import { useTheme, useUserData } from "@/components/HeaderContext";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { cancelNotification } from "@/utils/notifications";
+import { cancelAlarm } from "@/lib/alarmService";
+import { auth } from "@/lib/firebase";
 import { getData, saveData } from "@/utils/storage";
+import { Task, subscribeUserTasks, deleteTask as firestoreDeleteTask } from "@/lib/firestoreService";
 import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
 import { ThemedText } from "./ThemedText";
 import { ThemedView } from "./ThemedView";
-
-export interface Task {
-    id: string;
-    title: string;
-    description: string;
-    location: string;
-    level: string;
-    isGroupEvent: boolean;
-    startTime: string; // ISO string
-    endTime: string;   // ISO string
-    startTimeAMPM: string;
-    endTimeAMPM: string;
-}
+import { FontAwesome6 } from "@expo/vector-icons";
 
 interface Props {
   onDayPress?: (date: Date) => void;
   setModalVisible?: (visible: boolean) => void;
   modalVisible?: boolean;
+  refreshTrigger?: number;
 }
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }) => {
+const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible, refreshTrigger }) => {
     const { theme } = useTheme();
+    const { userData } = useUserData();
     const { screenWidth } = useResponsiveDimensions();
     const [calendarDate, setCalendarDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
     const globalStyles = useGlobalStyles()
     const router = useRouter();
 
@@ -44,26 +38,33 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
     const month = calendarDate.getMonth();
     const adjustedWidth = screenWidth - 30;
 
-    useFocusEffect(
-        useCallback(() => {
-        const loadTasks = async () => {
-            const saved = await getData("tasks");
-            setTasks(saved || []);
-        };
-        loadTasks();
-        }, [modalVisible])
-    );
+    useEffect(() => {
+        const uid = userData?.uid || auth.currentUser?.uid;
+        if (!uid) return;
+        const unsubscribe = subscribeUserTasks(uid, (fetchedTasks) => {
+            setTasks(fetchedTasks);
+        });
+        return () => unsubscribe();
+    }, [userData?.uid]);
 
     const filteredTasks = useMemo(() => {
-        return tasks.filter(task => {
-        const date = new Date(task.startTime);
-        return (
-            date.getFullYear() === selectedDate.getFullYear() &&
-            date.getMonth() === selectedDate.getMonth() &&
-            date.getDate() === selectedDate.getDate()
-        );
-        });
-    }, [selectedDate, tasks]);
+        const now = Date.now();
+        if (activeTab === "past") {
+            let past = tasks.filter(task => new Date(task.endTime).getTime() <= now);
+            past.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+            return past;
+        } else {
+            return tasks.filter(task => {
+                if (new Date(task.endTime).getTime() <= now) return false;
+                const date = new Date(task.startTime);
+                return (
+                    date.getFullYear() === selectedDate.getFullYear() &&
+                    date.getMonth() === selectedDate.getMonth() &&
+                    date.getDate() === selectedDate.getDate()
+                );
+            });
+        }
+    }, [selectedDate, tasks, activeTab]);
 
     const getMonthData = useMemo(() => {
         const firstDay = new Date(year, month, 1).getDay();
@@ -98,11 +99,13 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
     };
     
     const deleteTask = async (taskId: string) => {
-        const tasks = (await getData("tasks")) || [];
-        const updatedTasks = tasks.filter((task: Task) => task.id !== taskId);
-        await saveData("tasks", updatedTasks);
-        await cancelNotification(taskId);
-        setTasks(updatedTasks);
+        try {
+            await firestoreDeleteTask(taskId);
+            await cancelNotification(taskId);
+            await cancelAlarm(taskId);
+        } catch (e) {
+            console.error("Error deleting task or canceling alarm:", e);
+        }
     };
     
     const dynamicStyles = StyleSheet.create({
@@ -158,21 +161,38 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
                 ))}
             </View>
 
-            <View style={{ marginTop: 20 }}>
-                <ThemedText style={[styles.taskHeader, globalStyles.mediumText, { color: theme.text }]}>
-                    {selectedDate.toDateString()}
-                </ThemedText>
-                <Pressable onPress={() => setModalVisible?.(true)}>
-                    <ThemedText
-                    style={[
-                        globalStyles.mediumText,
-                        globalStyles.actionText,
-                        { color: theme.primary },
-                    ]}
+            <View style={{ marginTop: 20, paddingBottom: 80 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 15, backgroundColor: theme.tint, borderRadius: 8, padding: 4 }}>
+                    <Pressable 
+                        style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6, backgroundColor: activeTab === 'upcoming' ? theme.background : 'transparent' }} 
+                        onPress={() => setActiveTab('upcoming')}
                     >
-                    New Event
+                        <ThemedText style={[globalStyles.mediumText, { color: activeTab === 'upcoming' ? theme.text : theme.placeholder }]}>Upcoming</ThemedText>
+                    </Pressable>
+                    <Pressable 
+                        style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 6, backgroundColor: activeTab === 'past' ? theme.background : 'transparent' }} 
+                        onPress={() => setActiveTab('past')}
+                    >
+                        <ThemedText style={[globalStyles.mediumText, { color: activeTab === 'past' ? theme.text : theme.placeholder }]}>Past Tasks</ThemedText>
+                    </Pressable>
+                </View>
+
+                {activeTab === 'upcoming' ? (
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                        <ThemedText style={[styles.taskHeader, globalStyles.mediumText, { color: theme.text, flex: 1 }]}>
+                            {selectedDate.toDateString()}
+                        </ThemedText>
+                        <Pressable onPress={() => setModalVisible?.(true)}>
+                            <ThemedText style={[globalStyles.mediumText, globalStyles.actionText, { color: theme.primary }]}>
+                                New Event
+                            </ThemedText>
+                        </Pressable>
+                    </View>
+                ) : (
+                    <ThemedText style={[styles.taskHeader, globalStyles.mediumText, { color: theme.text, marginBottom: 10 }]}>
+                        Past Tasks History
                     </ThemedText>
-                </Pressable>
+                )}
                 {filteredTasks.length === 0 ? (
                     <ThemedText style={[globalStyles.semiMediumLightText, { color: theme.text }]}>
                     No tasks created yet.
@@ -188,9 +208,9 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible }
                                 {task.startTimeAMPM} - {task.endTimeAMPM}
                             </ThemedText>
                         </ThemedView>
-                        {/* <Pressable onPress={() => deleteTask(task.id)} style={styles.trashIconContainer} hitSlop={10}>
-                            <FontAwesome6 name="trash" size={16} color={theme.icon} />
-                        </Pressable> */}
+                        <Pressable onPress={() => deleteTask(task.id!)} style={styles.trashIconContainer} hitSlop={10}>
+                            <FontAwesome6 name="trash-can" size={15} color={theme.placeholder || "#999"} />
+                        </Pressable>
                     </View>
                 )))}
                 {(filteredTasks.length >= 0) && (filteredTasks.length < 7) ? (

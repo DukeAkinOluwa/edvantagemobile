@@ -1,6 +1,6 @@
-import bg from "@/assets/images/bg.png";
-import highlight from "@/assets/images/highlight.png";
-import rankingGradient from "@/assets/images/rankingGradient.png";
+const bg = require("../assets/images/bg.png");
+const highlight = require("../assets/images/highlight.png");
+const rankingGradient = require("../assets/images/rankingGradient.png");
 
 export const images = {
   bg,

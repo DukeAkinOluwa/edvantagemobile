@@ -14,8 +14,8 @@ import { removeData } from "../utils/storage";
 
 // Memoized Image component to prevent flickering
 const ProfileImage = memo(
-  ({ uri, borderColor }: { uri: string; borderColor: string }) => (
-    <Image source={{ uri }} style={[styles.avatar, { borderColor }]} />
+  ({ uri, borderColor }: { uri: string | undefined; borderColor: string }) => (
+    <Image source={uri ? { uri } : require("@/assets/images/default-avatar.jpg")} style={[styles.avatar, { borderColor }]} />
   )
 );
 
@@ -32,7 +32,7 @@ export default function ProfilePage() {
 
   // Memoize image URI to prevent flickering
   const imageUri = useMemo(() => {
-    return userData.profilePic || "https://via.placeholder.com/100";
+    return userData.profilePic;
   }, [userData.profilePic]);
 
   const profileNavigationList = [

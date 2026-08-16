@@ -84,14 +84,10 @@ const ChatRoomItem = React.memo(function ChatRoomItem({
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
-      {/* Avatar */}
-      {avatar ? (
-        <Image source={{ uri: avatar }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarInitial}>{(name[0] ?? "?").toUpperCase()}</Text>
-        </View>
-      )}
+      <Image 
+        source={avatar ? { uri: avatar } : require("@/assets/images/default-avatar.jpg")} 
+        style={styles.avatar} 
+      />
 
       {/* Info */}
       <View style={styles.roomInfo}>
@@ -341,14 +337,10 @@ function NewChatModal({
                 style={styles.userRow}
                 onPress={() => handleSelectUser(item)}
               >
-                {item.profilePic
-                  ? <Image source={{ uri: item.profilePic }} style={styles.userAvatar} />
-                  : <View style={[styles.userAvatar, styles.avatarPlaceholder]}>
-                      <Text style={styles.avatarInitial}>
-                        {(item.firstName ?? "?")[0].toUpperCase()}
-                      </Text>
-                    </View>
-                }
+                <Image 
+                  source={item.profilePic ? { uri: item.profilePic } : require("@/assets/images/default-avatar.jpg")} 
+                  style={styles.userAvatar} 
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.userName, { color: theme.text }]}>
                     {item.displayName ?? `${item.firstName} ${item.lastName}`}
@@ -540,12 +532,10 @@ export default function ChatsScreen() {
             keyExtractor={(item) => item.id!}
             renderItem={({ item }) => (
               <View style={[styles.roomItem, { borderBottomColor: theme.border }]}>
-                {item.avatarUrl
-                  ? <Image source={{ uri: item.avatarUrl }} style={styles.avatar} />
-                  : <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                      <Text style={styles.avatarInitial}>{(item.name[0] ?? "?").toUpperCase()}</Text>
-                    </View>
-                }
+                <Image 
+                  source={item.avatarUrl ? { uri: item.avatarUrl } : require("@/assets/images/default-avatar.jpg")} 
+                  style={styles.avatar} 
+                />
                 <View style={styles.roomInfo}>
                   <Text style={[styles.roomName, { color: theme.text }]}>{item.name}</Text>
                   <Text style={[styles.roomTime, { color: theme.placeholder }]}>
