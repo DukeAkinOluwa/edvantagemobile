@@ -182,13 +182,26 @@ export default function StaffDashboard() {
         
         {/* Coursework Quick-Link Banner */}
         <TouchableOpacity
-          style={[styles.bannerCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+          style={[styles.bannerCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border, marginBottom: 10 }]}
           onPress={() => router.push("/(tabs)/resources")}
         >
           <FontAwesome6 name="file-arrow-up" size={22} color="#2A52BE" style={{ marginRight: 12 }} />
           <View style={{ flex: 1 }}>
             <ThemedText style={{ fontWeight: "bold", fontSize: 15 }}>Upload Coursework</ThemedText>
             <ThemedText style={{ color: theme.placeholder, fontSize: 11 }}>Add PDFs, lecture slides, or coursework files.</ThemedText>
+          </View>
+          <FontAwesome6 name="chevron-right" size={14} color={theme.placeholder} />
+        </TouchableOpacity>
+
+        {/* Assignments Quick-Link Banner */}
+        <TouchableOpacity
+          style={[styles.bannerCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border, marginBottom: 20 }]}
+          onPress={() => router.push("/assignments")}
+        >
+          <FontAwesome6 name="check-to-slot" size={22} color="#4CAF50" style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+            <ThemedText style={{ fontWeight: "bold", fontSize: 15 }}>Assignments & Grading</ThemedText>
+            <ThemedText style={{ color: theme.placeholder, fontSize: 11 }}>Review submissions and use AI Auto-Grade.</ThemedText>
           </View>
           <FontAwesome6 name="chevron-right" size={14} color={theme.placeholder} />
         </TouchableOpacity>

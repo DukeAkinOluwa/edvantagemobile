@@ -33,6 +33,7 @@ import {
   TouchableOpacity,
   View,
   Switch,
+  ScrollView,
 } from "react-native";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -76,7 +77,8 @@ const ChatRoomItem = React.memo(function ChatRoomItem({
   onPress: (room: ChatRoom) => void;
 }) {
   const { name, avatar } = getRoomDisplayInfo(item, myUid);
-  const unread = item.unreadCounts?.[myUid] ?? 0;
+  // Include 'global' fallback since dummy chats use it
+  const unread = (item.unreadCounts?.[myUid] || 0) + (item.unreadCounts?.global || 0);
 
   return (
     <TouchableOpacity
@@ -84,10 +86,15 @@ const ChatRoomItem = React.memo(function ChatRoomItem({
       onPress={() => onPress(item)}
       activeOpacity={0.7}
     >
-      <Image 
-        source={avatar ? { uri: avatar } : require("@/assets/images/default-avatar.jpg")} 
-        style={styles.avatar} 
-      />
+      {avatar ? (
+        <Image source={{ uri: avatar }} style={styles.avatar} />
+      ) : item.isGroup ? (
+        <View style={[styles.avatar, styles.avatarPlaceholder, { backgroundColor: item.isClassGroup ? "#2A52BE" : "#4CAF50" }]}>
+          <FontAwesome6 name={item.isClassGroup ? "graduation-cap" : "user-group"} size={20} color="#fff" />
+        </View>
+      ) : (
+        <Image source={require("@/assets/images/default-avatar.jpg")} style={styles.avatar} />
+      )}
 
       {/* Info */}
       <View style={styles.roomInfo}>
@@ -114,20 +121,21 @@ const ChatRoomItem = React.memo(function ChatRoomItem({
             {item.lastMessage || "No messages yet"}
           </Text>
           {unread > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unread > 99 ? "99+" : unread}</Text>
-            </View>
+            <View style={[styles.readDot, { backgroundColor: "#2A52BE", borderColor: "#2A52BE" }]} />
           )}
         </View>
       </View>
     </TouchableOpacity>
   );
 }, (prev, next) => {
+  const prevUnread = (prev.item.unreadCounts?.[prev.myUid] ?? 0) + (prev.item.unreadCounts?.global ?? 0);
+  const nextUnread = (next.item.unreadCounts?.[next.myUid] ?? 0) + (next.item.unreadCounts?.global ?? 0);
+
   return (
     prev.item.id === next.item.id &&
     prev.item.lastMessageTime === next.item.lastMessageTime &&
     prev.item.lastMessage === next.item.lastMessage &&
-    (prev.item.unreadCounts?.[prev.myUid] ?? 0) === (next.item.unreadCounts?.[next.myUid] ?? 0)
+    prevUnread === nextUnread
   );
 });
 
@@ -383,6 +391,8 @@ export default function ChatsScreen() {
   const [loading, setLoading] = useState(true);
   const [showNewChat, setShowNewChat] = useState(false);
   const [activeTab, setActiveTab] = useState<"chats" | "discover">("chats");
+  const [displayLimit, setDisplayLimit] = useState(15); // Infinity scroll
+  const [chatQuery, setChatQuery] = useState("");
   
   // Discover State
   const [discoverQuery, setDiscoverQuery] = useState("");
@@ -418,11 +428,27 @@ export default function ChatsScreen() {
     ).start();
   }, []);
 
+  const isNavigating = useRef(false);
+
   const openRoom = async (room: ChatRoom) => {
-    if (room.id) {
-      await markRoomAsRead(room.id, myUid).catch(console.error);
+    if (isNavigating.current || !room.id) return;
+    isNavigating.current = true;
+    
+    try {
+      // Fire and forget so it doesn't block navigation
+      markRoomAsRead(room.id, myUid).catch(err => {
+        console.error("Failed to mark room as read:", err);
+      });
+      
       const { name } = getRoomDisplayInfo(room, myUid);
-      router.push(`/chat/${room.id}?name=${encodeURIComponent(name)}&isGroup=${room.isGroup}`);
+      router.push(`/chat/${room.id}?name=${encodeURIComponent(name)}&isGroup=${room.isGroup}&isClassGroup=${room.isClassGroup || false}&classId=${room.classId || ''}`);
+    } catch (err) {
+      console.error("Navigation error opening chat:", err);
+    } finally {
+      // Release lock after a short delay
+      setTimeout(() => {
+        isNavigating.current = false;
+      }, 500);
     }
   };
 
@@ -449,11 +475,14 @@ export default function ChatsScreen() {
     try {
       await joinGroupChat(group.id, myUid, myName, myAvatar || "");
       setActiveTab("chats");
-      router.push(`/chat/${group.id}?name=${encodeURIComponent(group.name)}&isGroup=true`);
+      router.push(`/chat/${group.id}?name=${encodeURIComponent(group.name)}&isGroup=true&isClassGroup=${group.isClassGroup || false}&classId=${group.classId || ''}`);
     } catch (err: any) {
       Alert.alert("Error", err.message || "Failed to join group");
     }
   };
+
+  // Filter state
+  const [chatFilter, setChatFilter] = useState<"all" | "groups" | "unread" | "read">("all");
 
   const renderRoom = useCallback(({ item }: { item: ChatRoom }) => {
     return (
@@ -466,44 +495,88 @@ export default function ChatsScreen() {
     );
   }, [myUid, theme, openRoom]);
 
+  // Filter and slice for infinite scroll
+  const filteredRooms = rooms.filter((r) => {
+    if (chatQuery) {
+      const { name } = getRoomDisplayInfo(r, myUid);
+      if (!name.toLowerCase().includes(chatQuery.toLowerCase())) return false;
+    }
+    
+    if (chatFilter === "groups") {
+      if (!r.isGroup) return false;
+    } else if (chatFilter === "unread") {
+      const unread = r.unreadCounts?.[myUid] || 0;
+      if (unread === 0) return false;
+    } else if (chatFilter === "read") {
+      const unread = r.unreadCounts?.[myUid] || 0;
+      if (unread > 0) return false;
+    }
+
+    return true;
+  });
+  const displayedRooms = filteredRooms.slice(0, displayLimit);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.border }]}>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Messages</Text>
         
-        {/* Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === "chats" && { backgroundColor: "#2A52BE" }]} 
-            onPress={() => setActiveTab("chats")}
-          >
-            <Text style={[styles.tabText, { color: activeTab === "chats" ? "#fff" : theme.text }]}>My Chats</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tabBtn, activeTab === "discover" && { backgroundColor: "#2A52BE" }]} 
-            onPress={() => setActiveTab("discover")}
-          >
-            <Text style={[styles.tabText, { color: activeTab === "discover" ? "#fff" : theme.text }]}>Discover</Text>
-          </TouchableOpacity>
+        {/* Global Search Bar */}
+        <View style={[styles.searchBar, { backgroundColor: theme.backgroundSecondary }]}>
+          <FontAwesome6 name="magnifying-glass" size={14} color={theme.placeholder} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Search chats..."
+            placeholderTextColor={theme.placeholder}
+            value={chatQuery}
+            onChangeText={setChatQuery}
+          />
         </View>
+
+        {/* Filter Chips */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 15 }} contentContainerStyle={{ gap: 10 }}>
+          {(["all", "groups", "unread", "read"] as const).map(filter => (
+            <TouchableOpacity 
+              key={filter} 
+              style={[
+                styles.filterChip, 
+                { borderColor: theme.border },
+                chatFilter === filter && { backgroundColor: "#2A52BE", borderColor: "#2A52BE" }
+              ]}
+              onPress={() => setChatFilter(filter)}
+            >
+              <Text style={[
+                styles.filterChipText, 
+                { color: chatFilter === filter ? "#fff" : theme.text }
+              ]}>
+                {filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
-      {activeTab === "chats" ? (
-        loading ? (
-          <ActivityIndicator size="large" color="#2A52BE" style={{ marginTop: 40 }} />
-        ) : (
+      {loading ? (
+        <ActivityIndicator size="large" color="#2A52BE" style={{ marginTop: 40 }} />
+      ) : (
         <FlatList
-          data={rooms}
+          data={displayedRooms}
           keyExtractor={(item) => item.id!}
           renderItem={renderRoom}
-          contentContainerStyle={rooms.length === 0 ? styles.emptyContainer : undefined}
+          contentContainerStyle={displayedRooms.length === 0 ? styles.emptyContainer : { paddingBottom: 100 }}
+          onEndReached={() => {
+            if (displayLimit < rooms.length) {
+              setDisplayLimit(prev => prev + 15);
+            }
+          }}
+          onEndReachedThreshold={0.5}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <FontAwesome6 name="comments" size={48} color={theme.placeholder} />
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>No conversations yet</Text>
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>No conversations found</Text>
               <Text style={[styles.emptyText, { color: theme.placeholder }]}>
-                Tap + to start a new chat
+                Try changing your filters or search.
               </Text>
             </View>
           }
@@ -512,64 +585,18 @@ export default function ChatsScreen() {
           windowSize={5}
           removeClippedSubviews={true}
         />
-        )
-      ) : (
-        /* Discover Tab */
-        <View style={{ flex: 1 }}>
-          <View style={[styles.searchBar, { backgroundColor: theme.backgroundSecondary, marginTop: 15 }]}>
-            <FontAwesome6 name="magnifying-glass" size={14} color={theme.placeholder} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Search public groups..."
-              placeholderTextColor={theme.placeholder}
-              value={discoverQuery}
-              onChangeText={handleSearchGroups}
-            />
-            {searchingGroups && <ActivityIndicator size="small" color={theme.placeholder} />}
-          </View>
-          <FlatList
-            data={publicGroups}
-            keyExtractor={(item) => item.id!}
-            renderItem={({ item }) => (
-              <View style={[styles.roomItem, { borderBottomColor: theme.border }]}>
-                <Image 
-                  source={item.avatarUrl ? { uri: item.avatarUrl } : require("@/assets/images/default-avatar.jpg")} 
-                  style={styles.avatar} 
-                />
-                <View style={styles.roomInfo}>
-                  <Text style={[styles.roomName, { color: theme.text }]}>{item.name}</Text>
-                  <Text style={[styles.roomTime, { color: theme.placeholder }]}>
-                    {(item.participants || []).length} members
-                  </Text>
-                </View>
-                <TouchableOpacity style={styles.joinBtn} onPress={() => handleJoinGroup(item)}>
-                  <Text style={styles.joinBtnText}>Join</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            ListEmptyComponent={
-              discoverQuery && !searchingGroups ? (
-                <View style={styles.emptyState}>
-                  <Text style={[styles.emptyText, { color: theme.placeholder }]}>No public groups found.</Text>
-                </View>
-              ) : null
-            }
-          />
-        </View>
       )}
 
-      {/* FAB (Only in Chats tab) */}
-      {activeTab === "chats" && (
-        <Animated.View
-          style={[styles.fab, {
-            transform: [{ scale: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }]
-          }]}
-        >
-          <TouchableOpacity onPress={() => setShowNewChat(true)} style={styles.fabInner}>
-            <FontAwesome6 name="pen-to-square" size={20} color="#fff" />
-          </TouchableOpacity>
-        </Animated.View>
-      )}
+      {/* FAB */}
+      <Animated.View
+        style={[styles.fab, {
+          transform: [{ scale: fabAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }]
+        }]}
+      >
+        <TouchableOpacity onPress={() => setShowNewChat(true)} style={styles.fabInner}>
+          <FontAwesome6 name="pen-to-square" size={20} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
 
       {/* New Chat Modal */}
       <NewChatModal
@@ -593,19 +620,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   headerTitle: { fontSize: 22, fontWeight: "700", marginBottom: 15 },
-  tabContainer: {
-    flexDirection: "row",
-    backgroundColor: "rgba(100,100,100,0.1)",
-    borderRadius: 8,
-    padding: 4,
-  },
-  tabBtn: {
-    flex: 1,
-    alignItems: "center",
+  filterChip: {
+    paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 10,
   },
-  tabText: {
+  filterChipText: {
     fontSize: 14,
     fontWeight: "600",
   },
@@ -630,17 +652,13 @@ const styles = StyleSheet.create({
   roomFooter: { flexDirection: "row", alignItems: "center" },
   lastMessage: { fontSize: 13, flex: 1 },
   bold: { fontWeight: "700" },
-  badge: {
-    backgroundColor: "#2A52BE",
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
+  readDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1,
     marginLeft: 8,
   },
-  badgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   fab: {
     position: "absolute",
     bottom: 90,

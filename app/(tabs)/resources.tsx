@@ -14,6 +14,8 @@ import { collection, addDoc, onSnapshot, query, orderBy } from "firebase/firesto
 import { FontAwesome6 } from "@expo/vector-icons";
 import { Picker } from "@react-native-picker/picker";
 
+let hasAttemptedResourceSeed = false;
+
 export default function ScheduleScreen() {
   const { theme } = useTheme();
   const { userData } = useUserData();
@@ -45,8 +47,25 @@ export default function ScheduleScreen() {
   useEffect(() => {
     setLoadingFiles(true);
     const q = query(collection(db, "resources"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const list = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const list = snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
+      
+      // Auto-seed if database is completely empty
+      if (list.length === 0 && !hasAttemptedResourceSeed) {
+        hasAttemptedResourceSeed = true;
+        console.log("No resources found in database. Seeding dummy data...");
+        for (const file of filesDummyData) {
+          try {
+            await addDoc(collection(db, "resources"), {
+              ...file,
+              createdAt: new Date().toISOString()
+            });
+          } catch (e) {
+            console.error("Failed to seed file (likely Firebase Rules):", e);
+          }
+        }
+      }
+      
       setDbFiles(list);
       setLoadingFiles(false);
     }, (err) => {
@@ -56,8 +75,8 @@ export default function ScheduleScreen() {
     return unsubscribe;
   }, []);
 
-  // Merge Firestore uploads (newest first) with client dummy files
-  const files = [...dbFiles, ...filesDummyData];
+  // Merge Firestore uploads with client dummy files if DB is empty to guarantee UI has content
+  const files = dbFiles.length > 0 ? dbFiles : [...dbFiles, ...filesDummyData];
 
   const extensionCategories: { [key: string]: string[] } = {
     Video: ["mp4", "m4a", "avi", "mov", "wmv", "flv", "mkv", "webm"],

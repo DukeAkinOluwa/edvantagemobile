@@ -25,6 +25,8 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
+  View,
+  Text,
 } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 
@@ -346,6 +348,30 @@ export default function HomeScreen() {
             dynamicStyles.gamificationContainer,
           ]}
         />
+        
+        {/* Assignments Quick-Link Banner */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: theme.backgroundSecondary || '#fff',
+            padding: 15,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: theme.border,
+            width: adjustedWidth,
+            marginTop: 15,
+            marginBottom: 5,
+          }}
+          onPress={() => router.push("/assignments")}
+        >
+          <FontAwesome6 name="check-to-slot" size={22} color="#4CAF50" style={{ marginRight: 12 }} />
+          <View style={{ flex: 1 }}>
+            <ThemedText style={{ fontWeight: "bold", fontSize: 15, color: theme.text }}>My Assignments</ThemedText>
+            <ThemedText style={{ color: theme.placeholder, fontSize: 11 }}>View due dates and submit your work.</ThemedText>
+          </View>
+          <FontAwesome6 name="chevron-right" size={14} color={theme.placeholder} />
+        </TouchableOpacity>
         {/* 
         <TouchableOpacity
           style={{ backgroundColor: "red", padding: 15, borderRadius: 8, marginVertical: 10, alignItems: "center" }}

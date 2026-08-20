@@ -32,7 +32,7 @@ export const auth = isNewApp
 export const db = isNewApp
   ? initializeFirestore(app, {
       localCache: memoryLocalCache({}),
-      experimentalAutoDetectLongPolling: true,
+      experimentalForceLongPolling: true,
     })
   : getFirestore(app);
 export const storage = getStorage(app);

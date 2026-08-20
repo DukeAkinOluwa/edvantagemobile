@@ -21,6 +21,7 @@ import {
   updateDoc,
   where,
   writeBatch,
+  arrayUnion
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { scheduleAlarm } from "./alarmService";
@@ -38,6 +39,7 @@ export interface UserProfile {
   bio?: string;
   dob?: string;
   gender?: string;
+  expoPushToken?: string;
   profilePic?: string;
   course?: string;
   level?: string;
@@ -87,6 +89,8 @@ export interface ChatRoom {
   lastMessageSenderUid?: string;
   isGroup: boolean;
   isPublic?: boolean;              // whether the group is discoverable
+  isClassGroup?: boolean;          // true if linked to a class
+  classId?: string;                // ID of the linked schedule event
   avatarUrl?: string;              // group avatar or other person's pic
   unreadCounts?: Record<string, number>; // uid -> unread count
   typingUsers?: Record<string, number>;  // uid -> timestamp of last typing event
@@ -170,7 +174,7 @@ export async function updateUserProfile(
 export async function getUserTasks(uid: string): Promise<Task[]> {
   const q = query(tasksCol(), where("uid", "==", uid));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id } as Task));
 }
 
 /** Subscribe to a user's tasks in real-time */
@@ -180,7 +184,7 @@ export function subscribeUserTasks(
 ): Unsubscribe {
   const q = query(tasksCol(), where("uid", "==", uid));
   return onSnapshot(q, (snap) => {
-    const tasks = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Task));
+    const tasks = snap.docs.map((d) => ({ ...d.data(), id: d.id } as Task));
     onUpdate(tasks);
   });
 }
@@ -249,7 +253,7 @@ export async function getUserChatRooms(uid: string): Promise<ChatRoom[]> {
     where("participants", "array-contains", uid)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+  return snap.docs.map((d) => ({ ...d.data(), id: d.id } as ChatRoom));
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
@@ -268,7 +272,7 @@ export function subscribeToMessages(
   );
   return onSnapshot(q, (snap) => {
     const messages = snap.docs.map(
-      (d) => ({ id: d.id, ...d.data() } as Message)
+      (d) => ({ ...d.data(), id: d.id } as Message)
     );
     callback(messages);
     // Also update local AsyncStorage cache
@@ -276,6 +280,8 @@ export function subscribeToMessages(
       `chat_messages_${chatId}`,
       JSON.stringify(messages)
     ).catch(console.error);
+  }, (error) => {
+    console.error("subscribeToMessages error:", error);
   });
 }
 
@@ -443,7 +449,9 @@ export async function createGroupChat(
   participantUids: string[],
   participantNames: Record<string, string>,
   participantAvatars: Record<string, string>,
-  isPublic: boolean = false
+  isPublic: boolean = false,
+  isClassGroup: boolean = false,
+  classId?: string
 ): Promise<string> {
   const unreadCounts: Record<string, number> = {};
   participantUids.forEach((uid) => (unreadCounts[uid] = 0));
@@ -455,6 +463,8 @@ export async function createGroupChat(
     participantAvatars,
     isGroup: true,
     isPublic,
+    isClassGroup,
+    classId: classId || null,
     lastMessage: "",
     unreadCounts,
     createdAt: serverTimestamp(),
@@ -465,23 +475,31 @@ export async function createGroupChat(
 // ─── Public Groups Discovery ──────────────────────────────────────────────────
 
 /**
- * Search for public groups by name prefix.
+ * Search for public groups by name prefix. (Now customized to only show class groups!)
  */
 export async function searchPublicGroups(queryStr: string): Promise<ChatRoom[]> {
   if (!queryStr.trim()) return [];
 
-  const term = queryStr.trim();
+  const term = queryStr.trim().toLowerCase();
   
-  const q = query(
-    chatRoomsCol(),
-    where("isPublic", "==", true),
-    where("name", ">=", term),
-    where("name", "<=", term + "\uf8ff"),
-    limit(20)
-  );
+  try {
+    // Only search for public class groups
+    const q = query(
+      chatRoomsCol(),
+      where("isPublic", "==", true),
+      where("isClassGroup", "==", true),
+      limit(50)
+    );
 
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+    const snap = await getDocs(q);
+    const allGroups = snap.docs.map((d) => ({ ...d.data(), id: d.id } as ChatRoom));
+    
+    // Client-side filter for case-insensitive search
+    return allGroups.filter(g => g.name?.toLowerCase().includes(term));
+  } catch (error) {
+    console.error("searchPublicGroups Error:", error);
+    return [];
+  }
 }
 
 /**
@@ -512,6 +530,18 @@ export async function joinGroupChat(
     [`participantAvatars.${uid}`]: avatar,
     [`unreadCounts.${uid}`]: 0
   });
+
+  // If this is a class group, also add the user to the corresponding ScheduleEvent
+  if (roomData.isClassGroup && roomData.classId) {
+    const classRef = doc(collection(db, "schedules"), roomData.classId);
+    try {
+      await updateDoc(classRef, {
+        participants: arrayUnion(uid)
+      });
+    } catch (e) {
+      console.warn("Failed to join schedule event linked to chat", e);
+    }
+  }
 }
 
 // ─── Real-time Chat Room List ─────────────────────────────────────────────────
@@ -526,10 +556,10 @@ export function subscribeToChatRooms(
 ): Unsubscribe {
   const q = query(
     chatRoomsCol(),
-    where("participants", "array-contains", uid)
+    where("participants", "array-contains-any", [uid, "global"])
   );
   return onSnapshot(q, (snap) => {
-    const rooms = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ChatRoom));
+    const rooms = snap.docs.map((d) => ({ ...d.data(), id: d.id } as ChatRoom));
     // Sort rooms client-side by lastMessageTime descending
     rooms.sort((a, b) => {
       const t1 = a.lastMessageTime?.toMillis ? a.lastMessageTime.toMillis() : (a.lastMessageTime ? new Date(a.lastMessageTime as any).getTime() : 0);
@@ -549,9 +579,11 @@ export function subscribeToChatRooms(
 export async function markRoomAsRead(
   chatId: string,
   uid: string
-): Promise<void> {
-  await updateDoc(doc(chatRoomsCol(), chatId), {
+) {
+  const roomRef = doc(db, "chatRooms", chatId);
+  await updateDoc(roomRef, {
     [`unreadCounts.${uid}`]: 0,
+    [`unreadCounts.global`]: 0,
   });
 }
 

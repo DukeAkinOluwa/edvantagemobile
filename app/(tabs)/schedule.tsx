@@ -4,9 +4,9 @@ import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { createScheduleEvent, ScheduleEvent, syncScheduleAlarms, deleteScheduleEvent, subscribeUserSchedule } from "@/lib/scheduleService";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
-import { SectionList, StyleSheet, Switch, View, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator, Text, ScrollView, Animated, RefreshControl } from "react-native";
+import { SectionList, StyleSheet, Switch, View, TouchableOpacity, Pressable, Modal, TextInput, Alert, ActivityIndicator, Text, ScrollView, Animated, RefreshControl } from "react-native";
 import { FontAwesome6 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
@@ -83,51 +83,97 @@ const ScheduleItem = React.memo(function ScheduleItem({
   theme,
   isLecturer,
   onDelete,
-  onCheckIn,
+  activeTab,
 }: {
   item: ScheduleEvent;
   theme: any;
   isLecturer: boolean;
   onDelete: (id: string) => void;
-  onCheckIn: (item: ScheduleEvent) => void;
+  activeTab: "upcoming" | "past" | "registered";
 }) {
+  const router = useRouter();
+  
+  // Mocked attendance logic for UI demonstration
+  const isPast = item.endTime < Date.now();
+  const mockAttendanceValue = "Present"; 
+  const mockAttendanceHistory = "85% (11/13)";
+
   return (
-    <View style={[styles.taskBox, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
-      <View style={styles.timeCol}>
-        <Text style={[styles.taskTime, { color: theme.text }]}>{formatTime(item.startTime)}</Text>
-        <Text style={{ color: theme.placeholder, fontSize: 10 }}>to</Text>
-        <Text style={[styles.taskTime, { color: theme.placeholder, fontSize: 11 }]}>{formatTime(item.endTime)}</Text>
-      </View>
-      
-      <View style={styles.taskInfo}>
-        <ThemedText style={[styles.taskTitle, { color: theme.text }]}>{item.courseCode}: {item.title}</ThemedText>
-        <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 }}>
-          <FontAwesome6 name="location-dot" size={10} color={theme.placeholder} />
-          <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.location}</ThemedText>
+    <View style={{ marginBottom: 10 }}>
+      <Pressable 
+        style={[styles.taskBox, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+        onPress={() => router.push(`/class/${item.id}`)}
+      >
+        <View style={styles.timeCol}>
+          <Text style={[styles.taskTime, { color: theme.text }]}>{formatTime(item.startTime)}</Text>
+          <Text style={{ color: theme.placeholder, fontSize: 10 }}>to</Text>
+          <Text style={[styles.taskTime, { color: theme.placeholder, fontSize: 11 }]}>{formatTime(item.endTime)}</Text>
         </View>
-        {!isLecturer && (
-          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 }}>
-            <FontAwesome6 name="chalkboard-user" size={10} color={theme.placeholder} />
-            <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.lecturerName}</ThemedText>
+        
+        <View style={styles.taskInfo}>
+          <ThemedText style={[styles.taskTitle, { color: theme.text }]}>{item.courseCode}: {item.title}</ThemedText>
+          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 4, gap: 4 }}>
+            <FontAwesome6 name="location-dot" size={10} color={theme.placeholder} />
+            <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.location}</ThemedText>
           </View>
-        )}
-        {/* Check-In Button — visible to students during active class window */}
-        {!isLecturer && isClassActive(item.startTime, item.endTime) && (
-          <TouchableOpacity style={styles.checkInBtn} onPress={() => onCheckIn(item)}>
-            <FontAwesome6 name="location-dot" size={11} color="#fff" />
-            <Text style={styles.checkInBtnText}>Check In</Text>
+          {!isLecturer && (
+            <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2, gap: 4 }}>
+              <FontAwesome6 name="chalkboard-user" size={10} color={theme.placeholder} />
+              <ThemedText style={[styles.taskMeta, { color: theme.placeholder }]}>{item.lecturerName}</ThemedText>
+            </View>
+          )}
+
+          {/* Attendance specific info */}
+          {!isLecturer && (
+            <View style={{ marginTop: 6 }}>
+              {activeTab === "registered" ? (
+                <ThemedText style={{ color: "#4CAF50", fontSize: 12, fontWeight: "bold" }}>
+                  Attendance History: {mockAttendanceHistory}
+                </ThemedText>
+              ) : isPast ? (
+                <ThemedText style={{ color: theme.placeholder, fontSize: 12, fontWeight: "bold" }}>
+                  Status: {mockAttendanceValue}
+                </ThemedText>
+              ) : null}
+            </View>
+          )}
+          
+          {/* Action Buttons Row */}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+            {/* Check-In Button — visible to students during active class window */}
+            {!isLecturer && isClassActive(item.startTime, item.endTime) && (
+              <Link 
+                href={`/attendance-checkin?classId=${encodeURIComponent(item.id || "")}&courseCode=${encodeURIComponent(item.courseCode || "")}&classTitle=${encodeURIComponent(item.title || "")}&classroomLat=${encodeURIComponent(String((item as any).classroomLat ?? 0))}&classroomLon=${encodeURIComponent(String((item as any).classroomLon ?? 0))}&classroomRadius=${encodeURIComponent(String((item as any).classroomRadius ?? 100))}&classroomName=${encodeURIComponent(item.location || "")}`}
+                asChild
+              >
+                <TouchableOpacity style={styles.checkInBtn}>
+                  <FontAwesome6 name="location-dot" size={11} color="#fff" />
+                  <Text style={styles.checkInBtnText}>Check In</Text>
+                </TouchableOpacity>
+              </Link>
+            )}
+            
+            {/* Take Attendance Button — visible to lecturers during active class window */}
+            {isLecturer && isClassActive(item.startTime, item.endTime) && (
+              <Link href={`/attendance-monitor?classId=${item.id}&courseCode=${item.courseCode}`} asChild>
+                <TouchableOpacity style={[styles.checkInBtn, { backgroundColor: "#4CAF50" }]}>
+                  <FontAwesome6 name="clipboard-user" size={11} color="#fff" />
+                  <Text style={styles.checkInBtnText}>Take Attendance</Text>
+                </TouchableOpacity>
+              </Link>
+            )}
+          </View>
+        </View>
+
+        {isLecturer && (
+          <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(item.id)}>
+            <FontAwesome6 name="trash" size={14} color="#ff4d4d" />
           </TouchableOpacity>
         )}
-      </View>
-
-      {isLecturer && (
-        <TouchableOpacity style={styles.deleteBtn} onPress={() => onDelete(item.id)}>
-          <FontAwesome6 name="trash" size={14} color="#ff4d4d" />
-        </TouchableOpacity>
-      )}
+      </Pressable>
     </View>
   );
-}, (prev, next) => prev.item.id === next.item.id && prev.item.startTime === next.item.startTime);
+}, (prev, next) => prev.item.id === next.item.id && prev.item.startTime === next.item.startTime && prev.activeTab === next.activeTab);
 
 export default function ScheduleScreen() {
   const { theme } = useTheme();
@@ -136,22 +182,19 @@ export default function ScheduleScreen() {
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [includePast, setIncludePast] = useState(false);
+  const [activeTab, setActiveTab] = useState<"upcoming" | "past" | "registered">("upcoming");
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [isJoining, setIsJoining] = useState(false);
+  
+  const [displayLimit, setDisplayLimit] = useState(10); // Infinity scroll limit
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    if (user && profile) {
-      syncScheduleAlarms(user.uid, profile.role === "lecturer" ? "lecturer" : "student").catch(console.error);
-    }
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 800);
-  }, [user, profile]);
-
-  // New Event Form State
+  // Form State
   const [title, setTitle] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [location, setLocation] = useState("");
@@ -159,12 +202,10 @@ export default function ScheduleScreen() {
   const [classroomLon, setClassroomLon] = useState("");
   const [classroomRadius, setClassroomRadius] = useState("100");
   const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date(Date.now() + 3600000)); // +1 hour
-  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [endTime, setEndTime] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isLecturer = profile?.role === "lecturer";
-  const router = useRouter();
 
   // Establish real-time listener subscription on mount
   useEffect(() => {
@@ -239,32 +280,74 @@ export default function ScheduleScreen() {
     ]);
   }, []);
 
-  const handleCheckIn = useCallback((item: ScheduleEvent) => {
-    router.push({
-      pathname: "/attendance-checkin",
-      params: {
-        classId: item.id,
-        courseCode: item.courseCode,
-        classTitle: item.title,
-        classroomLat: String((item as any).classroomLat ?? 0),
-        classroomLon: String((item as any).classroomLon ?? 0),
-        classroomRadius: String((item as any).classroomRadius ?? 100),
-        classroomName: item.location,
-      },
-    });
-  }, [router]);
+  const handleJoinClass = async () => {
+    if (!joinCode || !user) return;
+    setIsJoining(true);
+    try {
+      const { joinClass } = await import("@/lib/scheduleService");
+      const name = profile ? `${profile.firstName} ${profile.lastName}` : "Student";
+      const avatar = profile?.profilePic || "";
+      await joinClass(user.uid, joinCode, name, avatar);
+      Alert.alert("Success", "You have joined the class!");
+      setShowJoinModal(false);
+      setJoinCode("");
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Could not join class. Check the code.");
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    // Real-time listener already updates data, but we can simulate a pull-to-refresh
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
   const sections = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
     const grouped: { title: string; data: ScheduleEvent[] }[] = [];
+    
+    // Filter events based on activeTab and searchQuery
+    let filteredEvents = events.filter(event => {
+      // Search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesCourse = event.courseCode.toLowerCase().includes(query);
+        const matchesTitle = event.title.toLowerCase().includes(query);
+        if (!matchesCourse && !matchesTitle) return false;
+      }
 
-    events.forEach((event) => {
+      // Tab filter
+      const isPast = event.endTime < Date.now();
+      if (activeTab === "upcoming" && isPast) return false;
+      if (activeTab === "past" && !isPast) return false;
+      
+      return true;
+    });
+
+    if (activeTab === "registered") {
+      // Group by courseCode so we only show one generic entry per enrolled class
+      const uniqueClasses = new Map<string, ScheduleEvent>();
+      filteredEvents.forEach(evt => {
+        if (!uniqueClasses.has(evt.courseCode)) {
+          uniqueClasses.set(evt.courseCode, evt);
+        }
+      });
+      filteredEvents = Array.from(uniqueClasses.values());
+    }
+
+    // If past tab, sort descending so newest past classes are at the top
+    if (activeTab === "past") {
+      filteredEvents.sort((a, b) => b.startTime - a.startTime);
+    }
+
+    // Pagination limit
+    const paginatedEvents = filteredEvents.slice(0, displayLimit);
+
+    paginatedEvents.forEach((event) => {
       const taskDate = new Date(event.startTime);
       taskDate.setHours(0, 0, 0, 0);
-
-      if (!includePast && taskDate < today) return;
 
       const sectionTitle = formatDateHeader(taskDate);
       const sectionIndex = grouped.findIndex((sec) => sec.title === sectionTitle);
@@ -277,7 +360,7 @@ export default function ScheduleScreen() {
     });
 
     return grouped;
-  }, [events, includePast]);
+  }, [events, activeTab, searchQuery, displayLimit]);
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -288,26 +371,53 @@ export default function ScheduleScreen() {
           <ThemedText style={[globalStyles.largeText, { color: theme.text, fontWeight: "bold" }]}>
             {isLecturer ? "Lecturer Schedule" : "My Timetable"}
           </ThemedText>
-          <ThemedText style={{ color: theme.placeholder, fontSize: 12, marginTop: 4 }}>
-            Native alarms automatically sync 15 mins before class.
-          </ThemedText>
         </View>
         
-        {isLecturer && (
-          <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-            <FontAwesome6 name="plus" size={16} color="#fff" />
-            <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {isLecturer ? (
+            <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
+              <FontAwesome6 name="plus" size={16} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Add</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.addBtn} onPress={() => setShowJoinModal(true)}>
+              <FontAwesome6 name="door-open" size={14} color="#fff" />
+              <Text style={{ color: "#fff", fontWeight: "bold", marginLeft: 6 }}>Join</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <View style={styles.toggleRow}>
-        <ThemedText style={[globalStyles.mediumText, { color: theme.text }]}>Show Past Classes</ThemedText>
-        <Switch
-          value={includePast}
-          onValueChange={setIncludePast}
-          trackColor={{ false: "#767577", true: theme.primary }}
-          thumbColor={includePast ? theme.secondary : "#f4f3f4"}
+      {/* Tabs & Search */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === "upcoming" && { backgroundColor: "#2A52BE" }]} 
+          onPress={() => setActiveTab("upcoming")}
+        >
+          <Text style={[styles.tabText, { color: activeTab === "upcoming" ? "#fff" : theme.text }]}>Upcoming</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === "past" && { backgroundColor: "#2A52BE" }]} 
+          onPress={() => setActiveTab("past")}
+        >
+          <Text style={[styles.tabText, { color: activeTab === "past" ? "#fff" : theme.text }]}>Past</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tabBtn, activeTab === "registered" && { backgroundColor: "#2A52BE" }]} 
+          onPress={() => setActiveTab("registered")}
+        >
+          <Text style={[styles.tabText, { color: activeTab === "registered" ? "#fff" : theme.text }]}>Registered</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.searchContainer, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+        <FontAwesome6 name="magnifying-glass" size={14} color={theme.placeholder} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search course code or title..."
+          placeholderTextColor={theme.placeholder}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
       </View>
 
@@ -319,8 +429,8 @@ export default function ScheduleScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[theme.primary]}
-              tintColor={theme.primary}
+              colors={["#2A52BE"]}
+              tintColor={theme.text}
             />
           }
         >
@@ -337,10 +447,16 @@ export default function ScheduleScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[theme.primary]}
-              tintColor={theme.primary}
+              colors={["#2A52BE"]}
+              tintColor={theme.text}
             />
           }
+          onEndReached={() => {
+            if (displayLimit < events.length) {
+              setDisplayLimit(prev => prev + 10);
+            }
+          }}
+          onEndReachedThreshold={0.5}
           renderSectionHeader={({ section: { title } }) => (
             <ThemedText style={[styles.sectionHeader, globalStyles.semiLargeText, { color: theme.text }]}>
               {title}
@@ -352,7 +468,7 @@ export default function ScheduleScreen() {
               theme={theme}
               isLecturer={isLecturer}
               onDelete={handleDelete}
-              onCheckIn={handleCheckIn}
+              activeTab={activeTab}
             />
           )}
           initialNumToRender={10}
@@ -369,48 +485,112 @@ export default function ScheduleScreen() {
         />
       )}
 
-      {/* Add Event Modal (Lecturer Only) */}
-      <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { backgroundColor: theme.background }]}>
-          <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Schedule Class</Text>
-            <TouchableOpacity onPress={() => setShowAddModal(false)}>
-              <Text style={{ color: "#ff4d4d", fontSize: 16 }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-
-          <TextInput style={[styles.input, { color: theme.text, borderColor: theme.border }]} placeholder="Course Code (e.g. CSC 301)" placeholderTextColor={theme.placeholder} value={courseCode} onChangeText={setCourseCode} />
-          <TextInput style={[styles.input, { color: theme.text, borderColor: theme.border }]} placeholder="Topic / Title" placeholderTextColor={theme.placeholder} value={title} onChangeText={setTitle} />
-          <TextInput style={[styles.input, { color: theme.text, borderColor: theme.border }]} placeholder="Location / Hall Name" placeholderTextColor={theme.placeholder} value={location} onChangeText={setLocation} />
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <TextInput style={[styles.input, { flex: 1, color: theme.text, borderColor: theme.border }]} placeholder="Latitude" placeholderTextColor={theme.placeholder} keyboardType="decimal-pad" value={classroomLat} onChangeText={setClassroomLat} />
-            <TextInput style={[styles.input, { flex: 1, color: theme.text, borderColor: theme.border }]} placeholder="Longitude" placeholderTextColor={theme.placeholder} keyboardType="decimal-pad" value={classroomLon} onChangeText={setClassroomLon} />
-          </View>
-          <TextInput style={[styles.input, { color: theme.text, borderColor: theme.border }]} placeholder="Geofence Radius in metres (default: 100)" placeholderTextColor={theme.placeholder} keyboardType="number-pad" value={classroomRadius} onChangeText={setClassroomRadius} />
-
-          <TouchableOpacity style={[styles.dateBtn, { borderColor: theme.border }]} onPress={() => setShowStartPicker(true)}>
-            <FontAwesome6 name="clock" size={16} color={theme.text} />
-            <Text style={{ color: theme.text, marginLeft: 10 }}>{startTime.toLocaleString()}</Text>
-          </TouchableOpacity>
-
-          {showStartPicker && (
-            <DateTimePicker
-              value={startTime}
-              mode="datetime"
-              display="default"
-              onChange={(e, date) => {
-                setShowStartPicker(false);
-                if (date) {
-                  setStartTime(date);
-                  setEndTime(new Date(date.getTime() + 3600000));
-                }
-              }}
+      <Modal visible={showJoinModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Join Class</Text>
+            
+            <Text style={[styles.label, { color: theme.text }]}>Enter 6-Digit Class Code</Text>
+            <TextInput
+              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              placeholder="e.g. A1B2C3"
+              placeholderTextColor={theme.placeholder}
+              value={joinCode}
+              onChangeText={setJoinCode}
+              autoCapitalize="characters"
+              maxLength={6}
             />
-          )}
 
-          <TouchableOpacity style={styles.submitBtn} onPress={handleAddEvent} disabled={isSubmitting}>
-            {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Schedule Class</Text>}
-          </TouchableOpacity>
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setShowJoinModal(false)}>
+                <Text style={styles.btnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.submitBtn]} onPress={handleJoinClass} disabled={isJoining}>
+                {isJoining ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Join Class</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add Class Modal for Lecturers */}
+      <Modal visible={showAddModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.background }]}>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Schedule New Class</Text>
+            
+            <ScrollView style={{ maxHeight: "80%" }}>
+              <Text style={[styles.label, { color: theme.text }]}>Course Code</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                placeholder="e.g. SEN 300"
+                placeholderTextColor={theme.placeholder}
+                value={courseCode}
+                onChangeText={setCourseCode}
+              />
+
+              <Text style={[styles.label, { color: theme.text }]}>Class Title</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                placeholder="e.g. Intro to Software Eng."
+                placeholderTextColor={theme.placeholder}
+                value={title}
+                onChangeText={setTitle}
+              />
+
+              <Text style={[styles.label, { color: theme.text }]}>Location (Name)</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                placeholder="e.g. Hall 2"
+                placeholderTextColor={theme.placeholder}
+                value={location}
+                onChangeText={setLocation}
+              />
+
+              <Text style={[styles.label, { color: theme.text, marginTop: 10 }]}>GPS Coordinates (For Check-In)</Text>
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                placeholder="Latitude (e.g. 6.6732)"
+                placeholderTextColor={theme.placeholder}
+                keyboardType="numeric"
+                value={classroomLat}
+                onChangeText={setClassroomLat}
+              />
+              <TextInput
+                style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+                placeholder="Longitude (e.g. 3.1601)"
+                placeholderTextColor={theme.placeholder}
+                keyboardType="numeric"
+                value={classroomLon}
+                onChangeText={setClassroomLon}
+              />
+
+              <Text style={[styles.label, { color: theme.text, marginTop: 10 }]}>Start Time</Text>
+              <DateTimePicker
+                value={startTime}
+                mode="time"
+                display="default"
+                onChange={(e, date) => date && setStartTime(date)}
+              />
+
+              <Text style={[styles.label, { color: theme.text, marginTop: 10 }]}>End Time</Text>
+              <DateTimePicker
+                value={endTime}
+                mode="time"
+                display="default"
+                onChange={(e, date) => date && setEndTime(date)}
+              />
+            </ScrollView>
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity style={[styles.btn, styles.cancelBtn]} onPress={() => setShowAddModal(false)}>
+                <Text style={styles.btnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.btn, styles.submitBtn]} onPress={handleAddEvent} disabled={isSubmitting}>
+                {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Schedule</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </ThemedView>
@@ -418,8 +598,46 @@ export default function ScheduleScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 15, paddingTop: 60 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 },
+  container: { flex: 1 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    paddingTop: 60,
+    borderBottomWidth: 1,
+  },
+  tabContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    gap: 10,
+  },
+  tabBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: "transparent",
+  },
+  tabText: {
+    fontWeight: "bold",
+  },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginTop: 15,
+    paddingHorizontal: 15,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 10,
+    marginBottom: 5,
+  },
+  searchInput: {
+    flex: 1,
+    height: "100%",
+  },
   addBtn: { flexDirection: "row", backgroundColor: "#2A52BE", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, alignItems: "center" },
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, paddingBottom: 10, borderBottomWidth: 0.5, borderBottomColor: "#ddd" },
   sectionHeader: { marginTop: 20, marginBottom: 10, fontWeight: "600" },
@@ -434,13 +652,16 @@ const styles = StyleSheet.create({
   checkInBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#2A52BE", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, gap: 5, marginTop: 8, alignSelf: "flex-start" },
   checkInBtnText: { color: "#fff", fontSize: 12, fontWeight: "bold" },
   // Modal
-  modalContainer: { flex: 1, padding: 20, paddingTop: 50 },
-  modalHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 30 },
-  modalTitle: { fontSize: 20, fontWeight: "bold" },
-  input: { borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 16, fontSize: 16 },
-  dateBtn: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderRadius: 8, padding: 14, marginBottom: 30 },
-  submitBtn: { backgroundColor: "#2A52BE", padding: 16, borderRadius: 8, alignItems: "center" },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalContent: { padding: 25, borderTopLeftRadius: 20, borderTopRightRadius: 20, minHeight: 300 },
+  modalTitle: { fontSize: 22, fontWeight: "bold", marginBottom: 20 },
+  label: { fontSize: 13, fontWeight: "600", marginBottom: 6 },
+  input: { borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 15, fontSize: 16 },
+  modalBtns: { flexDirection: "row", gap: 10, marginTop: 20, marginBottom: 30 },
+  btn: { flex: 1, padding: 15, borderRadius: 10, alignItems: "center" },
+  cancelBtn: { backgroundColor: "rgba(128,128,128,0.2)" },
+  submitBtn: { backgroundColor: "#2A52BE" },
+  btnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
   // Skeletons
   skeletonCard: {
     flexDirection: "row",

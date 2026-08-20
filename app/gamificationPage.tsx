@@ -101,6 +101,38 @@ export default function GamificationPage() {
           </TouchableOpacity>
         </View>
 
+
+
+        {/* Achievements */}
+        <ThemedText style={[globalStyles.mediumText, { fontWeight: "bold", color: theme.text, marginTop: 25, marginBottom: 15 }]}>
+          Achievements
+        </ThemedText>
+        <View style={styles.achievementsRow}>
+          <View style={[styles.achievementBadge, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+            <View style={[styles.iconCircle, { backgroundColor: "rgba(255, 193, 7, 0.2)" }]}>
+              <FontAwesome6 name="medal" size={24} color="#FFC107" />
+            </View>
+            <ThemedText style={{ color: theme.text, fontWeight: "bold", marginTop: 8, textAlign: "center" }}>Early Bird</ThemedText>
+            <ThemedText style={{ color: theme.placeholder, fontSize: 11, textAlign: "center" }}>Check-in before 8AM</ThemedText>
+          </View>
+
+          <View style={[styles.achievementBadge, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+            <View style={[styles.iconCircle, { backgroundColor: "rgba(76, 175, 80, 0.2)" }]}>
+              <FontAwesome6 name="check-double" size={24} color="#4CAF50" />
+            </View>
+            <ThemedText style={{ color: theme.text, fontWeight: "bold", marginTop: 8, textAlign: "center" }}>Perfect Week</ThemedText>
+            <ThemedText style={{ color: theme.placeholder, fontSize: 11, textAlign: "center" }}>No missed classes</ThemedText>
+          </View>
+
+          <View style={[styles.achievementBadge, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border, opacity: 0.5 }]}>
+            <View style={[styles.iconCircle, { backgroundColor: "rgba(128, 128, 128, 0.2)" }]}>
+              <FontAwesome6 name="book-open" size={24} color={theme.placeholder} />
+            </View>
+            <ThemedText style={{ color: theme.text, fontWeight: "bold", marginTop: 8, textAlign: "center" }}>Bookworm</ThemedText>
+            <ThemedText style={{ color: theme.placeholder, fontSize: 11, textAlign: "center" }}>Read 10 resources</ThemedText>
+          </View>
+        </View>
+
       </ScrollView>
     </ThemedView>
   );
@@ -120,4 +152,11 @@ const styles = StyleSheet.create({
   inputUnits: { flex: 1, marginRight: 8, textAlign: "center" },
   inputGrade: { flex: 1, textAlign: "center" },
   addCourseBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 12, marginTop: 10, borderWidth: 1, borderColor: "#2A52BE", borderRadius: 8, borderStyle: "dashed" },
+  goalCard: { padding: 15, borderRadius: 12, borderWidth: 1, marginBottom: 10 },
+  goalHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  progressBar: { height: 8, borderRadius: 4, width: "100%", overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 4 },
+  achievementsRow: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
+  achievementBadge: { flex: 1, padding: 15, borderRadius: 12, borderWidth: 1, alignItems: "center" },
+  iconCircle: { width: 50, height: 50, borderRadius: 25, alignItems: "center", justifyContent: "center" },
 });

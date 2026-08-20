@@ -33,7 +33,8 @@ import { AudioPlayer } from "@/components/AudioPlayer";
 import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import React, {
   useCallback,
   useEffect,
@@ -376,10 +377,12 @@ const MessageBubble = React.memo(function MessageBubble({
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ChatScreen() {
-  const { chatId, name, isGroup } = useLocalSearchParams<{
+  const { chatId, name, isGroup, isClassGroup, classId: paramClassId } = useLocalSearchParams<{
     chatId: string;
     name: string;
     isGroup: string;
+    isClassGroup: string;
+    classId: string;
   }>();
   const { theme } = useTheme();
   const { user, profile } = useAuth();
@@ -392,6 +395,9 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [room, setRoom] = useState<ChatRoom | null>(null);
+  
+  const actualClassId = room?.classId || paramClassId;
+  const isClass = room?.isClassGroup || isClassGroup === "true";
   const [otherOnline, setOtherOnline] = useState(false);
   const [otherLastSeen, setOtherLastSeen] = useState<Timestamp | null>(null);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
@@ -415,10 +421,12 @@ export default function ChatScreen() {
   // Load room metadata
   useEffect(() => {
     if (!myUid || !chatId) return;
-    getUserChatRooms(myUid)
-      .then((rooms) => {
-        const found = rooms.find((r) => r.id === chatId);
-        if (found) setRoom(found);
+    const roomRef = doc(db, "chatRooms", chatId as string);
+    getDoc(roomRef)
+      .then((snap) => {
+        if (snap.exists()) {
+          setRoom({ id: snap.id, ...snap.data() } as ChatRoom);
+        }
       })
       .catch(console.error);
   }, [chatId, myUid]);
@@ -801,17 +809,23 @@ export default function ChatScreen() {
     ({ item, index }: { item: Message; index: number }) => {
       const isMe = item.sender === myUid;
       const prev = messages[index + 1];
+      const getMillis = (ts: any) => {
+        if (!ts) return 0;
+        if (typeof ts.toMillis === 'function') return ts.toMillis();
+        return new Date(ts).getTime();
+      };
+
       const showSender =
         !prev ||
         prev.sender !== item.sender ||
-        (item.timestamp?.toMillis() ?? 0) - (prev.timestamp?.toMillis() ?? 0) > 60000;
+        getMillis(item.timestamp) - getMillis(prev.timestamp) > 60000;
 
       let isRead = false;
       if (room && !isGroupChat) {
-        const otherUid = room.participants.find((p) => p !== myUid) ?? "";
+        const otherUid = room.participants?.find((p) => p !== myUid) ?? "";
         isRead = (room.unreadCounts?.[otherUid] ?? 0) === 0;
       } else if (room && isGroupChat) {
-        isRead = room.participants
+        isRead = (room.participants || [])
           .filter((p) => p !== myUid)
           .every((p) => (room.unreadCounts?.[p] ?? 0) === 0);
       }
@@ -848,7 +862,10 @@ export default function ChatScreen() {
           <FontAwesome6 name="angle-left" size={20} color="#2A52BE" />
         </TouchableOpacity>
 
-        <View style={styles.headerInfo}>
+        <TouchableOpacity 
+          style={styles.headerInfo}
+          onPress={() => router.push({ pathname: "/chat/info", params: { chatId, isGroup: isGroupChat ? "true" : "false", name: chatName } })}
+        >
           <Text style={[styles.headerName, { color: theme.text }]} numberOfLines={1}>
             {chatName}
           </Text>
@@ -867,7 +884,17 @@ export default function ChatScreen() {
               {room.participants.length} members
             </Text>
           )}
-        </View>
+        </TouchableOpacity>
+
+        {isClass && actualClassId && (
+          <TouchableOpacity 
+            style={{ backgroundColor: "#2A52BE", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, flexDirection: "row", alignItems: "center", gap: 6 }}
+            onPress={() => router.push(`/class/${actualClassId}`)}
+          >
+            <FontAwesome6 name="graduation-cap" size={12} color="#fff" />
+            <Text style={{ color: "#fff", fontSize: 12, fontWeight: "600" }}>Class Board</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Messages ── */}

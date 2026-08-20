@@ -341,41 +341,51 @@ export default function AttendanceCheckIn() {
       default: // idle
         return (
           <View style={styles.idleContainer}>
-            <Animated.View
-              style={[
-                styles.gpsPulseOuter,
-                { transform: [{ scale: pulseAnim }] },
-              ]}
-            >
-              <View style={styles.gpsPulseInner}>
-                <FontAwesome6 name="location-crosshairs" size={42} color="#fff" />
+            <View style={[styles.headerCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+              <View style={styles.iconCircle}>
+                <FontAwesome6 name="location-dot" size={32} color="#2A52BE" />
               </View>
-            </Animated.View>
-
-            <ThemedText
-              style={[styles.classTitle, { color: theme.text }]}
-            >
-              {params.courseCode}: {params.classTitle}
-            </ThemedText>
-            <ThemedText style={[styles.statusSub, { color: theme.placeholder }]}>
-              Tap the button below to verify you are inside{" "}
-              <Text style={{ fontWeight: "bold", color: theme.text }}>
-                {params.classroomName}
-              </Text>{" "}
-              and mark yourself present.
-            </ThemedText>
-
-            <View style={styles.warningNote}>
-              <FontAwesome6 name="shield-halved" size={14} color="#2A52BE" />
-              <Text style={{ color: "#2A52BE", fontSize: 12, marginLeft: 8, flex: 1 }}>
-                GPS spoofing detection is active. Any mock location usage will be
-                logged and flagged.
-              </Text>
+              <ThemedText style={[styles.classTitle, { color: theme.text }]}>
+                {params.courseCode}: {params.classTitle}
+              </ThemedText>
+              
+              <View style={styles.locationBadge}>
+                <FontAwesome6 name="building" size={14} color="#666" />
+                <ThemedText style={{ color: "#666", marginLeft: 6, fontWeight: "600" }}>
+                  {params.classroomName}
+                </ThemedText>
+              </View>
             </View>
 
-            <TouchableOpacity style={styles.checkInBtn} onPress={handleCheckIn}>
-              <FontAwesome6 name="location-dot" size={20} color="#fff" />
-              <Text style={styles.checkInBtnText}>Verify & Check In</Text>
+            <View style={styles.instructionCard}>
+              <Animated.View style={[styles.radarOuter, { transform: [{ scale: pulseAnim }], borderColor: "#2A52BE" }]} />
+              <Animated.View style={[styles.radarInner, { transform: [{ scale: Animated.multiply(pulseAnim, 0.8) }], borderColor: "#2A52BE" }]} />
+              <View style={styles.radarCenter}>
+                <FontAwesome6 name="street-view" size={32} color="#fff" />
+              </View>
+
+              <ThemedText style={[styles.instructionTitle, { color: theme.text }]}>
+                Proximity Check
+              </ThemedText>
+              <ThemedText style={[styles.instructionText, { color: theme.placeholder }]}>
+                We need to verify your physical presence. Please ensure you are within {params.classroomRadius || 100}m of the classroom before proceeding.
+              </ThemedText>
+
+              <View style={[styles.warningBox, { backgroundColor: theme.border }]}>
+                 <FontAwesome6 name="shield-halved" size={14} color="#2A52BE" />
+                 <ThemedText style={[styles.warningText, { color: theme.text }]}>
+                   GPS Spoofing is strictly prohibited and logged.
+                 </ThemedText>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.checkInBtn}
+              onPress={handleCheckIn}
+              activeOpacity={0.8}
+            >
+              <FontAwesome6 name="fingerprint" size={20} color="#fff" />
+              <Text style={styles.checkInBtnText}>Verify Attendance</Text>
             </TouchableOpacity>
           </View>
         );
@@ -416,40 +426,86 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: { padding: 20, alignItems: "center", paddingBottom: 60 },
 
-  // Idle Screen
-  idleContainer: { alignItems: "center", width: "100%", paddingTop: 20 },
-  gpsPulseOuter: {
+  // Idle Screen Redesign
+  idleContainer: { alignItems: "center", width: "100%", gap: 20 },
+  headerCard: {
+    width: "100%",
+    padding: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(42, 82, 190, 0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  classTitle: { fontSize: 22, fontWeight: "800", textAlign: "center", marginBottom: 12 },
+  locationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.06)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  instructionCard: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  radarOuter: {
+    position: "absolute",
+    top: 0,
     width: 140,
     height: 140,
     borderRadius: 70,
-    backgroundColor: "rgba(42, 82, 190, 0.15)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 30,
+    borderWidth: 2,
+    opacity: 0.2,
   },
-  gpsPulseInner: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+  radarInner: {
+    position: "absolute",
+    top: 20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    opacity: 0.5,
+  },
+  radarCenter: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: "#2A52BE",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 24,
+    marginTop: 40,
     shadowColor: "#2A52BE",
     shadowOpacity: 0.6,
     shadowRadius: 15,
-    elevation: 10,
+    elevation: 8,
   },
-  classTitle: { fontSize: 22, fontWeight: "bold", textAlign: "center", marginBottom: 10 },
-  statusSub: { fontSize: 14, textAlign: "center", marginTop: 6, marginBottom: 20 },
-  warningNote: {
+  instructionTitle: { fontSize: 20, fontWeight: "700", marginBottom: 8 },
+  instructionText: { fontSize: 15, textAlign: "center", paddingHorizontal: 20, marginBottom: 20, lineHeight: 22 },
+  warningBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(42, 82, 190, 0.08)",
-    borderRadius: 8,
     padding: 12,
-    marginBottom: 30,
-    width: "100%",
+    borderRadius: 12,
+    gap: 10,
+    width: "90%",
   },
+  warningText: { fontSize: 13, fontWeight: "500", flex: 1 },
+  
   checkInBtn: {
     flexDirection: "row",
     backgroundColor: "#2A52BE",
@@ -458,10 +514,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: "center",
     gap: 12,
+    width: "100%",
+    justifyContent: "center",
     shadowColor: "#2A52BE",
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 8,
+    marginTop: 10,
   },
   checkInBtnText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
 

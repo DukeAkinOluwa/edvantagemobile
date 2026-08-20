@@ -10,8 +10,9 @@ import {
   signUpWithEmail,
   type SignUpData,
 } from "@/lib/authService";
-import { UserProfile } from "@/lib/firestoreService";
+import { UserProfile, updateUserProfile } from "@/lib/firestoreService";
 import { startPresenceTracking, stopPresenceTracking } from "@/utils/presence";
+import { getExpoPushToken } from "@/utils/notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "firebase/auth";
 import React, {
@@ -71,7 +72,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setProfileLoading(true);
     try {
-      const p = await fetchUserProfile(firebaseUser.uid);
+      let p = await fetchUserProfile(firebaseUser.uid);
+      
+      // Update push token dynamically
+      try {
+        const currentToken = await getExpoPushToken();
+        if (currentToken && p && p.expoPushToken !== currentToken) {
+          await updateUserProfile(firebaseUser.uid, { expoPushToken: currentToken });
+          p = { ...p, expoPushToken: currentToken } as UserProfile;
+        }
+      } catch (pushErr) {
+        console.warn("AuthContext: Could not sync push token", pushErr);
+      }
+      
       setProfile(p);
     } catch (err: any) {
       console.error("AuthContext: Failed to load user profile", err);

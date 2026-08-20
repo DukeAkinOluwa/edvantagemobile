@@ -2,6 +2,7 @@
   "expo": {
     "name": "Edvantage",
     "slug": "Edvantage",
+    "owner": "edvantae-digital-hub-limited",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,7 +44,8 @@
         "backgroundColor": "#FAFBFD"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.akinoluwa.edvantage.dev"
+      "package": "com.akinoluwa.edvantage.dev",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "bundler": "metro",
@@ -104,7 +106,6 @@
       "eas": {
         "projectId": "4cf1f793-a004-4afa-81bc-88ac2263abc4"
       }
-    },
-    "owner": "mikeyyy"
+    }
   }
 }
