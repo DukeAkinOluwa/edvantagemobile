@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Dimensions, Clipboard, Alert, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Dimensions, Clipboard, Alert, ScrollView, Modal, TextInput } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { NavigationHeader, useTheme } from "@/components/Header";
 import { ThemedView } from "@/components/ThemedView";
@@ -7,7 +7,8 @@ import { ThemedText } from "@/components/ThemedText";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, orderBy, addDoc } from "firebase/firestore";
+import { Picker } from "@react-native-picker/picker";
 import { ScheduleEvent } from "@/lib/scheduleService";
 
 const { width } = Dimensions.get("window");
@@ -32,6 +33,19 @@ export default function ClassDetailsScreen() {
   const [allAttendance, setAllAttendance] = useState<any[]>([]);
   
   const isLecturer = profile?.role === "lecturer";
+
+  // Announcement Modal State
+  const [announcementModalVisible, setAnnouncementModalVisible] = useState(false);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementMsg, setAnnouncementMsg] = useState("");
+  const [isPostingAnn, setIsPostingAnn] = useState(false);
+
+  // Resource Modal State
+  const [resourceModalVisible, setResourceModalVisible] = useState(false);
+  const [resourceTitle, setResourceTitle] = useState("");
+  const [resourceSummary, setResourceSummary] = useState("");
+  const [resourceType, setResourceType] = useState("Document");
+  const [isUploadingRes, setIsUploadingRes] = useState(false);
 
   useEffect(() => {
     if (!classId) return;
@@ -141,6 +155,72 @@ export default function ClassDetailsScreen() {
     }
   };
 
+  const handlePostAnnouncement = async () => {
+    if (!announcementTitle.trim() || !announcementMsg.trim()) {
+      Alert.alert("Error", "Please fill out all fields.");
+      return;
+    }
+    setIsPostingAnn(true);
+    try {
+      await addDoc(collection(db, "broadcasts"), {
+        title: announcementTitle.trim(),
+        message: announcementMsg.trim(),
+        classId: classId,
+        authorId: user?.uid,
+        authorName: profile?.displayName || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim(),
+        createdAt: new Date().toISOString(),
+      });
+      setAnnouncementModalVisible(false);
+      setAnnouncementTitle("");
+      setAnnouncementMsg("");
+      Alert.alert("Success", "Announcement posted!");
+      // Refetch announcements
+      const annQ = query(collection(db, "broadcasts"), where("classId", "==", classId));
+      const annSnap = await getDocs(annQ);
+      setAnnouncements(annSnap.docs.map(d => ({id: d.id, ...d.data()})));
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "Failed to post announcement.");
+    } finally {
+      setIsPostingAnn(false);
+    }
+  };
+
+  const handleUploadResource = async () => {
+    if (!resourceTitle.trim()) {
+      Alert.alert("Error", "Please provide a title.");
+      return;
+    }
+    setIsUploadingRes(true);
+    try {
+      const ext = resourceType === "Video" ? ".mp4" : resourceType === "Audio" ? ".mp3" : resourceType === "Image" ? ".jpg" : ".pdf";
+      const mockPath = `/mock/resources/${resourceTitle.trim().toLowerCase().replace(/\s+/g, "_")}${ext}`;
+      
+      await addDoc(collection(db, "resources"), {
+        title: resourceTitle.trim(),
+        filename: resourceTitle.trim(),
+        filepath: mockPath,
+        classId: classId,
+        uploadedBy: profile?.displayName || `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim(),
+        summary: resourceSummary.trim() || "No description provided.",
+        createdAt: new Date().toISOString(),
+      });
+      setResourceModalVisible(false);
+      setResourceTitle("");
+      setResourceSummary("");
+      Alert.alert("Success", "Resource uploaded!");
+      // Refetch resources
+      const resQ = query(collection(db, "resources"), where("classId", "==", classId));
+      const resSnap = await getDocs(resQ);
+      setResources(resSnap.docs.map(d => ({id: d.id, ...d.data()})));
+    } catch (e) {
+      console.error(e);
+      Alert.alert("Error", "Failed to upload resource.");
+    } finally {
+      setIsUploadingRes(false);
+    }
+  };
+
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
       <NavigationHeader title={classData.courseCode} />
@@ -154,6 +234,17 @@ export default function ClassDetailsScreen() {
           <TouchableOpacity style={styles.codeBadge} onPress={copyClassCode}>
             <Text style={styles.codeText}>Code: {classData.classCode}</Text>
             <FontAwesome6 name="copy" size={12} color="#fff" style={{ marginLeft: 6 }} />
+          </TouchableOpacity>
+        )}
+        {classData.chatId && (
+          <TouchableOpacity 
+            style={{ marginTop: 15, paddingVertical: 8, paddingHorizontal: 15, flexDirection: "row", backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 8, alignItems: "center" }}
+            onPress={() => {
+              router.push(`/chat/${classData.chatId}?name=${encodeURIComponent(classData.courseCode + " Chat")}&isGroup=true&isClassGroup=true&classId=${classId}`);
+            }}
+          >
+            <FontAwesome6 name="comments" size={14} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={{ color: "#fff", fontWeight: "600", fontSize: 14 }}>Join Class Chat</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -253,7 +344,7 @@ export default function ClassDetailsScreen() {
               ))
             )}
             {isLecturer && (
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => setAnnouncementModalVisible(true)}>
                 <Text style={styles.actionBtnText}>Post Announcement</Text>
               </TouchableOpacity>
             )}
@@ -300,7 +391,7 @@ export default function ClassDetailsScreen() {
               ))
             )}
             {isLecturer && (
-              <TouchableOpacity style={styles.actionBtn}>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => setResourceModalVisible(true)}>
                 <Text style={styles.actionBtnText}>Upload Resource</Text>
               </TouchableOpacity>
             )}
@@ -359,6 +450,88 @@ export default function ClassDetailsScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Announcement Modal */}
+      <Modal visible={announcementModalVisible} transparent animationType="slide" onRequestClose={() => setAnnouncementModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundSecondary }]}>
+            <ThemedText style={[styles.modalTitle, { color: theme.text }]}>Post Announcement</ThemedText>
+            <TextInput
+              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              placeholder="Title"
+              placeholderTextColor={theme.placeholder}
+              value={announcementTitle}
+              onChangeText={setAnnouncementTitle}
+            />
+            <TextInput
+              style={[styles.input, { color: theme.text, borderColor: theme.border, minHeight: 80, textAlignVertical: "top" }]}
+              placeholder="Message"
+              placeholderTextColor={theme.placeholder}
+              multiline
+              numberOfLines={3}
+              value={announcementMsg}
+              onChangeText={setAnnouncementMsg}
+            />
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: theme.border }]} onPress={() => setAnnouncementModalVisible(false)}>
+                <Text style={[styles.btnText, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: theme.primary }, isPostingAnn && { opacity: 0.6 }]} onPress={handlePostAnnouncement} disabled={isPostingAnn}>
+                <Text style={[styles.btnText, { color: theme.secondary }]}>{isPostingAnn ? "Posting..." : "Post"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Resource Modal */}
+      <Modal visible={resourceModalVisible} transparent animationType="slide" onRequestClose={() => setResourceModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={[styles.modalContent, { backgroundColor: theme.backgroundSecondary }]}>
+            <ThemedText style={[styles.modalTitle, { color: theme.text }]}>Upload Coursework</ThemedText>
+            <TextInput
+              style={[styles.input, { color: theme.text, borderColor: theme.border }]}
+              placeholder="Resource Title (e.g. Intro to UI Design)"
+              placeholderTextColor={theme.placeholder}
+              value={resourceTitle}
+              onChangeText={setResourceTitle}
+            />
+            <TextInput
+              style={[styles.input, { color: theme.text, borderColor: theme.border, minHeight: 80, textAlignVertical: "top" }]}
+              placeholder="Summary/Description"
+              placeholderTextColor={theme.placeholder}
+              multiline
+              numberOfLines={3}
+              value={resourceSummary}
+              onChangeText={setResourceSummary}
+            />
+            <ThemedText style={{ fontSize: 14, fontWeight: "600", marginBottom: 5, color: theme.text }}>Resource Type</ThemedText>
+            <View style={{ borderWidth: 1, borderColor: theme.border, borderRadius: 8, marginBottom: 15, overflow: "hidden" }}>
+              <Picker
+                selectedValue={resourceType}
+                onValueChange={(val) => setResourceType(val)}
+                style={{ color: theme.text, backgroundColor: theme.background }}
+                dropdownIconColor={theme.text}
+              >
+                <Picker.Item label="Document (PDF, Doc)" value="Document" />
+                <Picker.Item label="Video Lecture" value="Video" />
+                <Picker.Item label="Audio Lecture" value="Audio" />
+                <Picker.Item label="Image Asset" value="Image" />
+                <Picker.Item label="Other File" value="Other" />
+              </Picker>
+            </View>
+            <View style={styles.btnRow}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: theme.border }]} onPress={() => setResourceModalVisible(false)}>
+                <Text style={[styles.btnText, { color: theme.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: theme.primary }, isUploadingRes && { opacity: 0.6 }]} onPress={handleUploadResource} disabled={isUploadingRes}>
+                <Text style={[styles.btnText, { color: theme.secondary }]}>{isUploadingRes ? "Uploading..." : "Publish"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </ThemedView>
   );
 }
@@ -396,5 +569,12 @@ const styles = StyleSheet.create({
   itemTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
   itemDesc: { fontSize: 14, marginBottom: 8 },
   itemMeta: { fontSize: 12, color: "#888" },
-  attendanceBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.05)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }
+  attendanceBadge: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(0,0,0,0.05)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  modalContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { width: "90%", borderRadius: 12, padding: 20, elevation: 5 },
+  modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 15, textAlign: "center" },
+  input: { borderWidth: 1, borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 12 },
+  btnRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 10, gap: 10 },
+  modalBtn: { flex: 1, padding: 12, borderRadius: 8, alignItems: "center" },
+  btnText: { fontWeight: "bold", fontSize: 16 }
 });

@@ -313,8 +313,8 @@ export default function ScheduleScreen() {
       // Search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchesCourse = event.courseCode.toLowerCase().includes(query);
-        const matchesTitle = event.title.toLowerCase().includes(query);
+        const matchesCourse = (event.courseCode || "").toLowerCase().includes(query);
+        const matchesTitle = (event.title || "").toLowerCase().includes(query);
         if (!matchesCourse && !matchesTitle) return false;
       }
 

@@ -132,7 +132,7 @@ export const ResourceListCard: React.FC<ResourceCardProps> = ({ file }) => {
   const globalStyles = useGlobalStyles();
   const { screenWidth } = useResponsiveDimensions();
 
-  const extension = file.filepath.split(".").pop() || "";
+  const extension = (file.filepath || "").split(".").pop() || "";
   const category = getResourceCategoryFromExtension(extension).toLowerCase();
 
   const IconComponent = resourceCategoryIconMap[category] || FileTextIcon;

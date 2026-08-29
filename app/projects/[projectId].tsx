@@ -256,7 +256,7 @@ export default function ProjectScreen(){
         selectedResourceCategory === "All"
         ? files
         : files.filter((file) => {
-            const ext = file.filepath.split(".").pop() || "";
+            const ext = (file.filepath || "").split(".").pop() || "";
             return getCategoryFromExtension(ext) === selectedResourceCategory;
             });
     

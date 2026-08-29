@@ -499,7 +499,7 @@ export default function ChatsScreen() {
   const filteredRooms = rooms.filter((r) => {
     if (chatQuery) {
       const { name } = getRoomDisplayInfo(r, myUid);
-      if (!name.toLowerCase().includes(chatQuery.toLowerCase())) return false;
+      if (!(name || "").toLowerCase().includes(chatQuery.toLowerCase())) return false;
     }
     
     if (chatFilter === "groups") {

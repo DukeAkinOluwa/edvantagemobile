@@ -124,15 +124,15 @@ export default function ScheduleScreen() {
     selectedCategory === "All"
       ? files
       : files.filter((file) => {
-          const ext = file.filepath.split(".").pop() || "";
+          const ext = (file.filepath || "").split(".").pop() || "";
           return getCategoryFromExtension(ext) === selectedCategory;
         });
 
   const filteredFiles = categoryFilteredFiles.filter(
     (file) =>
-      file.filename.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      file.uploadedBy.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      file.summary.toLowerCase().includes(searchQuery.toLowerCase())
+      (file.filename || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (file.uploadedBy || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (file.summary || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
