@@ -94,6 +94,7 @@ export interface ChatRoom {
   avatarUrl?: string;              // group avatar or other person's pic
   unreadCounts?: Record<string, number>; // uid -> unread count
   typingUsers?: Record<string, number>;  // uid -> timestamp of last typing event
+  clearedAt?: Record<string, number>;    // uid -> timestamp when user cleared chat
   createdAt?: Timestamp;
 }
 
@@ -257,6 +258,19 @@ export async function getUserChatRooms(uid: string): Promise<ChatRoom[]> {
 }
 
 // ─── Messages ─────────────────────────────────────────────────────────────────
+/** Clear chat messages for a specific user */
+export async function clearChatForUser(chatId: string, uid: string): Promise<void> {
+  const roomRef = doc(db, "chatRooms", chatId);
+  await updateDoc(roomRef, {
+    [`clearedAt.${uid}`]: Date.now()
+  });
+}
+
+/** Delete a chat room completely */
+export async function deleteChatRoom(chatId: string): Promise<void> {
+  const roomRef = doc(db, "chatRooms", chatId);
+  await deleteDoc(roomRef);
+}
 
 /** Subscribe to real-time messages in a chat room */
 export function subscribeToMessages(

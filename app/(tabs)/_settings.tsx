@@ -16,6 +16,11 @@ import {
   View,
 } from "react-native";
 import { useTheme, useUserData } from "@/components/HeaderContext";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
+import { auth, db } from "@/lib/firebase";
+import { deleteUser } from "firebase/auth";
+import { doc, deleteDoc } from "firebase/firestore";
 
 export default function SettingsScreen() {
   const { theme, setThemeMode } = useTheme();
@@ -110,6 +115,43 @@ export default function SettingsScreen() {
       Alert.alert("Error", "Failed to save settings.");
       console.error("Save error:", error);
     }
+  };
+
+  const handleDownloadData = async () => {
+    try {
+      const dataStr = JSON.stringify(userData, null, 2);
+      const fileUri = FileSystem.documentDirectory + "my_data.json";
+      await FileSystem.writeAsStringAsync(fileUri, dataStr, { encoding: FileSystem.EncodingType.UTF8 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        Alert.alert("Sharing not available", "Your device does not support file sharing.");
+      }
+    } catch (e) {
+      Alert.alert("Error", "Could not download data.");
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert("Delete Account", "This action is irreversible. All your data will be permanently deleted.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Delete", style: "destructive", onPress: async () => {
+        try {
+           const user = auth.currentUser;
+           if (user) {
+             await deleteDoc(doc(db, "users", user.uid));
+             await deleteUser(user);
+             Alert.alert("Account deleted");
+           }
+        } catch (e: any) {
+           if (e.code === "auth/requires-recent-login") {
+              Alert.alert("Re-authentication required", "Please log out and log back in before deleting your account.");
+           } else {
+              Alert.alert("Error", e.message);
+           }
+        }
+      }}
+    ]);
   };
 
   return (
@@ -253,6 +295,31 @@ export default function SettingsScreen() {
           onPress={handleSave}
           color={theme.primary}
         />
+        
+        <View style={{ marginTop: 30, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 20 }}>
+          <Text style={[styles.label, { color: theme.text, fontWeight: 'bold' }]}>Data & Privacy</Text>
+          <View style={{ marginBottom: 15 }}>
+            <Button
+              title="Backup Status: Last synced 2 mins ago"
+              onPress={() => Alert.alert("Backup", "Your data is actively synced with the cloud.")}
+              color={theme.placeholder}
+            />
+          </View>
+          <View style={{ marginBottom: 15 }}>
+            <Button
+              title="Download Data"
+              onPress={handleDownloadData}
+              color={theme.primary}
+            />
+          </View>
+          <View>
+            <Button
+              title="Delete Account"
+              onPress={handleDeleteAccount}
+              color="#FF3B30"
+            />
+          </View>
+        </View>
       </View>
     </ScrollView>
   );

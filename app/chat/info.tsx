@@ -1,17 +1,20 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, TextInput } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, ActivityIndicator, TextInput, Alert } from "react-native";
 import { useTheme, NavigationHeader } from "@/components/Header";
 import { ThemedView } from "@/components/ThemedView";
 import { ThemedText } from "@/components/ThemedText";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useAuth } from "@/context/AuthContext";
+import { clearChatForUser, deleteChatRoom } from "@/lib/firestoreService";
 
 export default function ChatInfoScreen() {
   const { chatId, isGroup, name } = useLocalSearchParams();
   const { theme } = useTheme();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState<any>(null);
@@ -103,6 +106,11 @@ export default function ChatInfoScreen() {
                     value={searchQuery}
                     onChangeText={setSearchQuery}
                   />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={10}>
+                      <FontAwesome6 name="xmark" size={14} color={theme.placeholder} />
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {/* Participants List */}
@@ -137,6 +145,42 @@ export default function ChatInfoScreen() {
                 </View>
               </View>
             )}
+
+            <View style={{ marginTop: 20 }}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}
+                onPress={() => {
+                  Alert.alert("Clear Chat", "Are you sure you want to clear all messages for yourself? They will still be visible to others.", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Clear", style: "destructive", onPress: async () => {
+                      if (user?.uid) {
+                        await clearChatForUser(chatId as string, user.uid);
+                        Alert.alert("Chat Cleared", "Messages have been cleared.");
+                      }
+                    }}
+                  ]);
+                }}
+              >
+                <FontAwesome6 name="eraser" size={16} color={theme.text} />
+                <Text style={[styles.actionButtonText, { color: theme.text }]}>Clear Chat</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: 'rgba(255, 59, 48, 0.1)', borderColor: '#FF3B30' }]}
+                onPress={() => {
+                  Alert.alert("Delete Chat", "Are you sure you want to completely delete this chat room for everyone? This cannot be undone.", [
+                    { text: "Cancel", style: "cancel" },
+                    { text: "Delete", style: "destructive", onPress: async () => {
+                      await deleteChatRoom(chatId as string);
+                      router.replace("/(tabs)/chatlistscreen");
+                    }}
+                  ]);
+                }}
+              >
+                <FontAwesome6 name="trash-can" size={16} color="#FF3B30" />
+                <Text style={[styles.actionButtonText, { color: '#FF3B30' }]}>Delete Chat</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </ScrollView>
@@ -193,13 +237,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  participantAvatarInitial: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+  participantAvatarInitial: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  participantName: { fontSize: 16, fontWeight: '500' },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+    gap: 10,
   },
-  participantName: {
+  actionButtonText: {
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: 'bold',
   }
 });

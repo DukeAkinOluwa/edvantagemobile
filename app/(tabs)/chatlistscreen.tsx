@@ -319,6 +319,11 @@ function NewChatModal({
             onChangeText={handleSearch}
             autoFocus
           />
+          {!searching && query.length > 0 && (
+            <TouchableOpacity onPress={() => handleSearch("")} hitSlop={10}>
+              <FontAwesome6 name="xmark" size={14} color={theme.placeholder} />
+            </TouchableOpacity>
+          )}
           {searching && <ActivityIndicator size="small" color={theme.placeholder} />}
         </View>
 
@@ -532,6 +537,11 @@ export default function ChatsScreen() {
             value={chatQuery}
             onChangeText={setChatQuery}
           />
+          {chatQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setChatQuery("")} hitSlop={10}>
+              <FontAwesome6 name="xmark" size={14} color={theme.placeholder} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Filter Chips */}

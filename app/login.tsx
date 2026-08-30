@@ -152,6 +152,30 @@ export default function LoginPage() {
             onChangeText={setPassword}
           />
 
+          <TouchableOpacity
+            style={{ alignSelf: 'flex-end', marginBottom: 15 }}
+            onPress={async () => {
+              if (!email) {
+                setError("Please enter your email first to reset password.");
+                return;
+              }
+              try {
+                const { auth } = require("@/lib/firebase");
+                const { sendPasswordResetEmail } = require("firebase/auth");
+                await sendPasswordResetEmail(auth, email.trim());
+                Toast.show({
+                  type: ALERT_TYPE.SUCCESS,
+                  title: "Success",
+                  textBody: "Password reset link sent to your email.",
+                });
+              } catch (e: any) {
+                setError(e.message);
+              }
+            }}
+          >
+            <ThemedText style={{ color: theme.primary, fontSize: 13, fontWeight: "500" }}>Forgot Password?</ThemedText>
+          </TouchableOpacity>
+
           {error && (
             <ThemedText style={{ color: theme.error, fontSize: 13, marginBottom: 10, textAlign: "center" }}>
               {error}

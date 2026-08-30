@@ -49,39 +49,39 @@ export default function ClassDetailsScreen() {
 
   useEffect(() => {
     if (!classId) return;
-    const fetchData = async () => {
-      try {
-        const docRef = doc(db, "schedules", classId);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          setClassData({ id: snap.id, ...snap.data() } as ScheduleEvent);
-        }
+    
+    // Defer the heavy fetching until AFTER the screen transition animation is complete
+    const timeoutId = setTimeout(() => {
+      const fetchData = async () => {
+        try {
+          const docRef = doc(db, "schedules", classId);
+          const snap = await getDoc(docRef);
+          
+          let cCode = classId;
+          if (snap.exists()) {
+            setClassData({ id: snap.id, ...snap.data() } as ScheduleEvent);
+            cCode = snap.data().courseCode;
+          }
 
-        // Fetch Assignments
-        const assignQ = query(collection(db, "tasks"), where("classId", "==", classId), where("type", "==", "assignment"));
-        const assignSnap = await getDocs(assignQ);
-        setAssignments(assignSnap.docs.map(d => ({id: d.id, ...d.data()})));
+          // Run independent queries in parallel using Promise.all to drastically reduce load time
+          const assignQ = query(collection(db, "tasks"), where("classId", "==", classId), where("type", "==", "assignment"));
+          const resQ = query(collection(db, "resources"), where("classId", "==", classId));
+          const annQ = query(collection(db, "broadcasts"), where("classId", "==", classId));
+          const attQ = query(collection(db, "attendance"), where("courseCode", "==", cCode));
 
-        // Fetch Resources
-        const resQ = query(collection(db, "resources"), where("classId", "==", classId));
-        const resSnap = await getDocs(resQ);
-        setResources(resSnap.docs.map(d => ({id: d.id, ...d.data()})));
+          const [assignSnap, resSnap, annSnap, attSnap] = await Promise.all([
+            getDocs(assignQ),
+            getDocs(resQ),
+            getDocs(annQ),
+            getDocs(attQ)
+          ]);
 
-        // Fetch Announcements
-        const annQ = query(collection(db, "broadcasts"), where("classId", "==", classId));
-        const annSnap = await getDocs(annQ);
-        setAnnouncements(annSnap.docs.map(d => ({id: d.id, ...d.data()})));
-
-        // Fetch Attendance
-        let cCode = classId;
-        if (snap.exists()) {
-          cCode = snap.data().courseCode;
-        }
-
-        const attQ = query(collection(db, "attendance"), where("courseCode", "==", cCode));
-        const attSnap = await getDocs(attQ);
-        const attData = attSnap.docs.map(d => d.data());
-        setAllAttendance(attData);
+          setAssignments(assignSnap.docs.map(d => ({id: d.id, ...d.data()})));
+          setResources(resSnap.docs.map(d => ({id: d.id, ...d.data()})));
+          setAnnouncements(annSnap.docs.map(d => ({id: d.id, ...d.data()})));
+          
+          const attData = attSnap.docs.map(d => d.data());
+          setAllAttendance(attData);
 
         let present = 0;
         let total = 0;
@@ -126,7 +126,11 @@ export default function ClassDetailsScreen() {
         setLoading(false);
       }
     };
-    fetchData();
+    
+      fetchData();
+    }, 500); // 500ms delay to allow screen transition to finish smoothly
+
+    return () => clearTimeout(timeoutId);
   }, [classId, user]);
 
   if (loading) {

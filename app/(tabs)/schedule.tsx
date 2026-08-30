@@ -419,6 +419,11 @@ export default function ScheduleScreen() {
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={10}>
+            <FontAwesome6 name="xmark" size={14} color={theme.placeholder} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Real-time Schedule list with Pulsing Skeleton Loader fallbacks */}

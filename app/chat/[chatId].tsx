@@ -903,7 +903,7 @@ export default function ChatScreen() {
       ) : (
         <FlatList
           ref={flatListRef}
-          data={messages}
+          data={visibleMessages}
           inverted={true}
           keyExtractor={(item) =>
             item.id ?? item.timestamp?.toString() ?? Math.random().toString()

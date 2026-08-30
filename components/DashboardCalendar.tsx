@@ -97,17 +97,28 @@ const Calendar: React.FC<Props> = ({ onDayPress, setModalVisible, modalVisible, 
         setSelectedDate(newDate);
         onDayPress?.(newDate);
     };
-    
-    const deleteTask = async (taskId: string) => {
-        try {
-            await firestoreDeleteTask(taskId);
-            await cancelNotification(taskId);
-            await cancelAlarm(taskId);
-        } catch (e) {
-            console.error("Error deleting task or canceling alarm:", e);
-        }
+    const deleteTask = (taskId: string) => {
+        Alert.alert(
+            "Delete Task",
+            "Are you sure you want to delete this task?",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            await firestoreDeleteTask(taskId);
+                            await cancelNotification(taskId);
+                            await cancelAlarm(taskId);
+                        } catch (e) {
+                            console.error("Error deleting task or canceling alarm:", e);
+                        }
+                    },
+                },
+            ]
+        );
     };
-    
     const dynamicStyles = StyleSheet.create({
         container: {
             width: adjustedWidth,

@@ -6,12 +6,14 @@ import { ThemedText } from "@/components/ThemedText";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { FontAwesome6 } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
+import { useUserData } from "@/components/HeaderContext";
 import { updateLoginStreak, calculateCGPA, CourseGrade, GamificationProfile } from "@/lib/gamificationService";
 
 export default function GamificationPage() {
   const { theme } = useTheme();
   const globalStyles = useGlobalStyles();
   const { user } = useAuth();
+  const { userData } = useUserData();
   
   const [profile, setProfile] = useState<GamificationProfile | null>(null);
   const [courses, setCourses] = useState<CourseGrade[]>([
@@ -28,6 +30,10 @@ export default function GamificationPage() {
     setCourses([...courses, { courseCode: "", units: 2, grade: "C" }]);
   };
 
+  const removeCourse = (index: number) => {
+    setCourses(courses.filter((_, idx) => idx !== index));
+  };
+
   const updateCourse = (index: number, field: keyof CourseGrade, value: any) => {
     const newCourses = [...courses];
     newCourses[index] = { ...newCourses[index], [field]: value };
@@ -35,6 +41,22 @@ export default function GamificationPage() {
   };
 
   const cgpa = calculateCGPA(courses);
+
+  const calculateProfilePoints = () => {
+    let p = 0;
+    if (userData.firstName) p += 10;
+    if (userData.lastName) p += 10;
+    if (userData.bio) p += 20;
+    if (userData.dob) p += 10;
+    if (userData.gender) p += 10;
+    if (userData.profilePic) p += 20;
+    if (userData.course) p += 10;
+    if (userData.level) p += 10;
+    return p;
+  };
+
+  const profilePoints = calculateProfilePoints();
+  const userLevel = Math.floor(profilePoints / 20) + 1;
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: theme.background }]}>
@@ -55,10 +77,23 @@ export default function GamificationPage() {
           </View>
         </View>
 
+        {/* Level and Points Card */}
+        <View style={[styles.streakCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
+          <FontAwesome6 name="star" size={40} color="#FFD700" />
+          <View style={{ marginLeft: 20 }}>
+            <ThemedText style={[globalStyles.largeText, { fontWeight: "bold", color: theme.text }]}>
+              Level {userLevel}
+            </ThemedText>
+            <ThemedText style={{ color: theme.placeholder }}>
+              {profilePoints} Profile Points (Complete profile to level up!)
+            </ThemedText>
+          </View>
+        </View>
+
         {/* CGPA Calculator */}
         <View style={[styles.cgpaCard, { backgroundColor: theme.backgroundSecondary, borderColor: theme.border }]}>
           <View style={styles.cgpaHeader}>
-            <ThemedText style={[globalStyles.mediumText, { fontWeight: "bold", color: theme.text }]}>
+            <ThemedText style={[globalStyles.mediumText, { fontWeight: "bold", color: theme.text, marginBottom: 0 }]}>
               CGPA Calculator (5.0)
             </ThemedText>
             <View style={styles.cgpaBadge}>
@@ -69,29 +104,31 @@ export default function GamificationPage() {
           {courses.map((course, idx) => (
             <View key={idx} style={styles.courseRow}>
               <TextInput 
-                style={[styles.input, styles.inputCode, { color: theme.text, borderColor: theme.border }]} 
+                style={[styles.input, { flex: 2, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Course Code"
                 placeholderTextColor={theme.placeholder}
                 value={course.courseCode}
                 onChangeText={(txt) => updateCourse(idx, "courseCode", txt)}
               />
               <TextInput 
-                style={[styles.input, styles.inputUnits, { color: theme.text, borderColor: theme.border }]} 
+                style={[styles.input, { flex: 1, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Units"
-                keyboardType="number-pad"
+                keyboardType="numeric"
                 placeholderTextColor={theme.placeholder}
                 value={course.units.toString()}
                 onChangeText={(txt) => updateCourse(idx, "units", parseInt(txt) || 0)}
               />
               <TextInput 
-                style={[styles.input, styles.inputGrade, { color: theme.text, borderColor: theme.border }]} 
+                style={[styles.input, { flex: 1, color: theme.text, borderColor: theme.border }]} 
                 placeholder="Grade"
                 autoCapitalize="characters"
-                maxLength={1}
                 placeholderTextColor={theme.placeholder}
                 value={course.grade}
                 onChangeText={(txt) => updateCourse(idx, "grade", txt)}
               />
+              <TouchableOpacity onPress={() => removeCourse(idx)} style={{ justifyContent: 'center', paddingHorizontal: 5 }}>
+                <FontAwesome6 name="trash-can" size={16} color="#FF3B30" />
+              </TouchableOpacity>
             </View>
           ))}
 

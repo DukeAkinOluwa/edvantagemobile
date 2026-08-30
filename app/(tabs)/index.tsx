@@ -349,6 +349,15 @@ export default function HomeScreen() {
           ]}
         />
         
+        {/* Advertisement Slideshow */}
+        <View style={{ width: adjustedWidth, height: 120, marginTop: 15, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: theme.border }}>
+          <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+            <Image source={{ uri: "https://picsum.photos/id/1018/800/300" }} style={{ width: adjustedWidth, height: 120 }} resizeMode="cover" />
+            <Image source={{ uri: "https://picsum.photos/id/1015/800/300" }} style={{ width: adjustedWidth, height: 120 }} resizeMode="cover" />
+            <Image source={{ uri: "https://picsum.photos/id/1035/800/300" }} style={{ width: adjustedWidth, height: 120 }} resizeMode="cover" />
+          </ScrollView>
+        </View>
+
         {/* Assignments Quick-Link Banner */}
         <TouchableOpacity
           style={{

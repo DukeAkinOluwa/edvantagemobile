@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "296171411586",
+    "project_id": "edvantae-mobile",
+    "storage_bucket": "edvantae-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:296171411586:android:6325cde2c6856b2285bc9b",
+        "android_client_info": {
+          "package_name": "com.akinoluwa.edvantage.dev"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6NzwSXxdZNxqQ5fqz7Ma6Hl0n-iCcbF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
