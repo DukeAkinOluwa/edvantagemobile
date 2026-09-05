@@ -1,34 +1,29 @@
+import StaffDashboard from "@/app/staff-dashboard";
 import Calendar from "@/components/DashboardCalendar";
 import { NavigationHeader } from "@/components/Header";
 import { useTheme, useUserData } from "@/components/HeaderContext";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
-import StaffDashboard from "@/app/staff-dashboard";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { useResponsiveDimensions } from "@/hooks/useResponsiveDimensions";
+import { scheduleAlarm } from "@/lib/alarmService";
+import { auth } from "@/lib/firebase";
+import { Task, createTask, subscribeUserTasks, syncTaskAlarms } from "@/lib/firestoreService";
 import { useGlobalStyles } from "@/styles/globalStyles";
 import { scheduleEventNotification } from "@/utils/notifications";
-import { scheduleAlarm } from "@/lib/alarmService";
 import { getData, saveData } from "@/utils/storage";
-import { Task, createTask, subscribeUserTasks, syncTaskAlarms } from "@/lib/firestoreService";
-import { auth } from "@/lib/firebase";
+import { FontAwesome6 } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  ActivityIndicator,
-  Modal,
+  ActivityIndicator, Image, Modal,
   Platform,
-  Pressable,
-  StyleSheet,
+  Pressable, RefreshControl, ScrollView, StyleSheet,
   Switch,
   TextInput,
-  TouchableOpacity,
-  RefreshControl,
-  View,
-  Text,
+  TouchableOpacity, View
 } from "react-native";
-import { FontAwesome6 } from "@expo/vector-icons";
 
 export default function HomeScreen() {
   const { theme } = useTheme();
